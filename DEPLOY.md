@@ -32,12 +32,17 @@ Redeploy após salvar. Com Supabase configurado, o build usa o banco + Storage; 
 
 ## GitHub
 
+Repositório local pronto (`git init`, branch `main`, 3 commits). Falta autenticar no GitHub:
+
 ```powershell
-git init
-git add .
-git commit -m "Initial commit: My Rep site + Supabase"
-gh repo create myrep --private --source=. --remote=origin --push
+gh auth login
+# ou abra https://github.com/login/device com o código que o gh mostrar
+.\scripts\publish-github.ps1
 ```
+
+Isso cria `https://github.com/<seu-usuario>/myrep` e faz push.
+
+Depois, na Vercel: **Settings → Git** → conectar o repo `myrep` para deploy automático.
 
 ## Vercel
 
