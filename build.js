@@ -771,6 +771,16 @@ async function build() {
   fs.writeFileSync(path.join(pastaAssinantes, "index.html"), tplAssinantes);
   console.log(`  ✓ /assinantes/`);
 
+  carregarEnvBuild();
+  const tplAlteracoes = fs.readFileSync(path.join(DIR_TEMPLATE, "alteracoes.html"), "utf8");
+  const pastaAlteracoes = path.join(DIST, "alteracoes");
+  fs.mkdirSync(pastaAlteracoes, { recursive: true });
+  fs.writeFileSync(
+    path.join(pastaAlteracoes, "index.html"),
+    tplAlteracoes.replace(/\{\{SUPPORT_EMAIL\}\}/g, esc(process.env.SUPPORT_EMAIL || ""))
+  );
+  console.log(`  ✓ /alteracoes/`);
+
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log(`  ✓ /404.html`);
 

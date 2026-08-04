@@ -246,7 +246,8 @@ const API_HANDLERS = {
   "/api/pagamento/liberar": () => require("./api/pagamento/liberar"),
   "/api/pagamento/validar": () => require("./api/pagamento/validar"),
   "/api/asaas/webhook": () => require("./api/asaas/webhook"),
-  "/api/assinantes": () => require("./api/assinantes")
+  "/api/assinantes": () => require("./api/assinantes"),
+  "/api/alteracoes": () => require("./api/alteracoes")
 };
 
 function invocarApi(handler, req, res) {
@@ -291,6 +292,7 @@ http.createServer((req, res) => {
   console.log(`  Briefing:   http://localhost:${PORTA}/briefing/`);
   console.log(`  Pagamento:  http://localhost:${PORTA}/pagamento/ok/`);
   console.log(`  Assinantes: http://localhost:${PORTA}/assinantes/`);
+  console.log(`  Alterações: http://localhost:${PORTA}/alteracoes/`);
   console.log(`  Ctrl+C para parar.\n`);
   observar();
 });

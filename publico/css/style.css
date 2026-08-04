@@ -1568,20 +1568,23 @@ a { color: inherit; }
    ========================================================= */
 
 .pagina-pagamento,
-.pagina-assinantes {
+.pagina-assinantes,
+.pagina-alteracoes {
   display: block;
   padding: 0;
 }
 
 .pagamento-shell,
-.assinantes-shell {
+.assinantes-shell,
+.alteracoes-shell {
   width: min(100% - 48px, 720px);
   margin: 0 auto 64px;
 }
 
 .pagamento-intro__titulo,
 .assinantes-titulo,
-.briefing-gate__titulo {
+.briefing-gate__titulo,
+.alteracoes-intro__titulo {
   font-family: var(--fonte-display);
   font-weight: 800;
   font-size: clamp(26px, 5vw, 34px);
@@ -1590,17 +1593,91 @@ a { color: inherit; }
 
 .pagamento-intro__texto,
 .assinantes-sub,
-.briefing-gate__texto {
+.briefing-gate__texto,
+.alteracoes-intro__texto {
   margin-top: 10px;
   color: var(--mutado);
   max-width: 46ch;
 }
 
 .pagamento-form,
-.assinantes-form {
+.assinantes-form,
+.alteracoes-form {
   margin-top: 28px;
   display: grid;
   gap: 16px;
+}
+
+.alteracoes-passo__num {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--sinal-escuro);
+  margin-bottom: 10px;
+}
+
+.alteracoes-intro__texto strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.alteracoes-bloco {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--borda);
+}
+
+.alteracoes-bloco__titulo {
+  font-family: var(--fonte-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+
+.alteracoes-bloco__sub {
+  margin: 6px 0 16px;
+  font-size: 14px;
+  color: var(--mutado);
+  max-width: 46ch;
+}
+
+.alteracoes-acao {
+  border: 0;
+  margin: 0 0 18px;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.alteracoes-acao__titulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 10px;
+}
+
+.alteracoes-acao .campo {
+  margin-bottom: 10px;
+}
+
+.alteracoes-suporte {
+  margin-top: 8px;
+  padding: 24px 0 8px;
+  border-top: 1px solid var(--borda);
+}
+
+.alteracoes-suporte__titulo {
+  font-family: var(--fonte-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.alteracoes-suporte__texto {
+  margin: 8px 0 16px;
+  font-size: 14px;
+  color: var(--mutado);
+  max-width: 42ch;
 }
 
 .pagamento-voltar {

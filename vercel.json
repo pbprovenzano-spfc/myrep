@@ -5,6 +5,7 @@
   "rewrites": [
     { "source": "/briefing", "destination": "/briefing/" },
     { "source": "/pagamento/ok", "destination": "/pagamento/ok/" },
-    { "source": "/assinantes", "destination": "/assinantes/" }
+    { "source": "/assinantes", "destination": "/assinantes/" },
+    { "source": "/alteracoes", "destination": "/alteracoes/" }
   ]
 }

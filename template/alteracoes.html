@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alterar minha página — My Rep</title>
+<meta name="description" content="Solicite alterações na sua página My Rep: catálogos, logos, empresas e mais.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+</head>
+<body class="pagina-alteracoes" data-support-email="{{SUPPORT_EMAIL}}">
+
+<header class="briefing-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Já sou usuário</p>
+</header>
+
+<main class="alteracoes-shell">
+
+  <section class="alteracoes-passo" id="passo-email">
+    <header class="alteracoes-intro">
+      <p class="alteracoes-passo__num">Passo 1 de 2</p>
+      <h1 class="alteracoes-intro__titulo">Informe seu e-mail</h1>
+      <p class="alteracoes-intro__texto">Use o mesmo e-mail do cadastro ou do pagamento. Depois você pede as alterações na página.</p>
+    </header>
+
+    <form class="alteracoes-form" id="form-email" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">E-mail do cadastro <abbr title="obrigatório">*</abbr></span>
+        <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
+      </label>
+
+      <p class="briefing-status" id="status-email" role="status" aria-live="polite"></p>
+
+      <button class="btn btn--primario" type="submit">Continuar</button>
+    </form>
+  </section>
+
+  <section class="alteracoes-passo" id="passo-pedido" hidden>
+    <header class="alteracoes-intro">
+      <p class="alteracoes-passo__num">Passo 2 de 2</p>
+      <h1 class="alteracoes-intro__titulo">O que deseja alterar?</h1>
+      <p class="alteracoes-intro__texto">
+        Solicitando para <strong id="email-exibido"></strong>.
+        <button type="button" class="btn-link" id="trocar-email">Trocar e-mail</button>
+      </p>
+    </header>
+
+    <form class="alteracoes-form" id="form-pedido" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Link da página (opcional)</span>
+        <input name="slug" type="text" maxlength="80" placeholder="meu-nome" autocomplete="off">
+        <span class="campo__ajuda">Só o final do link, se souber (ex.: myrep.app/<code>meu-nome</code>).</span>
+      </label>
+
+      <section class="alteracoes-bloco">
+        <h2 class="alteracoes-bloco__titulo">Catálogos</h2>
+        <p class="alteracoes-bloco__sub">Adicione, troque ou peça a remoção — sem precisar escrever um texto longo.</p>
+
+        <fieldset class="alteracoes-acao">
+          <legend class="alteracoes-acao__titulo">Adicionar catálogo</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome do catálogo</span>
+            <input name="catalogo_add_nome" type="text" maxlength="120" placeholder="Ex.: Linha verão 2026">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Arquivo (PDF ou imagem)</span>
+            <input name="catalogo_add_arquivo" type="file" accept=".pdf,image/*">
+          </label>
+        </fieldset>
+
+        <fieldset class="alteracoes-acao">
+          <legend class="alteracoes-acao__titulo">Substituir catálogo</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome do catálogo atual</span>
+            <input name="catalogo_troca_nome" type="text" maxlength="120" placeholder="Como aparece hoje na página">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Novo arquivo</span>
+            <input name="catalogo_troca_arquivo" type="file" accept=".pdf,image/*">
+          </label>
+        </fieldset>
+
+        <fieldset class="alteracoes-acao">
+          <legend class="alteracoes-acao__titulo">Remover catálogo</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome do catálogo a remover</span>
+            <input name="catalogo_remover" type="text" maxlength="120" placeholder="Ex.: Catálogo antigo">
+          </label>
+        </fieldset>
+      </section>
+
+      <section class="alteracoes-bloco">
+        <h2 class="alteracoes-bloco__titulo">Logos / marcas</h2>
+        <p class="alteracoes-bloco__sub">Envie o arquivo ou diga qual logo deve sair da página.</p>
+
+        <fieldset class="alteracoes-acao">
+          <legend class="alteracoes-acao__titulo">Adicionar ou atualizar logo</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome da empresa / marca</span>
+            <input name="logo_add_nome" type="text" maxlength="120" placeholder="Ex.: ACME">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Arquivo da logo</span>
+            <input name="logo_add_arquivo" type="file" accept="image/*">
+          </label>
+        </fieldset>
+
+        <fieldset class="alteracoes-acao">
+          <legend class="alteracoes-acao__titulo">Remover logo / marca</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome da marca a remover</span>
+            <input name="logo_remover" type="text" maxlength="120" placeholder="Ex.: Marca antiga">
+          </label>
+        </fieldset>
+      </section>
+
+      <section class="alteracoes-bloco">
+        <h2 class="alteracoes-bloco__titulo">Outras alterações</h2>
+        <label class="campo">
+          <span class="campo__rotulo">Descreva exatamente o que precisa</span>
+          <textarea name="mensagem" rows="5" maxlength="4000" placeholder="Ex.: incluir a empresa Beta; trocar o WhatsApp; alterar os estados de atuação…"></textarea>
+          <span class="campo__ajuda">Use este campo para empresas, contatos, bio, território ou qualquer pedido que não caiba acima.</span>
+        </label>
+      </section>
+
+      <aside class="alteracoes-suporte" id="bloco-suporte" hidden>
+        <h2 class="alteracoes-suporte__titulo">Prefere falar direto?</h2>
+        <p class="alteracoes-suporte__texto">Envie um e-mail ao suporte com o que precisa — sem preencher o formulário.</p>
+        <a class="btn btn--fantasma-ink" id="link-suporte" href="#">Falar com o suporte</a>
+      </aside>
+
+      <p class="briefing-status" id="status-pedido" role="status" aria-live="polite"></p>
+
+      <button class="btn btn--primario" type="submit" id="enviar-pedido">Enviar solicitação</button>
+    </form>
+  </section>
+
+  <p class="pagamento-voltar"><a href="/">Voltar ao início</a></p>
+</main>
+
+<script src="/js/alteracoes.js" defer></script>
+</body>
+</html>
