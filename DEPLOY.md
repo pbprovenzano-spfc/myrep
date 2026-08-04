@@ -40,7 +40,7 @@ gh auth login
 .\scripts\publish-github.ps1
 ```
 
-Isso cria `https://github.com/<seu-usuario>/myrep` e faz push.
+Repo: https://github.com/pbprovenzano-spfc/myrep
 
 Depois, na Vercel: **Settings → Git** → conectar o repo `myrep` para deploy automático.
 
