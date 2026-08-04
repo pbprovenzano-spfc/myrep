@@ -13,6 +13,13 @@
 
 ### Domínio myrep.com.br
 
+Detalhes para **Registro.br**: [`DNS-MYREP.md`](DNS-MYREP.md)
+
+Registros atuais recomendados pela Vercel:
+
+- **A** `@` → `216.198.79.1` e `64.29.17.1`
+- **CNAME** `www` → `cad408fa49781789.vercel-dns-017.com`
+
 No registrador (DNS atual: `a.auto.dns.br` / `b.auto.dns.br`), escolha **uma** opção:
 
 **Opção A (recomendada):** registro `A` → `myrep.com.br` → `76.76.21.21` e `CNAME` `www` → `cname.vercel-dns.com`

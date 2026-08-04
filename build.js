@@ -695,10 +695,13 @@ function gerar404() {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
 </head>
 <body class="pagina-erro">
   <main class="shell shell--estreito erro">
-    <p class="marca marca--compacta">My Rep</p>
+    <p class="marca marca--compacta">
+      <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+    </p>
     <p class="eyebrow">Erro 404</p>
     <h1 class="erro__titulo">Página não encontrada</h1>
     <p class="erro__sub">Esse endereço não existe ou o representante não está cadastrado.</p>

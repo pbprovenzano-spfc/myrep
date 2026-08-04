@@ -67,6 +67,12 @@ a { color: inherit; }
   line-height: 1;
 }
 
+.marca img {
+  display: block;
+  height: auto;
+  border: 0;
+}
+
 .marca--hero {
   font-size: clamp(48px, 14vw, 72px);
   color: var(--branco);
@@ -74,9 +80,22 @@ a { color: inherit; }
   animation: marca-in .7s cubic-bezier(.2, .7, .3, 1) both;
 }
 
+.marca--hero img {
+  width: clamp(64px, 18vw, 96px);
+}
+
 .marca--compacta {
   font-size: 22px;
   color: var(--ink);
+}
+
+.marca--compacta img {
+  width: 36px;
+}
+
+.rodape__creditos .marca--compacta img {
+  width: 28px;
+  margin-inline: auto;
 }
 
 .eyebrow {
