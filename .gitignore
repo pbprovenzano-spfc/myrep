@@ -2,4 +2,7 @@ dist/
 node_modules/
 inbox/
 .env
+.vercel
 .DS_Store
+
+.vercel

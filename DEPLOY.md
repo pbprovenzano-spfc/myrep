@@ -6,6 +6,30 @@
 2. Copie `.env.example` → `.env` e preencha `SUPABASE_*`.
 3. `npm run seed:supabase`
 
+## Vercel (já criado)
+
+- **Produção:** https://myrep-mu-brown.vercel.app
+- **Projeto:** `pfbprovenzano-3527s-projects/myrep`
+
+### Domínio myrep.com.br
+
+No registrador (DNS atual: `a.auto.dns.br` / `b.auto.dns.br`), escolha **uma** opção:
+
+**Opção A (recomendada):** registro `A` → `myrep.com.br` → `76.76.21.21` e `CNAME` `www` → `cname.vercel-dns.com`
+
+**Opção B:** trocar nameservers para `ns1.vercel-dns.com` e `ns2.vercel-dns.com`
+
+Verifique: `npx vercel domains inspect myrep.com.br`
+
+### Variáveis na Vercel
+
+Settings → Environment Variables → Production:
+
+- `SUPABASE_URL=https://raodkkzzxyhxucscuoct.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` (painel Supabase)
+
+Redeploy após salvar. Com Supabase configurado, o build usa o banco + Storage; sem keys, usa os JSONs do repo.
+
 ## GitHub
 
 ```powershell
