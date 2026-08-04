@@ -1,0 +1,27 @@
+{
+  "slug": "lima-agro",
+  "empresa": "Lima Agro",
+  "nome": "Mariana Lima",
+  "cargo": "Representante Comercial — Bahia",
+  "foto": "foto.svg",
+  "fotoTipo": "logo",
+  "whatsapp": "5571987654321",
+  "paleta": "floresta",
+  "mensagemWhatsapp": "Olá Mariana! Vim pela sua página e gostaria de falar sobre a linha agrícola.",
+  "marcas": [
+    { "nome": "Yara", "logo": "marca-1.svg" },
+    { "nome": "Basf", "logo": "marca-2.svg" },
+    { "nome": "Syngenta" }
+  ],
+  "estados": ["BA"],
+  "cidades": ["Salvador", "Feira de Santana", "Lauro de Freitas", "Camaçari", "Vitória da Conquista"],
+  "segmentos": "Insumos agrícolas e fertilizantes",
+  "bio": "Atendo produtores e revendas no Recôncavo e no sudoeste baiano. Foco em recomendação técnica e logística de entrega na safra.",
+  "catalogos": [
+    { "titulo": "Linha fertilizantes 2026", "arquivo": "catalogo-fertilizantes.pdf", "tipo": "PDF", "logo": "marca-1.svg" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "mariana@limaagro.com.br", "link": "mailto:mariana@limaagro.com.br" },
+    { "canal": "Telefone", "valor": "(71) 98765-4321", "link": "tel:+5571987654321" }
+  ]
+}

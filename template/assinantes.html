@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assinantes — My Rep</title>
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="pagina-assinantes">
+
+<header class="assinantes-topo">
+  <a class="marca marca--compacta" href="/">My Rep</a>
+  <p class="eyebrow">Painel</p>
+  <button type="button" class="btn btn--fantasma-ink assinantes-sair" id="btn-sair" hidden>Sair</button>
+</header>
+
+<main class="assinantes-shell">
+  <section class="assinantes-login" id="tela-login">
+    <h1 class="assinantes-titulo">Assinantes</h1>
+    <p class="assinantes-sub">Controle assinaturas Asaas, pagamentos e liberação do briefing.</p>
+    <form id="form-login" class="assinantes-form" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Senha do painel</span>
+        <input name="senha" type="password" required autocomplete="current-password">
+      </label>
+      <p class="briefing-status" id="login-status" role="status"></p>
+      <button class="btn btn--primario" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <section class="assinantes-painel" id="tela-painel" hidden>
+    <header class="assinantes-painel__topo">
+      <div>
+        <h1 class="assinantes-titulo">Assinantes</h1>
+        <p class="assinantes-sub">Dados ao vivo da Asaas.</p>
+      </div>
+      <button type="button" class="btn btn--primario" id="btn-atualizar">Atualizar</button>
+    </header>
+
+    <p class="briefing-status" id="painel-status" role="status"></p>
+
+    <section class="assinantes-bloco">
+      <h2 class="assinantes-bloco__titulo">Liberar briefing manualmente</h2>
+      <form id="form-liberar" class="assinantes-form assinantes-form--linha" novalidate>
+        <label class="campo">
+          <span class="campo__rotulo">E-mail</span>
+          <input name="email" type="email" required placeholder="cliente@email.com">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Plano</span>
+          <select name="plano">
+            <option value="mensal">Mensal (R$ 17,99)</option>
+            <option value="anual_parcelado">Anual parcelado (R$ 14,99)</option>
+            <option value="anual_avista">Anual à vista (R$ 161,89)</option>
+          </select>
+        </label>
+        <button class="btn btn--primario" type="submit">Gerar link</button>
+      </form>
+      <p class="assinantes-link" id="liberar-resultado" hidden></p>
+    </section>
+
+    <section class="assinantes-bloco">
+      <h2 class="assinantes-bloco__titulo">Assinaturas</h2>
+      <div class="assinantes-tabela-wrap">
+        <table class="assinantes-tabela" id="tabela-assinaturas">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Plano</th>
+              <th>Status</th>
+              <th>Próx. cobr.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="assinantes-bloco">
+      <h2 class="assinantes-bloco__titulo">Pagamentos recentes</h2>
+      <div class="assinantes-tabela-wrap">
+        <table class="assinantes-tabela" id="tabela-pagamentos">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Plano</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Meio</th>
+              <th>Data</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script src="/js/assinantes.js" defer></script>
+</body>
+</html>

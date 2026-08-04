@@ -1,0 +1,26 @@
+{
+  "slug": "silva-protecao",
+  "empresa": "Silva Proteção",
+  "nome": "Ana Beatriz Silva",
+  "cargo": "Representante Comercial — Pernambuco e Paraíba",
+  "foto": "foto.svg",
+  "cnpj": "11.111.111/0001-11",
+  "whatsapp": "5581988880002",
+  "paleta": "rubi",
+  "mensagemWhatsapp": "Olá Ana! Encontrei sua página e queria falar sobre EPI.",
+  "marcas": [
+    { "nome": "Vicsa", "logo": "marca-1.svg" },
+    { "nome": "Marluvas", "logo": "marca-2.svg" }
+  ],
+  "estados": ["PE", "PB", "RN"],
+  "segmentos": "Equipamentos de proteção individual e uniformes",
+  "bio": "Especializada em EPI para construção civil e indústria alimentícia. Faço levantamento de risco na obra e monto o kit certo para cada função, com laudo e CA em dia.",
+  "catalogos": [
+    { "titulo": "Catálogo EPI 2026", "arquivo": "catalogo-epi.pdf", "tipo": "PDF" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "ana@silvaprotecao.com.br", "link": "mailto:ana@silvaprotecao.com.br" },
+    { "canal": "Telefone", "valor": "(81) 98888-0002", "link": "tel:+5581988880002" },
+    { "canal": "LinkedIn", "valor": "Ana Beatriz Silva", "link": "https://linkedin.com/" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/briefing", "destination": "/briefing/" },
+    { "source": "/pagamento/ok", "destination": "/pagamento/ok/" },
+    { "source": "/assinantes", "destination": "/assinantes/" }
+  ]
+}

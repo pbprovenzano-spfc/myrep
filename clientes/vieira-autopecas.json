@@ -1,0 +1,25 @@
+{
+  "slug": "vieira-autopecas",
+  "empresa": "Vieira Autopeças",
+  "nome": "Rogério Vieira",
+  "cargo": "Representante Comercial — Minas Gerais e São Paulo",
+  "foto": "foto.svg",
+  "cnpj": "22.222.222/0001-22",
+  "whatsapp": "5531966660004",
+  "paleta": "ardosia",
+  "mensagemWhatsapp": "Olá Rogério! Vim pela sua página e quero fazer um orçamento.",
+  "marcas": [
+    { "nome": "Cofap", "logo": "marca-1.svg" },
+    { "nome": "NGK", "logo": "marca-2.svg" }
+  ],
+  "estados": ["MG", "SP", "GO", "DF"],
+  "segmentos": "Autopeças, suspensão e linha pesada",
+  "bio": "Atendo distribuidores e oficinas na linha leve e pesada. Reposição rápida e suporte técnico direto com o fabricante quando a peça exige aplicação específica.",
+  "catalogos": [
+    { "titulo": "Tabela de aplicação 2026", "arquivo": "tabela-aplicacao.pdf", "tipo": "PDF" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "rogerio@vieirapecas.com.br", "link": "mailto:rogerio@vieirapecas.com.br" },
+    { "canal": "Telefone", "valor": "(31) 96666-0004", "link": "tel:+5531966660004" }
+  ]
+}

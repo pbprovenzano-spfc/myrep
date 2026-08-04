@@ -1,0 +1,22 @@
+{
+  "slug": "nordeste-alimentos",
+  "empresa": "Nordeste Distribuição",
+  "nome": "Carlos Menezes",
+  "cargo": "Representante Comercial — Bahia e Sergipe",
+  "foto": "foto.svg",
+  "whatsapp": "5579977770003",
+  "paleta": "oceano",
+  "marcas": [
+    { "nome": "Piraquê", "logo": "marca-1.svg" },
+    { "nome": "Vitarella", "logo": "marca-2.svg" },
+    { "nome": "Bauducco" },
+    { "nome": "Pilar" }
+  ],
+  "estados": ["BA", "SE"],
+  "segmentos": "Alimentos, mercearia seca e food service",
+  "bio": "",
+  "catalogos": [],
+  "contatos": [
+    { "canal": "Telefone", "valor": "(79) 97777-0003", "link": "tel:+5579977770003" }
+  ]
+}

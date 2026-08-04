@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITULO}}</title>
+<meta name="description" content="{{DESCRICAO}}">
+
+<meta property="og:type" content="profile">
+<meta property="og:title" content="{{TITULO}}">
+<meta property="og:description" content="{{DESCRICAO}}">
+<meta property="og:image" content="{{FOTO}}">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+{{PALETA_CSS}}
+</head>
+<body class="pagina-rep">
+
+<main class="shell shell--estreito cartao">
+
+  <div class="cartao__perfil">
+    <header class="capa">
+      <img class="{{FOTO_CLASSE}}" src="{{FOTO}}" alt="{{ALT_FOTO}}" width="96" height="96">
+      {{ANTES_NOME}}
+      <h1 class="capa__nome">{{NOME}}</h1>
+      {{DEPOIS_NOME}}
+      {{CARGO}}
+      {{BIO}}
+    </header>
+
+    <div class="acoes">
+      {{ZAP}}
+    </div>
+  </div>
+
+  <div class="cartao__blocos">
+{{BLOCOS}}
+  </div>
+
+  <footer class="rodape">
+    <p class="rodape__creditos"><a href="/">My Rep</a></p>
+  </footer>
+
+</main>
+
+<script src="/js/mapa.js"></script>
+</body>
+</html>

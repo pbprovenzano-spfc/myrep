@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagamento — My Rep</title>
+<meta name="description" content="Confirme seu pagamento My Rep e libere o formulário de briefing.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="pagina-pagamento">
+
+<header class="briefing-topo">
+  <a class="marca marca--compacta" href="/">My Rep</a>
+  <p class="eyebrow">Pagamento</p>
+</header>
+
+<main class="pagamento-shell">
+  <header class="pagamento-intro">
+    <h1 class="pagamento-intro__titulo">Liberar briefing</h1>
+    <p class="pagamento-intro__texto" id="pagamento-plano-texto">Use o mesmo e-mail do pagamento na Asaas para liberar o formulário.</p>
+  </header>
+
+  <form class="pagamento-form" id="pagamento-form" novalidate>
+    <input type="hidden" name="plano" id="pagamento-plano" value="">
+
+    <label class="campo">
+      <span class="campo__rotulo">E-mail do pagamento <abbr title="obrigatório">*</abbr></span>
+      <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
+      <span class="campo__ajuda">PIX pode levar alguns segundos para confirmar. Se falhar, aguarde e tente de novo.</span>
+    </label>
+
+    <p class="briefing-status" id="pagamento-status" role="status" aria-live="polite"></p>
+
+    <button class="btn btn--primario" type="submit" id="pagamento-enviar">Liberar meu briefing</button>
+  </form>
+
+  <p class="pagamento-voltar"><a href="/#precos">Voltar aos planos</a></p>
+</main>
+
+<script src="/js/pagamento.js" defer></script>
+</body>
+</html>

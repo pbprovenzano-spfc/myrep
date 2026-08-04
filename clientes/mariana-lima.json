@@ -1,0 +1,50 @@
+{
+  "slug": "mariana-lima",
+  "nome": "Mariana Lima",
+  "whatsapp": "5571987654321",
+  "mensagemWhatsapp": "Olá, vim pela sua página do My Rep!",
+  "paleta": "floresta",
+  "destaque": "pessoa",
+  "empresa": "Lima Agro Teste",
+  "cargo": "Representante Comercial — Bahia",
+  "bio": "Atendo produtores e revendas no Recôncavo e no sudoeste baiano. Foco em recomendação técnica e logística na safra.",
+  "foto": "foto.svg",
+  "fotoTipo": "pessoa",
+  "marcas": [
+    { "nome": "Yara", "logo": "marca-yara.svg" },
+    { "nome": "Basf" },
+    { "nome": "Syngenta" }
+  ],
+  "estados": ["BA"],
+  "cidades": ["Salvador", "Lauro de Freitas", "Camaçari", "Feira de Santana"],
+  "segmentos": "Insumos agrícolas · Fertilizantes",
+  "catalogos": [
+    {
+      "titulo": "catalogo fertilizantes 2026",
+      "arquivo": "catalogo-fertilizantes-2026.pdf",
+      "tipo": "PDF"
+    }
+  ],
+  "contatos": [
+    {
+      "canal": "E-mail",
+      "valor": "mariana@limaagro-teste.com.br",
+      "link": "mailto:mariana@limaagro-teste.com.br"
+    },
+    {
+      "canal": "E-mail",
+      "valor": "contato@limaagro-teste.com.br",
+      "link": "mailto:contato@limaagro-teste.com.br"
+    },
+    {
+      "canal": "Telefone",
+      "valor": "(71) 3333-4444",
+      "link": "tel:+557133334444"
+    },
+    {
+      "canal": "Instagram",
+      "valor": "@limaagro.teste",
+      "link": "https://instagram.com/limaagro.teste"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "my-rep",
+  "version": "0.1.0",
+  "private": true,
+  "description": "My Rep — paginas unicas para representantes comerciais. Gerador estatico + briefing via Resend.",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node dev.js",
+    "geo": "node scripts/geo.js",
+    "seed:supabase": "node scripts/seed-supabase.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "resend": "^4.0.0"
+  }
+}

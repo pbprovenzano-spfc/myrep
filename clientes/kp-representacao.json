@@ -1,0 +1,29 @@
+{
+  "slug": "kp-representacao",
+  "empresa": "KP Representação",
+  "nome": "Pedro Provenzano",
+  "cargo": "Representante Comercial — Bahia",
+  "foto": "logo-kp.png",
+  "fotoTipo": "logo",
+  "whatsapp": "5571999990001",
+  "paleta": "ambar",
+  "mensagemWhatsapp": "Olá! Vim pela página da KP Representação e gostaria de falar sobre os produtos 3M.",
+  "marcas": [
+    { "nome": "3M", "logo": "marca-3m.png" }
+  ],
+  "estados": ["BA"],
+  "cidades": ["Salvador", "Lauro de Freitas", "Camaçari"],
+  "segmentos": "Hardware e soluções 3M",
+  "bio": "Representante da KP Representação na Bahia, com foco em Salvador, Lauro de Freitas e Camaçari. Atendimento direto para varejo e indústria com a linha 3M.",
+  "catalogos": [
+    {
+      "titulo": "3M Hardware 2026",
+      "arquivo": "catalogo-3m-hardware-2026.pdf",
+      "tipo": "PDF",
+      "logo": "marca-3m.png"
+    }
+  ],
+  "contatos": [
+    { "canal": "Telefone", "valor": "(71) 99999-0001", "link": "tel:+5571999990001" }
+  ]
+}
