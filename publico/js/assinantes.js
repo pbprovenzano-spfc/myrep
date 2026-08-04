@@ -14,6 +14,7 @@
   const btnAtualizar = document.getElementById("btn-atualizar");
   const tbodyAss = document.querySelector("#tabela-assinaturas tbody");
   const tbodyPag = document.querySelector("#tabela-pagamentos tbody");
+  const tbodyAcessos = document.querySelector("#tabela-acessos tbody");
 
   let tokenMemoria = sessionStorage.getItem("myrep_admin_token") || "";
 
@@ -96,6 +97,26 @@
       .join("");
   }
 
+  function renderAcessos(lista) {
+    if (!tbodyAcessos) return;
+    if (!lista.length) {
+      tbodyAcessos.innerHTML = `<tr><td colspan="5">Nenhum acesso registrado.</td></tr>`;
+      return;
+    }
+    tbodyAcessos.innerHTML = lista
+      .map((a) => {
+        const exp = a.expira_em ? new Date(a.expira_em).toLocaleString("pt-BR") : "—";
+        return `<tr>
+          <td>${esc(a.email)}</td>
+          <td>${esc(a.plano)}</td>
+          <td>${esc(a.origem)}</td>
+          <td>${esc(exp)}</td>
+          <td><code>${esc(a.payment_id || "—")}</code></td>
+        </tr>`;
+      })
+      .join("");
+  }
+
   function renderPagamentos(lista) {
     if (!lista.length) {
       tbodyPag.innerHTML = `<tr><td colspan="7">Nenhum pagamento recente.</td></tr>`;
@@ -124,7 +145,12 @@
     const data = await api("listar");
     renderAssinaturas(data.assinaturas || []);
     renderPagamentos(data.pagamentos || []);
-    setStatus(painelStatus, `${(data.assinaturas || []).length} assinaturas · ${(data.pagamentos || []).length} pagamentos`, "ok");
+    renderAcessos(data.acessos || []);
+    setStatus(
+      painelStatus,
+      `${(data.assinaturas || []).length} assinaturas · ${(data.pagamentos || []).length} pagamentos · ${(data.acessos || []).length} acessos`,
+      "ok"
+    );
   }
 
   async function tentarSessao() {
