@@ -12,8 +12,6 @@
   const emailExibido = document.getElementById("email-exibido");
   const btnTrocar = document.getElementById("trocar-email");
   const btnEnviar = document.getElementById("enviar-pedido");
-  const blocoSuporte = document.getElementById("bloco-suporte");
-  const linkSuporte = document.getElementById("link-suporte");
 
   if (!formEmail || !formPedido) return;
 
@@ -33,13 +31,6 @@
       passoEmail.hidden = true;
       passoPedido.hidden = false;
     }
-  }
-
-  const supportEmail = String(document.body.dataset.supportEmail || "").trim();
-  if (supportEmail && supportEmail.includes("@") && blocoSuporte && linkSuporte) {
-    const assunto = encodeURIComponent("My Rep — suporte / alteração de página");
-    linkSuporte.href = `mailto:${supportEmail}?subject=${assunto}`;
-    blocoSuporte.hidden = false;
   }
 
   formEmail.addEventListener("submit", (ev) => {
@@ -79,7 +70,8 @@
       texto("logo_add_nome") ||
       arquivo("logo_add_arquivo") ||
       texto("logo_remover") ||
-      texto("mensagem").length >= 3
+      texto("mensagem").length >= 3 ||
+      texto("telefone")
     );
   }
 
@@ -94,7 +86,7 @@
     if (!temPedido(fd)) {
       return setStatus(
         statusPedido,
-        "Preencha ao menos uma ação rápida ou descreva o que precisa alterar.",
+        "Preencha uma alteração, descreva o pedido ou deixe um telefone para retorno.",
         "erro"
       );
     }

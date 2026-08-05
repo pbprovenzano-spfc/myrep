@@ -1,13 +1,19 @@
 /* =========================================================
    POST /api/briefing
-   Recebe ZIP do formulário e envia por e-mail via Resend.
-   Em desenvolvimento local (dev.js), o ZIP é salvo em /inbox.
+   Recebe ZIP do formulário → inbox interna (dashboard).
    ========================================================= */
 
-const { Resend } = require("resend");
 const { lerToken, PLANOS } = require("./_lib/pagamento");
+const { lerZip } = require("./_lib/zip");
+const {
+  criarMensagem,
+  salvarAnexos,
+  mimePorNome,
+  nomeArquivoSeguro
+} = require("./_lib/inbox");
+const { associarEmailSeVazio } = require("./_lib/paginas");
 
-const MAX_BYTES = 4.5 * 1024 * 1024;
+const MAX_BYTES = 25 * 1024 * 1024;
 
 function lerCorpo(req) {
   return new Promise((resolve, reject) => {
@@ -16,7 +22,7 @@ function lerCorpo(req) {
     req.on("data", (chunk) => {
       total += chunk.length;
       if (total > MAX_BYTES) {
-        reject(Object.assign(new Error("Pacote muito grande (máx. ~4 MB)."), { status: 413 }));
+        reject(Object.assign(new Error("Pacote muito grande (máx. 25 MB)."), { status: 413 }));
         req.destroy();
         return;
       }
@@ -37,7 +43,7 @@ function parseMultipart(buffer, contentType) {
   let start = buffer.indexOf(sep) + sep.length;
 
   while (start < buffer.length) {
-    if (buffer[start] === 45 && buffer[start + 1] === 45) break; // --
+    if (buffer[start] === 45 && buffer[start + 1] === 45) break;
     if (buffer[start] === 13 && buffer[start + 1] === 10) start += 2;
 
     const next = buffer.indexOf(sep, start);
@@ -69,6 +75,75 @@ function parseMultipart(buffer, contentType) {
   return parts;
 }
 
+function resumoTerritorio(dados) {
+  if (!dados || typeof dados !== "object") return null;
+  const estados = Array.isArray(dados.estados)
+    ? dados.estados.map((u) => String(u).toUpperCase())
+    : [];
+  const linhas = [];
+  if (estados.length) linhas.push(`Estados: ${estados.join(", ")}`);
+
+  const cidades = dados.cidades;
+  if (Array.isArray(cidades) && cidades.length) {
+    linhas.push(`Cidades: ${cidades.join(", ")}`);
+  } else if (cidades && typeof cidades === "object") {
+    const partes = Object.entries(cidades)
+      .filter(([, lista]) => Array.isArray(lista) && lista.length)
+      .map(([uf, lista]) => `${String(uf).toUpperCase()}: ${lista.join(", ")}`);
+    if (partes.length) linhas.push(`Cidades: ${partes.join(" | ")}`);
+  }
+
+  return linhas.length ? linhas.join("\n") : null;
+}
+
+function extrairDadosDoZip(zipBuffer, slug) {
+  const entradas = lerZip(zipBuffer);
+  let dados = null;
+  const anexos = [];
+
+  for (const entrada of entradas) {
+    const nome = entrada.nome.replace(/^\/+/, "");
+    if (nome === `clientes/${slug}.json` || nome.endsWith(`/${slug}.json`) || nome.endsWith(".json")) {
+      if (!dados) {
+        try {
+          dados = JSON.parse(entrada.data.toString("utf8"));
+        } catch {
+          /* ignora JSON inválido */
+        }
+      }
+      continue;
+    }
+
+    const prefixo = `assets-clientes/${slug}/`;
+    let nomeArquivo = null;
+    if (nome.startsWith(prefixo)) {
+      nomeArquivo = nome.slice(prefixo.length);
+    } else if (nome.startsWith("assets-clientes/") && nome.includes("/")) {
+      nomeArquivo = nome.split("/").pop();
+    } else if (!nome.includes("/")) {
+      nomeArquivo = nome;
+    }
+
+    if (nomeArquivo && !nomeArquivo.includes("/")) {
+      anexos.push({
+        nome: nomeArquivoSeguro(nomeArquivo),
+        data: entrada.data,
+        mime: mimePorNome(nomeArquivo),
+        origem: "zip"
+      });
+    }
+  }
+
+  anexos.push({
+    nome: `${slug}-myrep.zip`,
+    data: zipBuffer,
+    mime: "application/zip",
+    origem: "upload"
+  });
+
+  return { dados, anexos };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -92,6 +167,13 @@ module.exports = async function handler(req, res) {
     const nome = campo("nome");
     const emailCliente = campo("emailCliente");
     const acesso = campo("acesso");
+    const aceiteTermos = campo("aceiteTermos");
+
+    if (aceiteTermos !== "1" && aceiteTermos.toLowerCase() !== "true") {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ erro: "É necessário aceitar os termos de uso." }));
+      return;
+    }
 
     const pagamentoAtivo = !!(process.env.PAGAMENTO_TOKEN_SECRET || process.env.ASAAS_API_KEY);
     let acessoDados = null;
@@ -117,26 +199,30 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    const para = process.env.BRIEFING_TO_EMAIL;
-    const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
-
-    if (!apiKey || !para) {
-      res.statusCode = 500;
-      res.end(
-        JSON.stringify({
-          erro: "Servidor sem RESEND_API_KEY ou BRIEFING_TO_EMAIL configurados."
-        })
-      );
-      return;
-    }
-
-    const resend = new Resend(apiKey);
-    const arquivoZip = `${slug}-myrep.zip`;
-    const assunto = `My Rep briefing — ${nome} (${slug})`;
     const planoNome = acessoDados
       ? PLANOS[acessoDados.plano]?.nome || acessoDados.plano
       : null;
+
+    const assunto = `My Rep briefing — ${nome} (${slug})`;
+    let dadosJson = null;
+    let anexosInbox = [];
+    try {
+      const extraido = extrairDadosDoZip(zipPart.data, slug);
+      dadosJson = extraido.dados;
+      anexosInbox = extraido.anexos;
+    } catch (erroZip) {
+      console.error("briefing zip:", erroZip.message || erroZip);
+      anexosInbox = [
+        {
+          nome: `${slug}-myrep.zip`,
+          data: zipPart.data,
+          mime: "application/zip",
+          origem: "upload"
+        }
+      ];
+    }
+
+    const territorio = resumoTerritorio(dadosJson);
     const texto = [
       `Novo briefing My Rep.`,
       ``,
@@ -146,35 +232,68 @@ module.exports = async function handler(req, res) {
       acessoDados ? `E-mail do pagamento: ${acessoDados.email}` : null,
       planoNome ? `Plano: ${planoNome}` : null,
       acessoDados ? `Pagamento Asaas: ${acessoDados.paymentId}` : null,
+      territorio ? `` : null,
+      territorio,
       ``,
       `Anexo: pacote padrão (clientes/${slug}.json + assets-clientes/${slug}/).`,
       `Descompacte na raiz do projeto e envie para gerar a página.`
     ]
-      .filter(Boolean)
+      .filter((linha) => linha != null)
       .join("\n");
 
-    const { data, error } = await resend.emails.send({
-      from: de,
-      to: [para],
-      subject: assunto,
-      text: texto,
-      attachments: [
-        {
-          filename: arquivoZip,
-          content: zipPart.data.toString("base64")
-        }
-      ]
-    });
+    const dadosMensagem = {
+      ...(dadosJson && typeof dadosJson === "object" ? dadosJson : {}),
+      slug,
+      nome,
+      emailCliente: emailCliente || null,
+      acesso: acessoDados
+        ? {
+            email: acessoDados.email,
+            plano: acessoDados.plano,
+            paymentId: acessoDados.paymentId
+          }
+        : null
+    };
 
-    if (error) {
-      console.error("Resend:", error);
-      res.statusCode = 502;
-      res.end(JSON.stringify({ erro: error.message || "Falha ao enviar e-mail." }));
+    let mensagem = null;
+    try {
+      mensagem = await criarMensagem({
+        tipo: "briefing",
+        assunto,
+        remetenteNome: nome,
+        remetenteEmail: emailCliente || acessoDados?.email || null,
+        slug,
+        dados: dadosMensagem,
+        corpo: texto
+      });
+      if (mensagem?.id && anexosInbox.length) {
+        await salvarAnexos(mensagem.id, anexosInbox);
+      }
+      const emailAssoc = emailCliente || acessoDados?.email || null;
+      if (mensagem?.id && slug && emailAssoc) {
+        try {
+          await associarEmailSeVazio(slug, emailAssoc);
+        } catch (erroAssoc) {
+          console.error("briefing associar e-mail:", erroAssoc.message || erroAssoc);
+        }
+      }
+    } catch (erroInbox) {
+      console.error("briefing inbox:", erroInbox.message || erroInbox);
+    }
+
+    if (!mensagem?.id) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({ erro: "Falha ao gravar briefing na inbox." }));
       return;
     }
 
     res.statusCode = 200;
-    res.end(JSON.stringify({ ok: true, id: data && data.id }));
+    res.end(
+      JSON.stringify({
+        ok: true,
+        mensagemId: mensagem.id
+      })
+    );
   } catch (erro) {
     console.error(erro);
     res.statusCode = erro.status || 500;

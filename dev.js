@@ -12,7 +12,6 @@ const { execFileSync } = require("child_process");
 const PORTA = process.env.PORT || 3000;
 const RAIZ = __dirname;
 const DIST = path.join(RAIZ, "dist");
-const DIR_INBOX = path.join(RAIZ, "inbox");
 const OBSERVAR = ["clientes", "template", "publico", "assets-clientes", "api"];
 
 function carregarEnvLocal() {
@@ -64,7 +63,56 @@ function rodarBuild() {
 
 /* ---------------- servidor ---------------- */
 
-function servir(req, res) {
+const ROTAS_RESERVADAS = new Set([
+  "",
+  "api",
+  "css",
+  "js",
+  "img",
+  "admin",
+  "briefing",
+  "pagamento",
+  "alteracoes",
+  "termos",
+  "representantes",
+  "assinantes",
+  "assets-clientes",
+  "inbox"
+]);
+
+function slugDaUrl(urlPath) {
+  const partes = String(urlPath || "/")
+    .split("?")[0]
+    .split("/")
+    .filter(Boolean);
+  if (!partes.length) return "";
+  if (ROTAS_RESERVADAS.has(partes[0])) return "";
+  if (partes[0].includes(".")) return "";
+  return partes[0];
+}
+
+function servir404(res) {
+  const pagina404 = path.join(DIST, "404.html");
+  if (fs.existsSync(pagina404)) {
+    res.writeHead(404, { "Content-Type": TIPOS[".html"] });
+    res.end(injetarRecarga(fs.readFileSync(pagina404, "utf8")));
+  } else {
+    res.writeHead(404).end("Não encontrado");
+  }
+}
+
+async function paginaClienteAtiva(slug) {
+  if (!slug) return true;
+  try {
+    const { paginaAtiva } = require("./api/_lib/paginas");
+    return await paginaAtiva(slug);
+  } catch (erro) {
+    console.error("gate pagina:", erro.message || erro);
+    return true;
+  }
+}
+
+async function servir(req, res) {
   let url = decodeURIComponent(req.url.split("?")[0]);
   let caminho = path.join(DIST, url);
 
@@ -72,6 +120,15 @@ function servir(req, res) {
   if (!caminho.startsWith(DIST)) {
     res.writeHead(403).end("Acesso negado");
     return;
+  }
+
+  const slugCliente = slugDaUrl(url);
+  if (slugCliente) {
+    const ativa = await paginaClienteAtiva(slugCliente);
+    if (!ativa) {
+      servir404(res);
+      return;
+    }
   }
 
   // /slug  →  /slug/index.html
@@ -82,13 +139,7 @@ function servir(req, res) {
   }
 
   if (!fs.existsSync(caminho) || fs.statSync(caminho).isDirectory()) {
-    const pagina404 = path.join(DIST, "404.html");
-    if (fs.existsSync(pagina404)) {
-      res.writeHead(404, { "Content-Type": TIPOS[".html"] });
-      res.end(injetarRecarga(fs.readFileSync(pagina404, "utf8")));
-    } else {
-      res.writeHead(404).end("Não encontrado");
-    }
+    servir404(res);
     return;
   }
 
@@ -196,44 +247,116 @@ function briefingLocal(req, res) {
       const parts = parseMultipartDev(buffer, req.headers["content-type"]);
       const slugPart = parts.find((p) => p.name === "slug" && !p.filename);
       const nomePart = parts.find((p) => p.name === "nome" && !p.filename);
+      const emailPart = parts.find((p) => p.name === "emailCliente" && !p.filename);
       const acessoPart = parts.find((p) => p.name === "acesso" && !p.filename);
       const zipPart = parts.find((p) => p.name === "zip");
       const slug = slugPart ? slugPart.data.toString("utf8").trim() : "briefing";
       const nome = nomePart ? nomePart.data.toString("utf8").trim() : slug;
+      const emailCliente = emailPart ? emailPart.data.toString("utf8").trim() : "";
       const acesso = acessoPart ? acessoPart.data.toString("utf8").trim() : "";
       if (!zipPart) throw new Error("ZIP ausente");
 
+      let acessoDados = null;
       if (process.env.PAGAMENTO_TOKEN_SECRET || process.env.ASAAS_API_KEY) {
         const { lerToken } = require("./api/_lib/pagamento");
-        lerToken(acesso);
+        acessoDados = lerToken(acesso);
       }
 
-      fs.mkdirSync(DIR_INBOX, { recursive: true });
-      const arquivo = path.join(DIR_INBOX, `${slug}-${Date.now()}.zip`);
-      fs.writeFileSync(arquivo, zipPart.data);
-      console.log(`  ✓ briefing salvo: ${arquivo}`);
+      const { lerZip } = require("./api/_lib/zip");
+      const {
+        criarMensagem,
+        salvarAnexos,
+        mimePorNome,
+        nomeArquivoSeguro
+      } = require("./api/_lib/inbox");
 
-      if (process.env.RESEND_API_KEY && process.env.BRIEFING_TO_EMAIL) {
+      let dadosJson = null;
+      const anexosInbox = [];
+      try {
+        for (const entrada of lerZip(zipPart.data)) {
+          const n = entrada.nome.replace(/^\/+/, "");
+          if (n.endsWith(".json") && !dadosJson) {
+            try {
+              dadosJson = JSON.parse(entrada.data.toString("utf8"));
+            } catch {
+              /* ignore */
+            }
+            continue;
+          }
+          const prefixo = `assets-clientes/${slug}/`;
+          let nomeArq = null;
+          if (n.startsWith(prefixo)) nomeArq = n.slice(prefixo.length);
+          else if (n.startsWith("assets-clientes/") && n.includes("/")) nomeArq = n.split("/").pop();
+          if (nomeArq && !nomeArq.includes("/")) {
+            anexosInbox.push({
+              nome: nomeArquivoSeguro(nomeArq),
+              data: entrada.data,
+              mime: mimePorNome(nomeArq),
+              origem: "zip"
+            });
+          }
+        }
+      } catch (erroZip) {
+        console.error("briefing local zip:", erroZip.message || erroZip);
+      }
+      anexosInbox.push({
+        nome: `${slug}-myrep.zip`,
+        data: zipPart.data,
+        mime: "application/zip",
+        origem: "upload"
+      });
+
+      const assunto = `My Rep briefing — ${nome} (${slug})`;
+      const texto = [
+        `Novo briefing My Rep (dev).`,
+        ``,
+        `Nome: ${nome}`,
+        `Slug: ${slug}`,
+        emailCliente ? `E-mail do cliente: ${emailCliente}` : null,
+        acessoDados ? `E-mail do pagamento: ${acessoDados.email}` : null
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const mensagem = await criarMensagem({
+        tipo: "briefing",
+        assunto,
+        remetenteNome: nome,
+        remetenteEmail: emailCliente || acessoDados?.email || null,
+        slug,
+        dados: {
+          ...(dadosJson && typeof dadosJson === "object" ? dadosJson : {}),
+          slug,
+          nome,
+          emailCliente: emailCliente || null
+        },
+        corpo: texto
+      });
+      if (mensagem?.id) await salvarAnexos(mensagem.id, anexosInbox);
+      console.log(`  ✓ briefing inbox: ${mensagem?.id || "?"}`);
+
+      const emailAssoc = emailCliente || acessoDados?.email || null;
+      if (mensagem?.id && slug && emailAssoc) {
         try {
-          const { Resend } = require("resend");
-          const resend = new Resend(process.env.RESEND_API_KEY);
-          await resend.emails.send({
-            from: process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>",
-            to: [process.env.BRIEFING_TO_EMAIL],
-            subject: `My Rep briefing — ${nome} (${slug})`,
-            text: `Briefing local salvo e enviado.\n\nArquivo: ${path.basename(arquivo)}`,
-            attachments: [{ filename: `${slug}-myrep.zip`, content: zipPart.data.toString("base64") }]
-          });
-          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ ok: true }));
-          return;
-        } catch (erroEmail) {
-          console.error("Resend local:", erroEmail.message || erroEmail);
+          const { associarEmailSeVazio } = require("./api/_lib/paginas");
+          await associarEmailSeVazio(slug, emailAssoc);
+        } catch (erroAssoc) {
+          console.error("briefing associar e-mail:", erroAssoc.message || erroAssoc);
         }
       }
 
+      if (!mensagem?.id) {
+        throw Object.assign(new Error("Falha ao gravar briefing na inbox."), { status: 500 });
+      }
+
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true, modo: "local", arquivo: path.basename(arquivo) }));
+      res.end(
+        JSON.stringify({
+          ok: true,
+          modo: "local",
+          mensagemId: mensagem.id
+        })
+      );
     } catch (erro) {
       console.error(erro);
       res.writeHead(erro.status || 400, { "Content-Type": "application/json; charset=utf-8" });
@@ -247,7 +370,9 @@ const API_HANDLERS = {
   "/api/pagamento/validar": () => require("./api/pagamento/validar"),
   "/api/asaas/webhook": () => require("./api/asaas/webhook"),
   "/api/assinantes": () => require("./api/assinantes"),
-  "/api/alteracoes": () => require("./api/alteracoes")
+  "/api/admin": () => require("./api/admin"),
+  "/api/alteracoes": () => require("./api/alteracoes"),
+  "/api/paginas/status": () => require("./api/paginas/status")
 };
 
 function invocarApi(handler, req, res) {
@@ -285,13 +410,19 @@ http.createServer((req, res) => {
     return;
   }
 
-  servir(req, res);
+  Promise.resolve(servir(req, res)).catch((erro) => {
+    console.error(erro);
+    if (!res.headersSent) {
+      res.writeHead(500).end("Erro interno");
+    }
+  });
 }).listen(PORTA, () => {
   console.log(`▸ Servidor em http://localhost:${PORTA}`);
   console.log(`  Home:       http://localhost:${PORTA}/`);
   console.log(`  Briefing:   http://localhost:${PORTA}/briefing/`);
   console.log(`  Pagamento:  http://localhost:${PORTA}/pagamento/ok/`);
-  console.log(`  Assinantes: http://localhost:${PORTA}/assinantes/`);
+  console.log(`  Admin:      http://localhost:${PORTA}/admin/`);
+  console.log(`  Assinantes: http://localhost:${PORTA}/assinantes/ → /admin/`);
   console.log(`  Alterações: http://localhost:${PORTA}/alteracoes/`);
   console.log(`  Ctrl+C para parar.\n`);
   observar();

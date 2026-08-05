@@ -1,5 +1,9 @@
 const { lerJsonBody, json, PLANOS, valoresIguais, asaasFetch } = require("../_lib/pagamento");
 const { registrarPagamentoEvento, registrarAcesso } = require("../_lib/acessos");
+const {
+  marcarAdimplentePorEmail,
+  marcarInadimplentePorEmail
+} = require("../_lib/paginas");
 
 function identificarPlano(pagamento) {
   if (!pagamento || pagamento.value == null) return null;
@@ -55,6 +59,11 @@ module.exports = async function handler(req, res) {
             dias: 14,
             origem: "webhook"
           });
+          try {
+            await marcarAdimplentePorEmail(email);
+          } catch (erroPaginas) {
+            console.error("Webhook reativar páginas:", erroPaginas.message || erroPaginas);
+          }
         }
       } catch (erroCliente) {
         console.error("Webhook cliente:", erroCliente.message || erroCliente);
@@ -62,17 +71,33 @@ module.exports = async function handler(req, res) {
     }
 
     if (
+      (evento === "PAYMENT_OVERDUE" || evento === "PAYMENT_UPDATED") &&
+      pagamento?.customer &&
+      process.env.ASAAS_API_KEY &&
+      String(pagamento?.status || "").toUpperCase() === "OVERDUE"
+    ) {
+      try {
+        const cliente = await asaasFetch(`/customers/${encodeURIComponent(pagamento.customer)}`);
+        if (cliente?.email) {
+          await marcarInadimplentePorEmail(cliente.email);
+        }
+      } catch (erroOverdue) {
+        console.error("Webhook overdue páginas:", erroOverdue.message || erroOverdue);
+      }
+    }
+
+    if (
       (evento === "PAYMENT_RECEIVED" || evento === "PAYMENT_CONFIRMED") &&
-      process.env.RESEND_API_KEY &&
-      process.env.BRIEFING_TO_EMAIL
+      process.env.RESEND_API_KEY
     ) {
       try {
         const { Resend } = require("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
         const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
+        const para = process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com";
         await resend.emails.send({
           from: de,
-          to: [process.env.BRIEFING_TO_EMAIL],
+          to: [para],
           subject: `My Rep pagamento — ${plano ? plano.nome : "cobrança"} (${pagamento?.id || "?"})`,
           text: [
             `Evento: ${evento}`,
@@ -83,7 +108,7 @@ module.exports = async function handler(req, res) {
             `Cliente Asaas: ${pagamento?.customer || "—"}`,
             `Billing: ${pagamento?.billingType || "—"}`,
             ``,
-            `Painel: /assinantes/`
+            `Painel: /admin/`
           ].join("\n")
         });
       } catch (erroEmail) {

@@ -72,6 +72,8 @@
       `<label class="opcao opcao--uf"><input type="checkbox" name="estados" value="${uf}"> ${uf}</label>`
   ).join("");
 
+  ufsGrid.addEventListener("change", () => syncCidadesUi());
+
   const limpar = (s) => String(s || "").trim();
   const soDigitos = (s) => String(s || "").replace(/\D/g, "");
   const slugOk = (s) => /^[a-z0-9-]+$/.test(s);
@@ -128,25 +130,180 @@
     return v.includes(".") ? `https://${v.replace(/^https?:\/\//i, "")}` : v;
   }
 
-  function parseCidades(texto, estados) {
+  function cidadesUnicas(lista) {
+    const vistos = new Set();
+    const out = [];
+    for (const item of lista) {
+      const nome = limpar(item);
+      if (!nome) continue;
+      const chave = nome.toLocaleLowerCase("pt-BR");
+      if (vistos.has(chave)) continue;
+      vistos.add(chave);
+      out.push(nome);
+    }
+    return out;
+  }
+
+  function partirCidades(trecho) {
+    return String(trecho || "")
+      .split(/[,;|/]+/)
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }
+
+  /** Interpreta o textarea livre (1 UF ou texto com prefixo UF:). */
+  function parseCidadesTexto(texto, estados) {
     const raw = limpar(texto);
     if (!raw) return estados.length === 1 ? [] : {};
 
-    const temUf = /(?:^|\n)\s*[A-Za-z]{2}\s*:/.test(raw);
-    if (estados.length === 1 && !temUf) return linhas(raw);
-
     const mapa = {};
+    const orfas = [];
+    const ufsValidas = new Set(UFS);
+
     for (const linha of linhas(raw)) {
-      const m = linha.match(/^([A-Za-z]{2})\s*:\s*(.+)$/);
-      if (!m) continue;
-      const uf = m[1].toUpperCase();
-      mapa[uf] = m[2]
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean);
+      let m = linha.match(/^([A-Za-z]{2})\s*[:\-–—]\s*(.+)$/);
+      if (!m) {
+        const mEspaco = linha.match(/^([A-Za-z]{2})\s+(.+)$/);
+        if (mEspaco && ufsValidas.has(mEspaco[1].toUpperCase())) m = mEspaco;
+      }
+
+      if (m) {
+        const uf = m[1].toUpperCase();
+        if (!mapa[uf]) mapa[uf] = [];
+        mapa[uf].push(...partirCidades(m[2]));
+        continue;
+      }
+
+      orfas.push(...partirCidades(linha));
     }
-    return mapa;
+
+    for (const uf of Object.keys(mapa)) {
+      mapa[uf] = cidadesUnicas(mapa[uf]);
+    }
+
+    if (estados.length === 1) {
+      return cidadesUnicas([...Object.values(mapa).flat(), ...orfas]);
+    }
+
+    if (orfas.length) {
+      throw new Error(
+        "Com vários estados, use o campo de cada UF ou o formato BA: Salvador, Camaçari."
+      );
+    }
+
+    const selecionadas = new Set(estados);
+    const extras = Object.keys(mapa).filter((uf) => mapa[uf].length && !selecionadas.has(uf));
+    if (extras.length) {
+      throw new Error(`Há cidades em UF não marcada: ${extras.join(", ")}.`);
+    }
+
+    const filtrado = {};
+    for (const uf of estados) {
+      if (mapa[uf]?.length) filtrado[uf] = mapa[uf];
+    }
+    return filtrado;
   }
+
+  function estadosSelecionados() {
+    return [...form.querySelectorAll('input[name="estados"]:checked')].map((el) =>
+      String(el.value).toUpperCase()
+    );
+  }
+
+  function syncCidadesUi() {
+    const unicaWrap = document.getElementById("cidades-unica-wrap");
+    const unica = document.getElementById("cidades-unica");
+    const porUf = document.getElementById("cidades-por-uf");
+    const ajuda = document.getElementById("cidades-ajuda");
+    if (!unicaWrap || !unica || !porUf) return;
+
+    const estados = estadosSelecionados();
+
+    if (estados.length <= 1) {
+      if (!porUf.hidden) {
+        const juntadas = [...porUf.querySelectorAll("textarea[data-uf]")]
+          .flatMap((el) => partirCidades(linhas(el.value).join(",")))
+          .filter(Boolean);
+        if (juntadas.length && !limpar(unica.value)) {
+          unica.value = cidadesUnicas(juntadas).join("\n");
+        }
+      }
+      porUf.hidden = true;
+      porUf.innerHTML = "";
+      unicaWrap.hidden = false;
+      if (ajuda) {
+        ajuda.textContent =
+          estados.length === 1
+            ? `Cidades em ${estados[0]}: uma por linha ou separadas por vírgula. Vazio = estado inteiro.`
+            : "Selecione os estados e informe as cidades. Vazio = estado inteiro.";
+      }
+      return;
+    }
+
+    const prev = {};
+    porUf.querySelectorAll("textarea[data-uf]").forEach((el) => {
+      prev[el.dataset.uf] = el.value;
+    });
+    if (!Object.keys(prev).length && limpar(unica.value)) {
+      try {
+        const parseado = parseCidadesTexto(unica.value, estados);
+        if (parseado && typeof parseado === "object" && !Array.isArray(parseado)) {
+          for (const [uf, lista] of Object.entries(parseado)) {
+            prev[uf] = (lista || []).join("\n");
+          }
+        } else if (Array.isArray(parseado) && parseado.length) {
+          prev[estados[0]] = parseado.join("\n");
+        } else if (limpar(unica.value)) {
+          prev[estados[0]] = unica.value;
+        }
+      } catch {
+        prev[estados[0]] = unica.value;
+      }
+    }
+
+    unicaWrap.hidden = true;
+    porUf.hidden = false;
+    porUf.replaceChildren();
+    for (const uf of estados) {
+      const label = document.createElement("label");
+      label.className = "campo";
+      const rotulo = document.createElement("span");
+      rotulo.className = "campo__rotulo";
+      rotulo.textContent = `Cidades em ${uf}`;
+      const ta = document.createElement("textarea");
+      ta.dataset.uf = uf;
+      ta.name = `cidades_${uf}`;
+      ta.rows = 2;
+      ta.placeholder = "Uma por linha ou separadas por vírgula";
+      if (prev[uf]) ta.value = prev[uf];
+      label.append(rotulo, ta);
+      porUf.append(label);
+    }
+    if (ajuda) {
+      ajuda.textContent =
+        "Com vários estados, preencha as cidades em cada UF. Vazio numa UF = estado inteiro.";
+    }
+  }
+
+  function coletarCidades(estados) {
+    if (!estados.length) return {};
+
+    const porUfEl = document.getElementById("cidades-por-uf");
+    if (estados.length > 1 && porUfEl && !porUfEl.hidden) {
+      const mapa = {};
+      for (const uf of estados) {
+        const el = porUfEl.querySelector(`textarea[data-uf="${uf}"]`);
+        const lista = cidadesUnicas(linhas(el?.value).flatMap(partirCidades));
+        if (lista.length) mapa[uf] = lista;
+      }
+      return mapa;
+    }
+
+    const unica = document.getElementById("cidades-unica");
+    return parseCidadesTexto(unica?.value || "", estados);
+  }
+
+  syncCidadesUi();
 
   function casarLogo(nomeMarca, arquivos) {
     const chave = nomeSeguro(nomeMarca).replace(/^marca-/, "");
@@ -383,7 +540,7 @@
     const ddd = soDigitos(fd.get("whatsappDdd"));
     const numeroZap = soDigitos(fd.get("whatsappNumero"));
     const whatsapp = `55${ddd}${numeroZap}`;
-    const estados = fd.getAll("estados").map((u) => String(u).toUpperCase());
+    const estados = estadosSelecionados();
     const fotoFile = fd.get("foto");
 
     if (!nome) return setStatus("Informe seu nome completo.", "erro");
@@ -401,12 +558,17 @@
     if (!(fotoFile instanceof File) || !fotoFile.size) {
       return setStatus("Envie a foto ou logo do perfil.", "erro");
     }
+    if (!form.elements.aceiteTermos?.checked) {
+      return setStatus("Aceite os termos de uso para enviar o briefing.", "erro");
+    }
 
     let telefones;
     let redes;
+    let cidades;
     try {
       telefones = coletarTelefones();
       redes = coletarRedes();
+      cidades = coletarCidades(estados);
     } catch (erro) {
       return setStatus(erro.message, "erro");
     }
@@ -463,7 +625,7 @@
       fotoTipo: fd.get("fotoTipo") === "logo" ? "logo" : "pessoa",
       marcas,
       estados,
-      cidades: parseCidades(fd.get("cidades"), estados),
+      cidades,
       segmentos,
       catalogos,
       paleta: limpar(fd.get("paleta")) || "ambar"
@@ -477,8 +639,8 @@
     try {
       const zipBlob = await montarZip(json, arquivosZip);
 
-      if (zipBlob.size > 4 * 1024 * 1024) {
-        throw new Error("Pacote acima de 4 MB. Reduza imagens/PDFs e tente de novo.");
+      if (zipBlob.size > 25 * 1024 * 1024) {
+        throw new Error("Pacote acima de 25 MB. Reduza imagens/PDFs e tente de novo.");
       }
 
       setStatus("Enviando briefing…", "info");
@@ -488,6 +650,7 @@
       corpo.append("nome", nome);
       if (emails[0]) corpo.append("emailCliente", emails[0]);
       corpo.append("acesso", acessoToken || acessoInput?.value || "");
+      corpo.append("aceiteTermos", "1");
       corpo.append("zip", zipBlob, `${slug}-myrep.zip`);
 
       const resp = await fetch("/api/briefing", {
@@ -506,18 +669,8 @@
         throw new Error(payload.erro || `Falha no envio (${resp.status}).`);
       }
 
-      form.reset();
-      form.querySelector('input[name="paleta"][value="ambar"]').checked = true;
-      form.querySelector('input[name="fotoTipo"][value="pessoa"]').checked = true;
-      form.querySelector('input[name="destaque"][value="pessoa"]').checked = true;
-      ["emails", "telefones", "redes", "segmentos"].forEach(resetLista);
-
-      setStatus(
-        payload.modo === "local"
-          ? "Briefing salvo localmente em /inbox. Em produção o ZIP vai por e-mail."
-          : "Briefing enviado! Em breve montamos sua página.",
-        "ok"
-      );
+      location.href = "/briefing/ok/";
+      return;
     } catch (erro) {
       setStatus(erro.message || "Não foi possível enviar. Tente novamente.", "erro");
     } finally {

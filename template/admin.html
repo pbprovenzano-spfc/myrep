@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — My Rep</title>
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+</head>
+<body class="pagina-admin">
+
+<header class="assinantes-topo admin-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Admin</p>
+  <button type="button" class="btn btn--fantasma-ink assinantes-sair" id="btn-sair" hidden>Sair</button>
+</header>
+
+<main class="assinantes-shell admin-shell">
+  <section class="assinantes-login" id="tela-login">
+    <h1 class="assinantes-titulo">Painel My Rep</h1>
+    <p class="assinantes-sub">Receita, inbox, páginas e assinantes em um só lugar.</p>
+    <form id="form-login" class="assinantes-form" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Senha do painel</span>
+        <input name="senha" type="password" required autocomplete="current-password">
+      </label>
+      <p class="briefing-status" id="login-status" role="status"></p>
+      <button class="btn btn--primario" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <section class="assinantes-painel admin-painel" id="tela-painel" hidden>
+    <header class="assinantes-painel__topo">
+      <div>
+        <h1 class="assinantes-titulo">Admin</h1>
+        <p class="assinantes-sub">Visão do negócio e da operação.</p>
+      </div>
+      <button type="button" class="btn btn--primario" id="btn-atualizar">Atualizar</button>
+    </header>
+
+    <nav class="admin-tabs" aria-label="Seções do painel">
+      <a class="admin-tab" href="#visao" data-tab="visao">Visão geral</a>
+      <a class="admin-tab" href="#inbox" data-tab="inbox">
+        Caixa de entrada
+        <span class="admin-tab__badge" id="badge-nao-lidas" hidden>0</span>
+      </a>
+      <a class="admin-tab" href="#paginas" data-tab="paginas">Páginas</a>
+      <a class="admin-tab" href="#assinantes" data-tab="assinantes">Assinantes</a>
+    </nav>
+
+    <p class="briefing-status" id="painel-status" role="status"></p>
+
+    <!-- VISÃO GERAL -->
+    <div class="admin-aba" id="aba-visao" data-aba="visao">
+      <div class="admin-kpis" id="kpi-cards">
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">MRR</p>
+          <p class="admin-kpi__valor" id="kpi-mrr">—</p>
+          <p class="admin-kpi__meta">Assinaturas ativas normalizadas</p>
+        </article>
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">Assinaturas ativas</p>
+          <p class="admin-kpi__valor" id="kpi-ativas">—</p>
+          <p class="admin-kpi__meta" id="kpi-por-plano">—</p>
+        </article>
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">Recebido no mês</p>
+          <p class="admin-kpi__valor" id="kpi-mes">—</p>
+          <p class="admin-kpi__meta" id="kpi-variacao">—</p>
+        </article>
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">Ticket médio</p>
+          <p class="admin-kpi__valor" id="kpi-ticket">—</p>
+          <p class="admin-kpi__meta">Pagamentos confirmados no mês</p>
+        </article>
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">Vencidos</p>
+          <p class="admin-kpi__valor" id="kpi-vencidos">—</p>
+          <p class="admin-kpi__meta" id="kpi-vencidos-meta">—</p>
+        </article>
+        <article class="admin-kpi">
+          <p class="admin-kpi__rotulo">Inbox não lidas</p>
+          <p class="admin-kpi__valor" id="kpi-nao-lidas">—</p>
+          <p class="admin-kpi__meta">Briefings e alterações</p>
+        </article>
+      </div>
+
+      <section class="assinantes-bloco admin-ops">
+        <h2 class="assinantes-bloco__titulo">Páginas — operação</h2>
+        <div class="admin-kpis admin-kpis--ops" id="kpi-paginas">
+          <a class="admin-kpi admin-kpi--link" href="#paginas/inadimplentes">
+            <p class="admin-kpi__rotulo">Em risco</p>
+            <p class="admin-kpi__valor" id="kpi-pg-risco">—</p>
+            <p class="admin-kpi__meta">Inadimplentes na carência</p>
+          </a>
+          <a class="admin-kpi admin-kpi--link" href="#paginas/inativas">
+            <p class="admin-kpi__rotulo">Inativas</p>
+            <p class="admin-kpi__valor" id="kpi-pg-inativas">—</p>
+            <p class="admin-kpi__meta">404 no link público</p>
+          </a>
+          <a class="admin-kpi admin-kpi--link" href="#paginas/sem_email">
+            <p class="admin-kpi__rotulo">Sem e-mail</p>
+            <p class="admin-kpi__valor" id="kpi-pg-sem-email">—</p>
+            <p class="admin-kpi__meta">Fora do controle Asaas</p>
+          </a>
+          <a class="admin-kpi admin-kpi--link" href="#paginas/manual">
+            <p class="admin-kpi__rotulo">Controle manual</p>
+            <p class="admin-kpi__valor" id="kpi-pg-manual">—</p>
+            <p class="admin-kpi__meta">Automação pausada</p>
+          </a>
+        </div>
+      </section>
+
+      <section class="assinantes-bloco">
+        <h2 class="assinantes-bloco__titulo">Pagamentos recentes</h2>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-pagamentos-resumo">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Plano</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Meio</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- INBOX -->
+    <div class="admin-aba" id="aba-inbox" data-aba="inbox" hidden>
+      <div class="admin-inbox-filtros">
+        <label class="campo campo--inline">
+          <span class="campo__rotulo">Tipo</span>
+          <select id="filtro-tipo">
+            <option value="">Todos</option>
+            <option value="briefing">Briefing</option>
+            <option value="alteracao">Alteração</option>
+          </select>
+        </label>
+        <label class="campo campo--inline">
+          <span class="campo__rotulo">Status</span>
+          <select id="filtro-status">
+            <option value="">Todos</option>
+            <option value="nova">Nova</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="publicada">Publicada</option>
+            <option value="arquivada">Arquivada</option>
+          </select>
+        </label>
+        <label class="campo campo--inline campo--busca">
+          <span class="campo__rotulo">Busca</span>
+          <input type="search" id="filtro-busca" placeholder="Nome, e-mail, slug…">
+        </label>
+        <button type="button" class="btn btn--fantasma-ink" id="btn-filtrar-inbox">Filtrar</button>
+      </div>
+
+      <div class="admin-inbox">
+        <aside class="admin-inbox__lista" id="inbox-lista" aria-label="Mensagens">
+          <p class="admin-inbox__vazio" id="inbox-vazio">Nenhuma mensagem.</p>
+        </aside>
+        <section class="admin-inbox__detalhe" id="inbox-detalhe" aria-live="polite">
+          <p class="admin-inbox__placeholder">Selecione uma mensagem para ver os detalhes e anexos.</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- PÁGINAS -->
+    <div class="admin-aba" id="aba-paginas" data-aba="paginas" hidden>
+      <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
+        <div class="admin-paginas-topo">
+          <div>
+            <h2 class="assinantes-bloco__titulo">Páginas do projeto</h2>
+            <p class="assinantes-sub">Atraso no pagamento: carência de 3 dias, depois a página desativa sozinha (404). Ativar/desativar na mão trava o automático até “Voltar ao automático”.</p>
+          </div>
+          <button type="button" class="btn btn--primario" id="btn-sync-paginas">Atualizar adimplência</button>
+        </div>
+        <div class="admin-filtros-chips" id="filtro-paginas" role="toolbar" aria-label="Filtrar páginas">
+          <button type="button" class="admin-chip admin-chip--ativa" data-filtro-pagina="">Todas</button>
+          <button type="button" class="admin-chip" data-filtro-pagina="adimplente">Adimplentes</button>
+          <button type="button" class="admin-chip" data-filtro-pagina="inadimplente">Inadimplentes</button>
+          <button type="button" class="admin-chip" data-filtro-pagina="inativa">Inativas</button>
+          <button type="button" class="admin-chip" data-filtro-pagina="sem_email">Sem e-mail</button>
+          <button type="button" class="admin-chip" data-filtro-pagina="manual">Manual</button>
+        </div>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-paginas">
+            <thead>
+              <tr>
+                <th>Página</th>
+                <th>E-mail de cobrança</th>
+                <th>Situação</th>
+                <th>Modo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ASSINANTES -->
+    <div class="admin-aba" id="aba-assinantes" data-aba="assinantes" hidden>
+      <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
+        <h2 class="assinantes-bloco__titulo">Liberar briefing manualmente</h2>
+        <form id="form-liberar" class="assinantes-form assinantes-form--linha" novalidate>
+          <label class="campo">
+            <span class="campo__rotulo">E-mail</span>
+            <input name="email" type="email" required placeholder="cliente@email.com">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Plano</span>
+            <select name="plano">
+              <option value="mensal">Mensal (R$ 17,99)</option>
+              <option value="anual_parcelado">Anual parcelado (R$ 14,99)</option>
+              <option value="anual_avista">Anual à vista (R$ 161,89)</option>
+            </select>
+          </label>
+          <button class="btn btn--primario" type="submit">Gerar link</button>
+        </form>
+        <p class="assinantes-link" id="liberar-resultado" hidden></p>
+      </section>
+
+      <section class="assinantes-bloco">
+        <h2 class="assinantes-bloco__titulo">Acessos ao briefing (Supabase)</h2>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-acessos">
+            <thead>
+              <tr>
+                <th>E-mail</th>
+                <th>Plano</th>
+                <th>Origem</th>
+                <th>Expira</th>
+                <th>Pagamento</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="assinantes-bloco">
+        <h2 class="assinantes-bloco__titulo">Assinaturas</h2>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-assinaturas">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Página</th>
+                <th>Plano</th>
+                <th>Status</th>
+                <th>Próx. cobr.</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="assinantes-bloco">
+        <h2 class="assinantes-bloco__titulo">Pagamentos recentes</h2>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-pagamentos">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Plano</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Meio</th>
+                <th>Data</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script src="/js/admin.js" defer></script>
+</body>
+</html>

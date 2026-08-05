@@ -24,7 +24,7 @@
 <main class="briefing-shell">
   <header class="briefing-intro">
     <h1 class="briefing-intro__titulo">Criar seu My Rep</h1>
-    <p class="briefing-intro__texto">Preencha os dados da sua página, anexe foto/logo, marcas e PDFs. Ao enviar, montamos um pacote completo e recebemos por e-mail.</p>
+    <p class="briefing-intro__texto">Preencha os dados da sua página, anexe foto/logo, marcas e PDFs. Ao enviar, montamos um pacote completo para nossa equipe publicar sua página.</p>
   </header>
 
   <aside class="briefing-gate" id="briefing-gate" hidden>
@@ -152,11 +152,14 @@
         <div class="ufs-grid" id="ufs-grid"></div>
       </fieldset>
 
-      <label class="campo">
+      <div class="campo" id="campo-cidades">
         <span class="campo__rotulo">Cidades atendidas</span>
-        <textarea name="cidades" rows="4" placeholder="Salvador&#10;Lauro de Freitas&#10;&#10;Ou, com vários estados:&#10;BA: Salvador, Camaçari&#10;SE: Aracaju"></textarea>
-        <span class="campo__ajuda">1 estado: uma cidade por linha. Vários: <code>UF: cidade1, cidade2</code>. Vazio = estado inteiro.</span>
-      </label>
+        <div id="cidades-unica-wrap">
+          <textarea name="cidades" id="cidades-unica" rows="4" placeholder="Salvador&#10;Lauro de Freitas"></textarea>
+        </div>
+        <div id="cidades-por-uf" class="cidades-por-uf" hidden></div>
+        <span class="campo__ajuda" id="cidades-ajuda">Uma cidade por linha (ou separadas por vírgula). Vazio = estado inteiro.</span>
+      </div>
 
       <div class="campo">
         <span class="campo__rotulo">Segmentos / o que vende</span>
@@ -213,8 +216,13 @@
     </fieldset>
 
     <aside class="briefing-aviso" role="note">
-      <p>Personalizações específicas podem ser solicitadas no contato: <a href="mailto:ola@myrep.app">ola@myrep.app</a></p>
+      <p>Personalizações específicas podem ser solicitadas no contato: <a href="mailto:myrep.sup@gmail.com">myrep.sup@gmail.com</a></p>
     </aside>
+
+    <label class="opcao opcao--termos">
+      <input type="checkbox" name="aceiteTermos" id="briefing-aceite-termos" value="1" required>
+      <span>Li e aceito os <a href="/termos/" target="_blank" rel="noopener">termos de uso</a> <abbr title="obrigatório">*</abbr></span>
+    </label>
 
     <div class="briefing-acoes">
       <p class="briefing-status" id="briefing-status" role="status" aria-live="polite"></p>

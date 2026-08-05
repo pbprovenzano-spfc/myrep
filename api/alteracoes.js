@@ -1,10 +1,17 @@
 /* =========================================================
    POST /api/alteracoes
-   Solicitação de alteração (multipart) → e-mail via Resend.
+   Solicitação de alteração (multipart) → inbox + e-mail via Resend.
    ========================================================= */
 
 const { Resend } = require("resend");
 const { json } = require("./_lib/pagamento");
+const {
+  criarMensagem,
+  atualizarMensagemEmail,
+  salvarAnexos,
+  mimePorNome,
+  nomeArquivoSeguro
+} = require("./_lib/inbox");
 
 const MAX_BYTES = 4.5 * 1024 * 1024;
 const MAX_ANEXO = 3.5 * 1024 * 1024;
@@ -69,15 +76,8 @@ function parseMultipart(buffer, contentType) {
   return parts;
 }
 
-function nomeArquivoSeguro(nome, fallback) {
-  const base = String(nome || fallback || "arquivo")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 80);
-  return base || fallback || "arquivo";
+function nomeArquivoSeguroEmail(nome, fallback) {
+  return nomeArquivoSeguro(nome, fallback);
 }
 
 function anexoDeParte(part, prefixo) {
@@ -87,8 +87,11 @@ function anexoDeParte(part, prefixo) {
   }
   const original = part.filename.replace(/[/\\]/g, "").slice(0, 120) || "arquivo";
   return {
-    filename: `${prefixo}-${nomeArquivoSeguro(original, "arquivo")}`,
-    content: part.data.toString("base64")
+    filename: `${prefixo}-${nomeArquivoSeguroEmail(original, "arquivo")}`,
+    content: part.data.toString("base64"),
+    data: part.data,
+    mime: mimePorNome(original),
+    origem: "upload"
   };
 }
 
@@ -112,6 +115,7 @@ module.exports = async function handler(req, res) {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "")
       .slice(0, 80);
+    const telefone = campo("telefone").slice(0, 40);
     const mensagem = campo("mensagem").slice(0, 4000);
 
     const catalogoAddNome = campo("catalogo_add_nome").slice(0, 120);
@@ -155,28 +159,19 @@ module.exports = async function handler(req, res) {
     }
     if (logoRemover) acoes.push(`Remover logo/marca: ${logoRemover}`);
     if (mensagem.length >= 3) acoes.push("Pedido em texto livre (ver abaixo).");
+    if (telefone && !acoes.length) acoes.push("Pediu retorno de contato por telefone/WhatsApp.");
 
-    if (!acoes.length) {
+    if (!acoes.length && !telefone) {
       return json(res, 400, {
-        erro: "Preencha ao menos uma ação rápida ou descreva o que precisa alterar."
+        erro: "Preencha uma alteração, descreva o pedido ou deixe um telefone para retorno."
       });
     }
 
-    const anexos = [
+    const anexosEmail = [
       anexoDeParte(catalogoAddArquivo, "catalogo-novo"),
       anexoDeParte(catalogoTrocaArquivo, "catalogo-troca"),
       anexoDeParte(logoAddArquivo, "logo")
     ].filter(Boolean);
-
-    const apiKey = process.env.RESEND_API_KEY;
-    const para = process.env.BRIEFING_TO_EMAIL;
-    const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
-
-    if (!apiKey || !para) {
-      return json(res, 500, {
-        erro: "Servidor sem RESEND_API_KEY ou BRIEFING_TO_EMAIL configurados."
-      });
-    }
 
     const assunto = `My Rep alteração — ${slug || email}`;
     const texto = [
@@ -184,36 +179,111 @@ module.exports = async function handler(req, res) {
       ``,
       `E-mail do cadastro: ${email}`,
       slug ? `Slug / página: ${slug}` : null,
+      telefone ? `Telefone / WhatsApp para retorno: ${telefone}` : null,
       ``,
       `Ações:`,
       ...acoes.map((a) => `• ${a}`),
       mensagem ? `` : null,
       mensagem ? `Detalhes do cliente:` : null,
       mensagem || null,
-      anexos.length ? `` : null,
-      anexos.length ? `Anexos: ${anexos.map((a) => a.filename).join(", ")}` : null
+      anexosEmail.length ? `` : null,
+      anexosEmail.length ? `Anexos: ${anexosEmail.map((a) => a.filename).join(", ")}` : null
     ]
       .filter((linha) => linha !== null)
       .join("\n");
 
-    const resend = new Resend(apiKey);
-    const payload = {
-      from: de,
-      to: [para],
-      replyTo: email,
-      subject: assunto,
-      text: texto
+    const dadosMensagem = {
+      email,
+      slug: slug || null,
+      telefone: telefone || null,
+      mensagem: mensagem || null,
+      acoes,
+      catalogo_add_nome: catalogoAddNome || null,
+      catalogo_troca_nome: catalogoTrocaNome || null,
+      catalogo_remover: catalogoRemover || null,
+      logo_add_nome: logoAddNome || null,
+      logo_remover: logoRemover || null
     };
-    if (anexos.length) payload.attachments = anexos;
 
-    const { data, error } = await resend.emails.send(payload);
-
-    if (error) {
-      console.error("Resend alterações:", error);
-      return json(res, 502, { erro: error.message || "Falha ao enviar e-mail." });
+    let msgInbox = null;
+    try {
+      msgInbox = await criarMensagem({
+        tipo: "alteracao",
+        assunto,
+        remetenteNome: null,
+        remetenteEmail: email,
+        slug: slug || null,
+        dados: dadosMensagem,
+        corpo: texto
+      });
+      if (msgInbox?.id && anexosEmail.length) {
+        await salvarAnexos(
+          msgInbox.id,
+          anexosEmail.map((a) => ({
+            nome: a.filename,
+            data: a.data,
+            mime: a.mime,
+            origem: "upload"
+          }))
+        );
+      }
+    } catch (erroInbox) {
+      console.error("alteracoes inbox:", erroInbox.message || erroInbox);
     }
 
-    return json(res, 200, { ok: true, id: data && data.id });
+    const apiKey = process.env.RESEND_API_KEY;
+    const para = process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com";
+    const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
+    let emailId = null;
+    let emailErro = null;
+
+    if (!apiKey) {
+      emailErro = "Servidor sem RESEND_API_KEY configurada.";
+    } else {
+      try {
+        const resend = new Resend(apiKey);
+        const payload = {
+          from: de,
+          to: [para],
+          replyTo: email,
+          subject: assunto,
+          text: texto
+        };
+        if (anexosEmail.length) {
+          payload.attachments = anexosEmail.map((a) => ({
+            filename: a.filename,
+            content: a.content
+          }));
+        }
+        const { data, error } = await resend.emails.send(payload);
+        if (error) {
+          console.error("Resend alterações:", error);
+          emailErro = error.message || "Falha ao enviar e-mail.";
+        } else {
+          emailId = data && data.id;
+        }
+      } catch (erroEmail) {
+        console.error("Resend alterações:", erroEmail);
+        emailErro = erroEmail.message || "Falha ao enviar e-mail.";
+      }
+    }
+
+    if (msgInbox?.id) {
+      await atualizarMensagemEmail(msgInbox.id, { emailId, emailErro });
+    }
+
+    if (!msgInbox?.id && !emailId) {
+      return json(res, emailErro ? 502 : 500, {
+        erro: emailErro || "Falha ao gravar solicitação."
+      });
+    }
+
+    return json(res, 200, {
+      ok: true,
+      id: emailId,
+      mensagemId: msgInbox?.id || null,
+      aviso: emailErro || undefined
+    });
   } catch (erro) {
     console.error(erro);
     return json(res, erro.status || 500, { erro: erro.message || "Erro interno." });

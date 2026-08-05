@@ -4,8 +4,11 @@
   "framework": null,
   "rewrites": [
     { "source": "/briefing", "destination": "/briefing/" },
+    { "source": "/briefing/ok", "destination": "/briefing/ok/" },
     { "source": "/pagamento/ok", "destination": "/pagamento/ok/" },
+    { "source": "/admin", "destination": "/admin/" },
     { "source": "/assinantes", "destination": "/assinantes/" },
-    { "source": "/alteracoes", "destination": "/alteracoes/" }
+    { "source": "/alteracoes", "destination": "/alteracoes/" },
+    { "source": "/termos", "destination": "/termos/" }
   ]
 }

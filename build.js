@@ -279,12 +279,18 @@ ${itens}
 }
 
 /** Normaliza `cidades`: array (1 UF) ou objeto { BA: [...] }. */
-function normalizarCidades(cidades, estados) {
+function normalizarCidades(cidades, estados, arquivo) {
   const porUf = {};
   for (const uf of estados) porUf[uf] = [];
 
   if (Array.isArray(cidades)) {
-    if (estados.length === 1) porUf[estados[0]] = cidades.filter(temTexto);
+    if (estados.length === 1) {
+      porUf[estados[0]] = cidades.filter(temTexto);
+    } else if (cidades.filter(temTexto).length) {
+      console.error(
+        `  ▸ ${arquivo || "cliente"}: cidades em lista com vários estados — use { "BA": ["..."], "SE": ["..."] }`
+      );
+    }
     return porUf;
   }
 
@@ -495,7 +501,7 @@ function blocoAtuacao(c) {
 
   if (temItens(c.estados)) {
     const estados = c.estados.map((uf) => String(uf).toUpperCase());
-    const porUf = normalizarCidades(c.cidades, estados);
+    const porUf = normalizarCidades(c.cidades, estados, arquivo);
 
     if (estados.length === 1) {
       corpo = painelUf(estados[0], porUf[estados[0]], arquivo, { oculto: false, glow });
@@ -759,17 +765,51 @@ async function build() {
   fs.writeFileSync(path.join(pastaBriefing, "index.html"), tplBriefing);
   console.log(`  ✓ /briefing/`);
 
+  const tplBriefingOk = fs.readFileSync(path.join(DIR_TEMPLATE, "briefing-ok.html"), "utf8");
+  const pastaBriefingOk = path.join(DIST, "briefing", "ok");
+  fs.mkdirSync(pastaBriefingOk, { recursive: true });
+  fs.writeFileSync(path.join(pastaBriefingOk, "index.html"), tplBriefingOk);
+  console.log(`  ✓ /briefing/ok/`);
+
+  const tplTermos = fs.readFileSync(path.join(DIR_TEMPLATE, "termos.html"), "utf8");
+  const pastaTermos = path.join(DIST, "termos");
+  fs.mkdirSync(pastaTermos, { recursive: true });
+  fs.writeFileSync(path.join(pastaTermos, "index.html"), tplTermos);
+  console.log(`  ✓ /termos/`);
+
   const tplPagamento = fs.readFileSync(path.join(DIR_TEMPLATE, "pagamento-ok.html"), "utf8");
   const pastaPagamento = path.join(DIST, "pagamento", "ok");
   fs.mkdirSync(pastaPagamento, { recursive: true });
   fs.writeFileSync(path.join(pastaPagamento, "index.html"), tplPagamento);
   console.log(`  ✓ /pagamento/ok/`);
 
-  const tplAssinantes = fs.readFileSync(path.join(DIR_TEMPLATE, "assinantes.html"), "utf8");
+  const tplAdmin = fs.readFileSync(path.join(DIR_TEMPLATE, "admin.html"), "utf8");
+  const pastaAdmin = path.join(DIST, "admin");
+  fs.mkdirSync(pastaAdmin, { recursive: true });
+  fs.writeFileSync(path.join(pastaAdmin, "index.html"), tplAdmin);
+  console.log(`  ✓ /admin/`);
+
   const pastaAssinantes = path.join(DIST, "assinantes");
   fs.mkdirSync(pastaAssinantes, { recursive: true });
-  fs.writeFileSync(path.join(pastaAssinantes, "index.html"), tplAssinantes);
-  console.log(`  ✓ /assinantes/`);
+  fs.writeFileSync(
+    path.join(pastaAssinantes, "index.html"),
+    `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="0;url=/admin/">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="/admin/">
+<title>Redirecionando...</title>
+<script>location.replace("/admin/"+location.hash);</script>
+</head>
+<body>
+  <p><a href="/admin/">Ir para o painel admin</a></p>
+</body>
+</html>
+`
+  );
+  console.log(`  ✓ /assinantes/ → /admin/`);
 
   carregarEnvBuild();
   const tplAlteracoes = fs.readFileSync(path.join(DIR_TEMPLATE, "alteracoes.html"), "utf8");
@@ -777,7 +817,10 @@ async function build() {
   fs.mkdirSync(pastaAlteracoes, { recursive: true });
   fs.writeFileSync(
     path.join(pastaAlteracoes, "index.html"),
-    tplAlteracoes.replace(/\{\{SUPPORT_EMAIL\}\}/g, esc(process.env.SUPPORT_EMAIL || ""))
+    tplAlteracoes.replace(
+      /\{\{SUPPORT_EMAIL\}\}/g,
+      esc(process.env.SUPPORT_EMAIL || process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com")
+    )
   );
   console.log(`  ✓ /alteracoes/`);
 

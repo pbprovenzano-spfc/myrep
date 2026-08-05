@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="icon" href="/img/favicon.png" type="image/png">
 </head>
-<body class="pagina-alteracoes" data-support-email="{{SUPPORT_EMAIL}}">
+<body class="pagina-alteracoes">
 
 <header class="briefing-topo">
   <a class="marca marca--compacta" href="/">
@@ -131,10 +131,18 @@
         </label>
       </section>
 
-      <aside class="alteracoes-suporte" id="bloco-suporte" hidden>
+      <aside class="alteracoes-suporte">
         <h2 class="alteracoes-suporte__titulo">Prefere falar direto?</h2>
-        <p class="alteracoes-suporte__texto">Envie um e-mail ao suporte com o que precisa — sem preencher o formulário.</p>
-        <a class="btn btn--fantasma-ink" id="link-suporte" href="#">Falar com o suporte</a>
+        <p class="alteracoes-suporte__texto">Envie um e-mail para o suporte ou deixe seu telefone que entramos em contato.</p>
+        <p class="alteracoes-suporte__email">
+          <span class="alteracoes-suporte__rotulo">E-mail do suporte</span>
+          <span class="alteracoes-suporte__valor">{{SUPPORT_EMAIL}}</span>
+        </p>
+        <label class="campo">
+          <span class="campo__rotulo">Seu telefone / WhatsApp (opcional)</span>
+          <input name="telefone" type="tel" maxlength="40" autocomplete="tel" placeholder="(11) 99999-9999">
+          <span class="campo__ajuda">Se preferir, deixe o número e retornamos o contato.</span>
+        </label>
       </aside>
 
       <p class="briefing-status" id="status-pedido" role="status" aria-live="polite"></p>

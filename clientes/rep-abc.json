@@ -1,0 +1,43 @@
+{
+  "slug": "rep-abc",
+  "nome": "Joao Silva",
+  "whatsapp": "5599123123123",
+  "mensagemWhatsapp": "Olá, vim pela sua página do My Rep!",
+  "paleta": "oceano",
+  "destaque": "empresa",
+  "empresa": "Rep ABC",
+  "cargo": "Representante Comercial - São Paulo",
+  "bio": "Sou um Representante da COTON BABY",
+  "foto": "foto.png",
+  "fotoTipo": "logo",
+  "marcas": [
+    {
+      "nome": "Cotton Baby",
+      "logo": "cotonbaby.png"
+    }
+  ],
+  "estados": [
+    "BA",
+    "SE"
+  ],
+  "segmentos": "Bola de gude",
+  "catalogos": [
+    {
+      "titulo": "3M Proteção Respiratória 1",
+      "arquivo": "3m-protecao-respiratoria-1.pdf",
+      "tipo": "PDF"
+    }
+  ],
+  "contatos": [
+    {
+      "canal": "E-mail",
+      "valor": "EMAIL@EMAIL.COM",
+      "link": "mailto:EMAIL@EMAIL.COM"
+    },
+    {
+      "canal": "Instagram",
+      "valor": "@EMRPESAABC",
+      "link": "https://instagram.com/EMRPESAABC"
+    }
+  ]
+}
