@@ -1,11 +1,11 @@
-const {
+﻿const {
   PLANOS,
   emitirToken,
   encontrarPagamentoDoPlano,
   lerJsonBody,
   json
-} = require("../_lib/pagamento");
-const { registrarAcesso } = require("../_lib/acessos");
+} = require("../pagamento");
+const { registrarAcesso } = require("../acessos");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {

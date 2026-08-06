@@ -1,18 +1,18 @@
-/* =========================================================
+﻿/* =========================================================
    POST /api/painel/alteracoes — solicitação autenticada
    ========================================================= */
 
 const { Resend } = require("resend");
-const { json } = require("../_lib/pagamento");
+const { json } = require("../pagamento");
 const {
   criarMensagem,
   atualizarMensagemEmail,
   salvarAnexos,
   mimePorNome,
   nomeArquivoSeguro
-} = require("../_lib/inbox");
-const { exigirUsuario } = require("../_lib/auth");
-const { obterPaginaPorUserId } = require("../_lib/assinaturas");
+} = require("../inbox");
+const { exigirUsuario } = require("../auth");
+const { obterPaginaPorUserId } = require("../assinaturas");
 
 const MAX_BYTES = 4.5 * 1024 * 1024;
 const MAX_ANEXO = 3.5 * 1024 * 1024;

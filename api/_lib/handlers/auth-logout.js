@@ -1,10 +1,10 @@
-/* =========================================================
+﻿/* =========================================================
    POST /api/auth/logout — revoga sessão Supabase
    ========================================================= */
 
-const { json } = require("../_lib/pagamento");
-const { extrairAccessToken, getSupabaseAnon } = require("../_lib/auth");
-const { getSupabase, supabaseConfigured } = require("../_lib/supabase");
+const { json } = require("../pagamento");
+const { extrairAccessToken, getSupabaseAnon } = require("../auth");
+const { getSupabase, supabaseConfigured } = require("../supabase");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {

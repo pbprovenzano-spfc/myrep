@@ -1,12 +1,12 @@
-/* =========================================================
+﻿/* =========================================================
    GET/PUT /api/painel/pagina — ler/editar dados da página
    ========================================================= */
 
-const { json, lerJsonBody } = require("../_lib/pagamento");
-const { exigirUsuario } = require("../_lib/auth");
-const { obterPaginaPorUserId } = require("../_lib/assinaturas");
-const { getSupabase, supabaseConfigured, storagePublicUrl } = require("../_lib/supabase");
-const { nomeArquivoSeguro, mimePorNome } = require("../_lib/inbox");
+const { json, lerJsonBody } = require("../pagamento");
+const { exigirUsuario } = require("../auth");
+const { obterPaginaPorUserId } = require("../assinaturas");
+const { getSupabase, supabaseConfigured, storagePublicUrl } = require("../supabase");
+const { nomeArquivoSeguro, mimePorNome } = require("../inbox");
 
 const MAX_BYTES = 4.5 * 1024 * 1024;
 const MAX_ANEXO = 3.5 * 1024 * 1024;

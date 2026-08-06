@@ -13,6 +13,15 @@
     { "source": "/cadastro", "destination": "/cadastro/" },
     { "source": "/entrar", "destination": "/entrar/" },
     { "source": "/recuperar-senha", "destination": "/recuperar-senha/" },
-    { "source": "/painel", "destination": "/painel/" }
+    { "source": "/painel", "destination": "/painel/" },
+    { "source": "/api/assinantes", "destination": "/api/admin" },
+    { "source": "/api/auth/perfil", "destination": "/api/auth?acao=perfil" },
+    { "source": "/api/auth/logout", "destination": "/api/auth?acao=logout" },
+    { "source": "/api/painel/checkout", "destination": "/api/painel?acao=checkout" },
+    { "source": "/api/painel/briefing", "destination": "/api/painel?acao=briefing" },
+    { "source": "/api/painel/alteracoes", "destination": "/api/painel?acao=alteracoes" },
+    { "source": "/api/painel/pagina", "destination": "/api/painel?acao=pagina" },
+    { "source": "/api/pagamento/liberar", "destination": "/api/pagamento?acao=liberar" },
+    { "source": "/api/pagamento/validar", "destination": "/api/pagamento?acao=validar" }
   ]
 }

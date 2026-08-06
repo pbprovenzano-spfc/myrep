@@ -370,19 +370,22 @@ function briefingLocal(req, res) {
 }
 
 const API_HANDLERS = {
-  "/api/pagamento/liberar": () => require("./api/pagamento/liberar"),
-  "/api/pagamento/validar": () => require("./api/pagamento/validar"),
+  "/api/pagamento": () => require("./api/pagamento"),
+  "/api/pagamento/liberar": () => require("./api/_lib/handlers/pagamento-liberar"),
+  "/api/pagamento/validar": () => require("./api/_lib/handlers/pagamento-validar"),
   "/api/asaas/webhook": () => require("./api/asaas/webhook"),
-  "/api/assinantes": () => require("./api/assinantes"),
+  "/api/assinantes": () => require("./api/admin"),
   "/api/admin": () => require("./api/admin"),
   "/api/alteracoes": () => require("./api/alteracoes"),
   "/api/paginas/status": () => require("./api/paginas/status"),
-  "/api/auth/perfil": () => require("./api/auth/perfil"),
-  "/api/auth/logout": () => require("./api/auth/logout"),
-  "/api/painel/checkout": () => require("./api/painel/checkout"),
-  "/api/painel/briefing": () => require("./api/painel/briefing"),
-  "/api/painel/alteracoes": () => require("./api/painel/alteracoes"),
-  "/api/painel/pagina": () => require("./api/painel/pagina")
+  "/api/auth": () => require("./api/auth"),
+  "/api/auth/perfil": () => require("./api/_lib/handlers/auth-perfil"),
+  "/api/auth/logout": () => require("./api/_lib/handlers/auth-logout"),
+  "/api/painel": () => require("./api/painel"),
+  "/api/painel/checkout": () => require("./api/_lib/handlers/painel-checkout"),
+  "/api/painel/briefing": () => require("./api/_lib/handlers/painel-briefing"),
+  "/api/painel/alteracoes": () => require("./api/_lib/handlers/painel-alteracoes"),
+  "/api/painel/pagina": () => require("./api/_lib/handlers/painel-pagina")
 };
 
 function invocarApi(handler, req, res) {
@@ -411,7 +414,7 @@ http.createServer((req, res) => {
   const url = req.url.split("?")[0].replace(/\/$/, "") || "/";
   if (req.method === "POST" && (url === "/api/briefing" || url === "/api/painel/briefing")) {
     if (url === "/api/painel/briefing") {
-      invocarApi(require("./api/painel/briefing"), req, res);
+      invocarApi(require("./api/_lib/handlers/painel-briefing"), req, res);
       return;
     }
     briefingLocal(req, res);

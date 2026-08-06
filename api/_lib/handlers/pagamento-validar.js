@@ -1,4 +1,4 @@
-const { lerToken, lerJsonBody, json, PLANOS } = require("../_lib/pagamento");
+﻿const { lerToken, lerJsonBody, json, PLANOS } = require("../pagamento");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "GET") {

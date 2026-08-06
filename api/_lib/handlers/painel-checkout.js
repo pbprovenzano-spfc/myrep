@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    POST /api/painel/checkout — link de pagamento Asaas
    ========================================================= */
 
@@ -9,9 +9,9 @@ const {
   json,
   asaasFetch,
   buscarClientePorEmail
-} = require("../_lib/pagamento");
-const { exigirUsuario } = require("../_lib/auth");
-const { upsertAssinatura } = require("../_lib/assinaturas");
+} = require("../pagamento");
+const { exigirUsuario } = require("../auth");
+const { upsertAssinatura } = require("../assinaturas");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {

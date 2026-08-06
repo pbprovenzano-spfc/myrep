@@ -1,21 +1,21 @@
-/* =========================================================
+﻿/* =========================================================
    POST /api/painel/briefing — briefing autenticado
    ========================================================= */
 
-const { PLANOS, json } = require("../_lib/pagamento");
-const { lerZip } = require("../_lib/zip");
+const { PLANOS, json } = require("../pagamento");
+const { lerZip } = require("../zip");
 const {
   criarMensagem,
   salvarAnexos,
   mimePorNome,
   nomeArquivoSeguro
-} = require("../_lib/inbox");
-const { associarEmailSeVazio } = require("../_lib/paginas");
-const { exigirUsuario } = require("../_lib/auth");
+} = require("../inbox");
+const { associarEmailSeVazio } = require("../paginas");
+const { exigirUsuario } = require("../auth");
 const {
   obterAssinaturaPorUserId,
   vincularUserIdNaPagina
-} = require("../_lib/assinaturas");
+} = require("../assinaturas");
 
 const MAX_BYTES = 25 * 1024 * 1024;
 

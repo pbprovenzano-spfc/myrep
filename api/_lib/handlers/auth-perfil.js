@@ -1,16 +1,16 @@
-/* =========================================================
+﻿/* =========================================================
    GET /api/auth/perfil — dados do cliente logado
    ========================================================= */
 
-const { json } = require("../_lib/pagamento");
-const { exigirUsuario } = require("../_lib/auth");
+const { json } = require("../pagamento");
+const { exigirUsuario } = require("../auth");
 const {
   obterAssinaturaPorUserId,
   obterPaginaPorUserId,
   obterPaginaPorEmail
-} = require("../_lib/assinaturas");
-const { getSupabase, supabaseConfigured } = require("../_lib/supabase");
-const { situacaoDe } = require("../_lib/paginas");
+} = require("../assinaturas");
+const { getSupabase, supabaseConfigured } = require("../supabase");
+const { situacaoDe } = require("../paginas");
 
 async function briefingEnviado(userId, email) {
   if (!supabaseConfigured()) return false;
