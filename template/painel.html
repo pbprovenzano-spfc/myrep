@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu painel — My Rep</title>
+<meta name="description" content="Gerencie sua assinatura, briefing e cartão de representante My Rep.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+<script>window.MYREP_SUPABASE={{MYREP_SUPABASE}};</script>
+</head>
+<body class="pagina-painel">
+
+<header class="briefing-topo painel-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Meu painel</p>
+  <button type="button" class="btn btn--fantasma-ink assinantes-sair" id="btn-sair" hidden>Sair</button>
+</header>
+
+<main class="painel-shell">
+  <p class="briefing-status" id="painel-carregando" role="status">Carregando…</p>
+
+  <div id="painel-conteudo" hidden>
+    <header class="painel-intro">
+      <div>
+        <h1 class="painel-intro__titulo">Olá<span id="painel-nome-saudacao"></span></h1>
+        <p class="painel-intro__email" id="painel-email"></p>
+      </div>
+      <p class="painel-badge" id="painel-badge-assinatura" data-status="">—</p>
+    </header>
+
+    <!-- ASSINATURA -->
+    <section class="painel-card" id="secao-assinatura">
+      <h2 class="painel-card__titulo">Assinatura</h2>
+      <p class="painel-card__texto" id="assinatura-texto">Escolha um plano para liberar o briefing e publicar seu cartão.</p>
+      <div class="painel-planos" id="painel-planos">
+        <button type="button" class="btn btn--primario" data-checkout="mensal">Mensal · R$ 17,99</button>
+        <button type="button" class="btn btn--fantasma-ink" data-checkout="anual_parcelado">Anual · R$ 14,99/mês</button>
+        <button type="button" class="btn btn--fantasma-ink" data-checkout="anual_avista">Anual à vista · R$ 161,89</button>
+      </div>
+      <p class="briefing-status" id="checkout-status" role="status"></p>
+    </section>
+
+    <!-- SUA PÁGINA -->
+    <section class="painel-card" id="secao-pagina">
+      <h2 class="painel-card__titulo">Sua página</h2>
+      <div id="pagina-sem" hidden>
+        <p class="painel-card__texto">Ainda não enviamos seus dados para publicação. Preencha o briefing abaixo após o pagamento.</p>
+        <a class="btn btn--primario" href="#secao-briefing">Preencher briefing</a>
+      </div>
+      <div id="pagina-com" hidden>
+        <p class="painel-card__texto">
+          Link do cartão:
+          <a id="pagina-link" href="#" target="_blank" rel="noopener"></a>
+        </p>
+        <p class="painel-card__meta" id="pagina-situacao"></p>
+        <div class="painel-acoes">
+          <button type="button" class="btn btn--primario" id="btn-compartilhar">Compartilhar Cartão do Representante</button>
+          <button type="button" class="btn btn--fantasma-ink" id="btn-copiar-link">Copiar link</button>
+        </div>
+        <p class="briefing-status" id="compartilhar-status" role="status"></p>
+      </div>
+    </section>
+
+    <!-- CATÁLOGOS E LOGOS -->
+    <section class="painel-card" id="secao-midia" hidden>
+      <h2 class="painel-card__titulo">Catálogos e logos</h2>
+      <p class="painel-card__texto">Inclua ou remova arquivos. A página pública atualiza no próximo deploy.</p>
+
+      <div class="painel-midia-grid">
+        <div>
+          <h3 class="painel-sub">Catálogos</h3>
+          <ul class="painel-lista" id="lista-catalogos"></ul>
+          <form class="painel-form-inline" id="form-catalogo-add">
+            <label class="campo">
+              <span class="campo__rotulo">Título</span>
+              <input name="titulo" type="text" maxlength="120" required placeholder="Catálogo 2026">
+            </label>
+            <label class="campo">
+              <span class="campo__rotulo">Arquivo PDF</span>
+              <input name="arquivo" type="file" accept="application/pdf,.pdf" required>
+            </label>
+            <button class="btn btn--primario" type="submit">Adicionar catálogo</button>
+          </form>
+        </div>
+        <div>
+          <h3 class="painel-sub">Marcas / logos</h3>
+          <ul class="painel-lista" id="lista-marcas"></ul>
+          <form class="painel-form-inline" id="form-marca-add">
+            <label class="campo">
+              <span class="campo__rotulo">Nome da marca</span>
+              <input name="nome" type="text" maxlength="120" required placeholder="Ex.: 3M">
+            </label>
+            <label class="campo">
+              <span class="campo__rotulo">Logo (opcional)</span>
+              <input name="arquivo" type="file" accept="image/*">
+            </label>
+            <button class="btn btn--primario" type="submit">Adicionar marca</button>
+          </form>
+        </div>
+      </div>
+      <p class="briefing-status" id="midia-status" role="status"></p>
+    </section>
+
+    <!-- ALTERAÇÃO MANUAL -->
+    <section class="painel-card" id="secao-alteracao">
+      <h2 class="painel-card__titulo">Solicitar alteração manual</h2>
+      <p class="painel-card__texto">Descreva o que precisa — nossa equipe aplica na página.</p>
+      <form id="form-alteracao-painel" class="painel-form-inline" novalidate>
+        <label class="campo">
+          <span class="campo__rotulo">Pedido</span>
+          <textarea name="mensagem" rows="4" maxlength="4000" placeholder="Ex.: trocar WhatsApp, incluir empresa Beta…"></textarea>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Anexo (opcional)</span>
+          <input name="anexo" type="file" accept="image/*,.pdf,application/pdf">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Telefone / WhatsApp (opcional)</span>
+          <input name="telefone" type="tel" maxlength="40" placeholder="(11) 99999-9999">
+        </label>
+        <button class="btn btn--primario" type="submit">Enviar solicitação</button>
+      </form>
+      <p class="briefing-status" id="alteracao-status" role="status"></p>
+    </section>
+
+    <!-- BRIEFING -->
+    <section class="painel-card" id="secao-briefing">
+      <h2 class="painel-card__titulo">Briefing — criar página</h2>
+      <p class="painel-card__texto" id="briefing-ajuda">Preencha os dados da sua página. Disponível após o pagamento da assinatura.</p>
+
+      <aside class="briefing-gate" id="briefing-gate-painel" hidden>
+        <p>Conclua a assinatura acima para liberar o formulário de briefing.</p>
+      </aside>
+
+      <form class="briefing-form" id="briefing-form" data-modo="painel" novalidate hidden>
+        <input type="hidden" name="acesso" id="briefing-acesso" value="">
+
+        <fieldset class="briefing-secao">
+          <legend>Identidade</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Nome da representada / empresa</span>
+            <input name="empresa" type="text" autocomplete="organization" maxlength="120">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Seu nome completo <abbr title="obrigatório">*</abbr></span>
+            <input name="nome" type="text" required autocomplete="name" maxlength="120">
+          </label>
+          <fieldset class="campo campo--opcoes">
+            <legend class="campo__rotulo">O que deve aparecer em evidência <abbr title="obrigatório">*</abbr></legend>
+            <label class="opcao"><input type="radio" name="destaque" value="empresa"> Nome da representada / empresa</label>
+            <label class="opcao"><input type="radio" name="destaque" value="pessoa" checked> Meu nome próprio</label>
+          </fieldset>
+          <label class="campo">
+            <span class="campo__rotulo">Cargo / região</span>
+            <input name="cargo" type="text" maxlength="160">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Bio / apresentação</span>
+            <textarea name="bio" rows="3" maxlength="600"></textarea>
+          </label>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Contato</legend>
+          <div class="campo">
+            <span class="campo__rotulo">WhatsApp <abbr title="obrigatório">*</abbr></span>
+            <div class="fone-linha">
+              <span class="fone-ddi" aria-hidden="true">+55</span>
+              <label class="fone-parte">
+                <span class="visually-hidden">DDD</span>
+                <input name="whatsappDdd" type="tel" inputmode="numeric" required maxlength="2" pattern="[0-9]{2}" placeholder="DDD">
+              </label>
+              <label class="fone-parte fone-parte--numero">
+                <span class="visually-hidden">Número</span>
+                <input name="whatsappNumero" type="tel" inputmode="numeric" required maxlength="9" pattern="[0-9]{8,9}" placeholder="Número">
+              </label>
+            </div>
+          </div>
+          <div class="campo">
+            <span class="campo__rotulo">E-mails de contato</span>
+            <div class="lista-dinamica" data-lista="emails" id="lista-emails"></div>
+            <button type="button" class="btn-add" data-add="emails">+ Adicionar e-mail</button>
+          </div>
+          <div class="campo">
+            <span class="campo__rotulo">Outros telefones</span>
+            <div class="lista-dinamica" data-lista="telefones" id="lista-telefones"></div>
+            <button type="button" class="btn-add" data-add="telefones">+ Adicionar telefone</button>
+          </div>
+          <div class="campo">
+            <span class="campo__rotulo">Redes sociais</span>
+            <div class="lista-dinamica" data-lista="redes" id="lista-redes"></div>
+            <button type="button" class="btn-add" data-add="redes">+ Adicionar rede</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Foto / logo</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Foto ou logo do perfil <abbr title="obrigatório">*</abbr></span>
+            <input name="foto" type="file" required accept="image/*">
+          </label>
+          <fieldset class="campo campo--opcoes">
+            <legend class="campo__rotulo">Tipo da imagem</legend>
+            <label class="opcao"><input type="radio" name="fotoTipo" value="pessoa" checked> Foto de pessoa</label>
+            <label class="opcao"><input type="radio" name="fotoTipo" value="logo"> Logo da empresa</label>
+          </fieldset>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Marcas</legend>
+          <label class="campo">
+            <span class="campo__rotulo">Liste as marcas (uma por linha)</span>
+            <textarea name="marcas" rows="3" placeholder="Yara&#10;Basf"></textarea>
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Logos das marcas (opcional)</span>
+            <input name="logosMarcas" type="file" accept="image/*" multiple>
+          </label>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Território</legend>
+          <fieldset class="campo campo--ufs">
+            <legend class="campo__rotulo">Estados (UFs) <abbr title="obrigatório">*</abbr></legend>
+            <div class="ufs-grid" id="ufs-grid"></div>
+          </fieldset>
+          <div class="campo" id="campo-cidades">
+            <span class="campo__rotulo">Cidades atendidas</span>
+            <div id="cidades-unica-wrap">
+              <textarea name="cidades" id="cidades-unica" rows="3"></textarea>
+            </div>
+            <div id="cidades-por-uf" class="cidades-por-uf" hidden></div>
+          </div>
+          <div class="campo">
+            <span class="campo__rotulo">Segmentos</span>
+            <div class="lista-dinamica" data-lista="segmentos" id="lista-segmentos"></div>
+            <button type="button" class="btn-add" data-add="segmentos">+ Adicionar segmento</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Catálogos</legend>
+          <label class="campo">
+            <span class="campo__rotulo">PDFs de catálogo</span>
+            <input name="catalogos" type="file" accept="application/pdf,.pdf" multiple>
+          </label>
+        </fieldset>
+
+        <fieldset class="briefing-secao">
+          <legend>Visual</legend>
+          <div class="paletas" role="radiogroup" aria-label="Paleta">
+            <label class="paleta"><input type="radio" name="paleta" value="ambar" checked><span class="paleta__swatches" style="--p1:#0A1620;--p2:#F0A202;--p3:#F2F5F7"></span><span class="paleta__nome">Âmbar</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="oceano"><span class="paleta__swatches" style="--p1:#0A1F2E;--p2:#1AA6B8;--p3:#EEF4F7"></span><span class="paleta__nome">Oceano</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="floresta"><span class="paleta__swatches" style="--p1:#0F1F14;--p2:#2F9E5B;--p3:#F0F5F1"></span><span class="paleta__nome">Floresta</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="rubi"><span class="paleta__swatches" style="--p1:#1A1214;--p2:#C44B3A;--p3:#F6F1F2"></span><span class="paleta__nome">Rubi</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="ardosia"><span class="paleta__swatches" style="--p1:#1C1F24;--p2:#C47A3A;--p3:#F3F3F5"></span><span class="paleta__nome">Ardósia</span></label>
+          </div>
+        </fieldset>
+
+        <label class="opcao opcao--termos">
+          <input type="checkbox" name="aceiteTermos" id="briefing-aceite-termos" value="1" required>
+          <span>Li e aceito os <a href="/termos/" target="_blank" rel="noopener">termos de uso</a></span>
+        </label>
+
+        <div class="briefing-acoes">
+          <p class="briefing-status" id="briefing-status" role="status"></p>
+          <button class="btn btn--primario" type="submit" id="briefing-enviar">Enviar briefing</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+<script src="/js/supabase-client.js" defer></script>
+<script src="/js/painel.js" defer></script>
+<script src="/js/briefing.js" defer></script>
+</body>
+</html>

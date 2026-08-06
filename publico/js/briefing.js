@@ -29,10 +29,16 @@
 
   if (!form || !ufsGrid) return;
 
+  const modoPainel = form.dataset.modo === "painel";
   const acessoUrl = new URLSearchParams(location.search).get("acesso") || "";
   let acessoToken = acessoUrl;
 
   async function garantirAcesso() {
+    if (modoPainel) {
+      form.hidden = false;
+      if (gate) gate.hidden = true;
+      return true;
+    }
     try {
       const resp = await fetch("/api/pagamento/validar", {
         method: "POST",
@@ -653,8 +659,17 @@
       corpo.append("aceiteTermos", "1");
       corpo.append("zip", zipBlob, `${slug}-myrep.zip`);
 
-      const resp = await fetch("/api/briefing", {
+      const headers = {};
+      let endpoint = "/api/briefing";
+      if (modoPainel && window.MyRepAuth) {
+        endpoint = "/api/painel/briefing";
+        const token = await window.MyRepAuth.accessToken();
+        if (token) headers.Authorization = `Bearer ${token}`;
+      }
+
+      const resp = await fetch(endpoint, {
         method: "POST",
+        headers,
         body: corpo
       });
 
@@ -669,7 +684,7 @@
         throw new Error(payload.erro || `Falha no envio (${resp.status}).`);
       }
 
-      location.href = "/briefing/ok/";
+      location.href = modoPainel ? "/painel/?briefing=ok" : "/briefing/ok/";
       return;
     } catch (erro) {
       setStatus(erro.message || "Não foi possível enviar. Tente novamente.", "erro");

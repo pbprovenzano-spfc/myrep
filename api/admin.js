@@ -35,6 +35,14 @@ const {
   resumirPaginas,
   situacaoDe
 } = require("./_lib/paginas");
+const { listarUsuariosAuth, buscarUsuarioPorEmail } = require("./_lib/auth");
+const {
+  listarAssinaturasLocais,
+  upsertAssinatura,
+  vincularUserIdNaPagina,
+  obterPaginaPorUserId
+} = require("./_lib/assinaturas");
+const { supabaseConfigured } = require("./_lib/supabase");
 
 function exigirAdmin(req) {
   const token =
@@ -422,15 +430,34 @@ module.exports = async function handler(req, res) {
         }
       }
       const [acessos, paginas] = await Promise.all([acessosPromise, paginasPromise]);
+
+      // Enriquecer páginas com e-mail do dono (auth)
+      let emailPorUserId = {};
+      if (supabaseConfigured()) {
+        try {
+          const { users } = await listarUsuariosAuth({ page: 1, perPage: 200 });
+          for (const u of users) {
+            emailPorUserId[u.id] = String(u.email || "").toLowerCase();
+          }
+        } catch (erroUsers) {
+          console.error("admin users map:", erroUsers.message || erroUsers);
+        }
+      }
+      const paginasComDono = paginas.map((p) => ({
+        ...p,
+        dono_email: p.user_id ? emailPorUserId[p.user_id] || null : null
+      }));
+
       const emailParaPagina = {};
-      for (const p of paginas) {
+      for (const p of paginasComDono) {
         if (p.email_cobranca) {
           emailParaPagina[p.email_cobranca] = {
             slug: p.slug,
             situacao: p.situacao,
             situacaoLabel: p.situacaoLabel,
             ativo: p.ativo !== false,
-            controle_manual: p.controle_manual === true
+            controle_manual: p.controle_manual === true,
+            dono_email: p.dono_email
           };
         }
       }
@@ -444,7 +471,7 @@ module.exports = async function handler(req, res) {
         assinaturas: assinaturasComPagina,
         pagamentos,
         acessos,
-        paginas,
+        paginas: paginasComDono,
         emailParaPagina,
         planos: PLANOS
       });
@@ -460,6 +487,7 @@ module.exports = async function handler(req, res) {
         tipo: url.searchParams.get("tipo") || "",
         status: url.searchParams.get("status") || "",
         busca: url.searchParams.get("busca") || "",
+        userId: url.searchParams.get("userId") || "",
         limit: url.searchParams.get("limit") || 50,
         offset: url.searchParams.get("offset") || 0
       });
@@ -514,6 +542,114 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET" && acao === "paginas") {
       const paginas = await listarPaginas();
       return json(res, 200, { ok: true, paginas });
+    }
+
+    if (req.method === "GET" && acao === "usuarios") {
+      const page = Math.max(Number(url.searchParams.get("page") || 1), 1);
+      const { users, total } = await listarUsuariosAuth({ page, perPage: 50 });
+      const assinaturas = await listarAssinaturasLocais({ limit: 200 });
+      const paginas = await listarPaginas();
+      const assPorUser = new Map(assinaturas.map((a) => [a.user_id, a]));
+      const pagPorUser = new Map(
+        paginas.filter((p) => p.user_id).map((p) => [p.user_id, p])
+      );
+      const pagPorEmail = new Map(
+        paginas
+          .filter((p) => p.email_cobranca)
+          .map((p) => [p.email_cobranca, p])
+      );
+
+      const lista = users.map((u) => {
+        const email = String(u.email || "").toLowerCase();
+        const ass = assPorUser.get(u.id) || null;
+        const pag = pagPorUser.get(u.id) || pagPorEmail.get(email) || null;
+        return {
+          id: u.id,
+          email,
+          criado_em: u.created_at,
+          confirmado: !!(u.email_confirmed_at || u.confirmed_at),
+          nome: u.user_metadata?.nome || u.user_metadata?.full_name || null,
+          assinatura: ass
+            ? {
+                plano: ass.plano,
+                status: ass.status,
+                proxima_cobranca: ass.proxima_cobranca
+              }
+            : null,
+          pagina: pag
+            ? {
+                slug: pag.slug,
+                situacao: pag.situacao,
+                situacaoLabel: pag.situacaoLabel,
+                ativo: pag.ativo !== false
+              }
+            : null
+        };
+      });
+
+      return json(res, 200, { ok: true, usuarios: lista, total, page });
+    }
+
+    if (req.method === "POST" && acao === "usuario-vincular") {
+      const body = await lerJsonBody(req);
+      const slug = normalizarSlug(body.slug);
+      const userId = String(body.userId || "").trim();
+      const email = normalizarEmail(body.email);
+      if (!slug) return json(res, 400, { erro: "Slug inválido." });
+
+      let uid = userId;
+      if (!uid && email) {
+        const u = await buscarUsuarioPorEmail(email);
+        if (!u) return json(res, 404, { erro: "Usuário Auth não encontrado com esse e-mail." });
+        uid = u.id;
+      }
+      if (!uid) return json(res, 400, { erro: "Informe userId ou e-mail." });
+
+      // impede duas páginas no mesmo user
+      const jaTem = await obterPaginaPorUserId(uid);
+      if (jaTem && jaTem.slug !== slug) {
+        return json(res, 409, {
+          erro: `Este usuário já está vinculado a /${jaTem.slug}/.`
+        });
+      }
+
+      let emailFinal = email;
+      if (!emailFinal && supabaseConfigured()) {
+        try {
+          const { getSupabase } = require("./_lib/supabase");
+          const { data } = await getSupabase().auth.admin.getUserById(uid);
+          emailFinal = normalizarEmail(data?.user?.email);
+        } catch {
+          /* ignore */
+        }
+      }
+      const row = await vincularUserIdNaPagina(slug, uid, emailFinal);
+      if (!row) return json(res, 500, { erro: "Falha ao vincular." });
+
+      if (emailFinal) {
+        try {
+          await associarEmailSeVazio(slug, emailFinal);
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const paginas = await listarPaginas();
+      return json(res, 200, {
+        ok: true,
+        pagina: paginas.find((p) => p.slug === slug) || row
+      });
+    }
+
+    if (req.method === "POST" && acao === "usuario-assinatura") {
+      const body = await lerJsonBody(req);
+      const userId = String(body.userId || "").trim();
+      const plano = String(body.plano || "mensal").trim();
+      const status = String(body.status || "ativa").trim();
+      if (!userId) return json(res, 400, { erro: "Informe userId." });
+      if (!PLANOS[plano]) return json(res, 400, { erro: "Plano inválido." });
+      const ass = await upsertAssinatura(userId, { plano, status });
+      return json(res, 200, { ok: true, assinatura: ass });
     }
 
     if (req.method === "POST" && acao === "pagina-email") {

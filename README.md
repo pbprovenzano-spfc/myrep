@@ -6,10 +6,10 @@ Páginas únicas para representantes comerciais. Cada perfil tem uma rota por pa
 A home (`/`) é a landing do produto. A lista interna de perfis fica em
 `/representantes` (sem link público por enquanto).
 
-Gerador estático: um script Node lê os JSONs e gera `/dist`. O briefing do
-cliente fica em `/briefing/` e envia um ZIP por e-mail via **Resend** (função
-serverless na **Vercel**), além de gravar na caixa de entrada do painel
-`/admin/`.
+Gerador estático: um script Node lê os JSONs e gera `/dist`. Clientes criam
+conta (Supabase Auth), assinam na Asaas e usam o **painel** (`/painel/`) para
+enviar briefing, gerenciar catálogos/logos e compartilhar o cartão. A operação
+fica no `/admin/` (usuários, adimplência, inbox).
 
 ## Rodar
 
@@ -30,39 +30,55 @@ clientes/              um JSON por representante
 template/
   pagina.html          página do representante
   home.html            landing
-  briefing.html        formulário de cadastro
+  cadastro.html        criar conta (email+senha)
+  entrar.html          login
+  recuperar-senha.html
+  painel.html          área do cliente
+  briefing.html        formulário legado (?acesso=)
   admin.html           painel /admin/
-  representantes.html  diretório interno
 publico/
   css/style.css
-  js/briefing.js       monta JSON + ZIP e POST /api/briefing
+  js/painel.js         painel do cliente
+  js/briefing.js       monta JSON + ZIP
   js/admin.js          painel admin
-  js/mapa.js
-  js/representantes.js
 api/
-  briefing.js          Vercel function → inbox + e-mail com ZIP (Resend)
-  alteracoes.js        solicitações de alteração → inbox + e-mail
-  admin.js             painel (KPIs, inbox, páginas, assinantes)
-  _lib/inbox.js        persistência da inbox (Supabase ou /inbox local)
-  _lib/zip.js          leitor de ZIP sem dependências
+  auth/perfil.js       sessão do cliente
+  painel/*             checkout, briefing, alterações, página
+  asaas/webhook.js     adimplência + assinaturas
+  admin.js             KPIs, inbox, usuários, páginas
+  _lib/auth.js         Supabase Auth (Bearer)
+  _lib/assinaturas.js  espelho local da assinatura
+  _lib/inbox.js
 assets-clientes/<slug>/
-geo/
+supabase/schema.sql
 build.js
-dev.js                 servidor local (grava inbox em /inbox se sem Supabase)
+dev.js
 vercel.json
 .env.example
-dist/
-inbox/                 mensagens locais do dev (não versionar)
 ```
+
+## Fluxo do cliente
+
+1. `/cadastro/` — cria conta Supabase (email + senha)
+2. Escolhe plano → Asaas (checkout no painel)
+3. Webhook confirma pagamento → `assinaturas` + adimplência
+4. `/painel/` — briefing, catálogos/logos, alteração manual, **Compartilhar Cartão**
+5. Admin publica a página a partir da inbox
+
+## Painel do cliente (`/painel/`)
+
+Requer login. Seções: assinatura, sua página (com botão compartilhar),
+catálogos/logos, solicitação de alteração e formulário de briefing.
 
 ## Painel admin (`/admin/`)
 
 Login com `ADMIN_PASSWORD`. Abas:
 
-- **Visão geral** — MRR, assinaturas ativas, recebido no mês, ticket médio, vencidos; KPIs de páginas (em risco, inativas, sem e-mail, controle manual)
-- **Caixa de entrada** — briefings e alterações com todos os campos e anexos
-- **Páginas** — e-mail de cobrança, situação de adimplência, ativar/desativar e modo Automático/Manual
-- **Assinantes** — liberar briefing, acessos Supabase, assinaturas e pagamentos Asaas (com vínculo à página quando o e-mail bate)
+- **Visão geral** — MRR, assinaturas ativas, recebido no mês, ticket médio, vencidos; KPIs de páginas
+- **Caixa de entrada** — briefings e alterações (vinculados a `user_id` quando houver)
+- **Usuários** — contas Auth, assinatura local, página vinculada; vincular slug ↔ e-mail
+- **Páginas** — dono, e-mail de cobrança, adimplência, Automático/Manual
+- **Assinantes** — liberar briefing legado, acessos, assinaturas e pagamentos Asaas
 
 ### Ativação e inadimplência
 
@@ -72,23 +88,27 @@ Login com `ADMIN_PASSWORD`. Abas:
 - No admin, Ativar/Desativar entra em controle manual (a automação não altera `ativo` até **Voltar ao automático**).
 - “Atualizar adimplência” sincroniza com a Asaas respeitando o modo manual.
 
-Rode o [`supabase/schema.sql`](supabase/schema.sql) atualizado para criar a coluna `controle_manual`.
+Rode o [`supabase/schema.sql`](supabase/schema.sql) atualizado (inclui `user_id`,
+tabela `assinaturas` e RLS). Veja também [`supabase/README.md`](supabase/README.md)
+para Auth (email/senha) e redirect URLs.
 
-`/assinantes/` redireciona para `/admin/`. Em produção a inbox usa as tabelas
+`/assinantes/` redireciona para `/admin/`. `/alteracoes/` redireciona para login.
+`/briefing/` sem `?acesso=` redireciona para `/entrar/`. Em produção a inbox usa
 `mensagens` / `mensagens_anexos` e o bucket privado `inbox` do Supabase.
-Sem Supabase, o `dev` grava em `/inbox/<id>/`.
 
-## Briefing no site (`/briefing/`)
+## Briefing
 
-Fluxo:
+Fluxo principal: formulário dentro de `/painel/` → `POST /api/painel/briefing`.
 
-1. Cliente preenche o formulário (escolhe se a representada ou o nome próprio fica em evidência), anexa foto, logos e PDFs.
-2. O browser gera o `slug` da URL a partir do nome em evidência e monta o ZIP (`clientes/<slug>.json` + `assets-clientes/<slug>/`).
-3. `POST /api/briefing` grava na inbox do `/admin/` (JSON + anexos
-   descompactados + ZIP) e envia o ZIP para o seu e-mail com **Resend**.
-4. Você abre o painel, baixa o pacote (ou descompacta na raiz) e gera a página.
+Legado: `/briefing/?acesso=TOKEN` → `POST /api/briefing` (tokens HMAC antigos).
 
-Limite prático: ~**4 MB** por envio (limite da Vercel Hobby). Comprima imagens/PDFs grandes.
+1. Cliente preenche dados, anexa foto, logos e PDFs.
+2. O browser gera o `slug` e monta o ZIP (`clientes/<slug>.json` + `assets-clientes/<slug>/`).
+3. A API grava na inbox do `/admin/`.
+4. Você publica a página no projeto.
+
+Limite prático: ~**4 MB** por envio na Hobby da Vercel (painéis autenticados
+aceitam até ~25 MB no handler; o limite da plataforma ainda vale).
 
 ### Configurar Resend + Vercel
 
@@ -96,19 +116,24 @@ Limite prático: ~**4 MB** por envio (limite da Vercel Hobby). Comprima imagens/
 2. Copie `.env.example` → `.env` e preencha:
 
 ```bash
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 RESEND_API_KEY=re_xxxxxxxx
 BRIEFING_TO_EMAIL=myrep.sup@gmail.com
 BRIEFING_FROM_EMAIL=My Rep <ola@seudominio.com>
 SUPPORT_EMAIL=myrep.sup@gmail.com
+ADMIN_PASSWORD=...
+ASAAS_API_KEY=...
+ASAAS_LINK_MENSAL=...
 ```
 
 3. Na Vercel: importe o repo, use build `npm run build` e output `dist` (já em `vercel.json`).
-4. Em **Settings → Environment Variables**, cadastre as variáveis acima (inclua `ADMIN_PASSWORD`).
-5. Deploy. O formulário fica em `https://seu-dominio/briefing/`; o painel em
-   `https://seu-dominio/admin/`.
+4. Em **Settings → Environment Variables**, cadastre as variáveis (inclua as do Supabase e `ADMIN_PASSWORD`).
+5. Deploy. Conta: `/cadastro/`; painel do cliente: `/painel/`; admin: `/admin/`.
 
-Em `npm run dev` sem Supabase, a inbox grava em `/inbox/<id>/`. Sem Resend o
-e-mail é pulado, mas a mensagem continua na caixa de entrada.
+Em `npm run dev` sem Supabase, a inbox grava em `/inbox/<id>/`. Auth de cliente
+exige Supabase configurado.
 
 ### Pacote que chega no e-mail
 

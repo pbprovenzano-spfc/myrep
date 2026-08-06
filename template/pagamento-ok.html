@@ -24,25 +24,29 @@
 
 <main class="pagamento-shell">
   <header class="pagamento-intro">
-    <h1 class="pagamento-intro__titulo">Liberar briefing</h1>
-    <p class="pagamento-intro__texto" id="pagamento-plano-texto">Use o mesmo e-mail do pagamento na Asaas para liberar o formulário.</p>
+    <h1 class="pagamento-intro__titulo">Pagamento recebido</h1>
+    <p class="pagamento-intro__texto" id="pagamento-plano-texto">Se você já tem conta, abra o painel para enviar o briefing. Contas novas: use o mesmo e-mail do pagamento.</p>
   </header>
 
-  <form class="pagamento-form" id="pagamento-form" novalidate>
-    <input type="hidden" name="plano" id="pagamento-plano" value="">
+  <div class="painel-acoes" style="margin-bottom:24px">
+    <a class="btn btn--primario" href="/painel/">Abrir meu painel</a>
+    <a class="btn btn--fantasma-ink" href="/entrar/?next=/painel/">Entrar</a>
+  </div>
 
-    <label class="campo">
-      <span class="campo__rotulo">E-mail do pagamento <abbr title="obrigatório">*</abbr></span>
-      <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
-      <span class="campo__ajuda">PIX pode levar alguns segundos para confirmar. Se falhar, aguarde e tente de novo.</span>
-    </label>
+  <details class="pagamento-legado">
+    <summary>Liberação legado (sem conta)</summary>
+    <form class="pagamento-form" id="pagamento-form" novalidate>
+      <input type="hidden" name="plano" id="pagamento-plano" value="">
+      <label class="campo">
+        <span class="campo__rotulo">E-mail do pagamento</span>
+        <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
+      </label>
+      <p class="briefing-status" id="pagamento-status" role="status" aria-live="polite"></p>
+      <button class="btn btn--primario" type="submit" id="pagamento-enviar">Liberar briefing (legado)</button>
+    </form>
+  </details>
 
-    <p class="briefing-status" id="pagamento-status" role="status" aria-live="polite"></p>
-
-    <button class="btn btn--primario" type="submit" id="pagamento-enviar">Liberar meu briefing</button>
-  </form>
-
-  <p class="pagamento-voltar"><a href="/#precos">Voltar aos planos</a></p>
+  <p class="pagamento-voltar"><a href="/">Voltar ao início</a></p>
 </main>
 
 <script src="/js/pagamento.js" defer></script>

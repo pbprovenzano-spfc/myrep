@@ -79,6 +79,7 @@ async function criarMensagem({
   remetenteNome,
   remetenteEmail,
   slug,
+  userId,
   dados,
   corpo,
   emailId,
@@ -94,6 +95,7 @@ async function criarMensagem({
     remetente_nome: remetenteNome ? String(remetenteNome).slice(0, 160) : null,
     remetente_email: remetenteEmail ? String(remetenteEmail).trim().toLowerCase().slice(0, 160) : null,
     slug: slug ? String(slug).slice(0, 80) : null,
+    user_id: userId || null,
     dados: dados && typeof dados === "object" ? dados : {},
     corpo: String(corpo || ""),
     lida: false,
@@ -264,7 +266,7 @@ async function listarMensagens(filtros = {}) {
     let q = sb
       .from("mensagens")
       .select(
-        "id, tipo, assunto, remetente_nome, remetente_email, slug, lida, status, email_id, email_erro, created_at",
+        "id, tipo, assunto, remetente_nome, remetente_email, slug, user_id, lida, status, email_id, email_erro, created_at",
         { count: "exact" }
       )
       .order("created_at", { ascending: false })
@@ -272,6 +274,7 @@ async function listarMensagens(filtros = {}) {
 
     if (filtros.tipo && TIPOS_OK.has(filtros.tipo)) q = q.eq("tipo", filtros.tipo);
     if (filtros.status && STATUS_OK.has(filtros.status)) q = q.eq("status", filtros.status);
+    if (filtros.userId) q = q.eq("user_id", filtros.userId);
     if (filtros.busca) {
       const raw = String(filtros.busca).replace(/[%*,()]/g, "").trim().slice(0, 80);
       if (raw) {

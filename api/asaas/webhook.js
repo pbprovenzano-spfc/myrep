@@ -4,6 +4,11 @@ const {
   marcarAdimplentePorEmail,
   marcarInadimplentePorEmail
 } = require("../_lib/paginas");
+const { buscarUsuarioPorEmail } = require("../_lib/auth");
+const {
+  upsertAssinatura,
+  associarUserIdPorEmail
+} = require("../_lib/assinaturas");
 
 function identificarPlano(pagamento) {
   if (!pagamento || pagamento.value == null) return null;
@@ -11,6 +16,40 @@ function identificarPlano(pagamento) {
     if (valoresIguais(pagamento.value, plano.valor)) return plano;
   }
   return null;
+}
+
+async function sincronizarContaPorEmail(email, {
+  planoId,
+  status,
+  customerId,
+  subscriptionId,
+  paymentId,
+  proximaCobranca
+} = {}) {
+  const e = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!e) return null;
+
+  const user = await buscarUsuarioPorEmail(e);
+  if (!user) return null;
+
+  await upsertAssinatura(user.id, {
+    plano: planoId || "mensal",
+    status: status || "ativa",
+    asaas_customer_id: customerId || null,
+    asaas_subscription_id: subscriptionId || null,
+    asaas_payment_id: paymentId || null,
+    proxima_cobranca: proximaCobranca || null
+  });
+
+  try {
+    await associarUserIdPorEmail(e, user.id);
+  } catch (erroAssoc) {
+    console.error("Webhook associar user_id:", erroAssoc.message || erroAssoc);
+  }
+
+  return user;
 }
 
 module.exports = async function handler(req, res) {
@@ -64,6 +103,18 @@ module.exports = async function handler(req, res) {
           } catch (erroPaginas) {
             console.error("Webhook reativar páginas:", erroPaginas.message || erroPaginas);
           }
+          try {
+            await sincronizarContaPorEmail(email, {
+              planoId: plano.id,
+              status: "ativa",
+              customerId: pagamento.customer,
+              subscriptionId: pagamento.subscription || null,
+              paymentId: pagamento.id,
+              proximaCobranca: pagamento.nextDueDate || pagamento.dueDate || null
+            });
+          } catch (erroConta) {
+            console.error("Webhook conta:", erroConta.message || erroConta);
+          }
         }
       } catch (erroCliente) {
         console.error("Webhook cliente:", erroCliente.message || erroCliente);
@@ -80,6 +131,14 @@ module.exports = async function handler(req, res) {
         const cliente = await asaasFetch(`/customers/${encodeURIComponent(pagamento.customer)}`);
         if (cliente?.email) {
           await marcarInadimplentePorEmail(cliente.email);
+          const planoOverdue = identificarPlano(pagamento);
+          await sincronizarContaPorEmail(cliente.email, {
+            planoId: planoOverdue?.id,
+            status: "inadimplente",
+            customerId: pagamento.customer,
+            subscriptionId: pagamento.subscription || null,
+            paymentId: pagamento.id
+          });
         }
       } catch (erroOverdue) {
         console.error("Webhook overdue páginas:", erroOverdue.message || erroOverdue);

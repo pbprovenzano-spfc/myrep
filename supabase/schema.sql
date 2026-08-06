@@ -11,6 +11,7 @@ create table if not exists public.representantes (
   ativo boolean not null default true,
   inadimplente_desde timestamptz,
   controle_manual boolean not null default false,
+  user_id uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -20,9 +21,35 @@ alter table public.representantes add column if not exists email_cobranca text;
 alter table public.representantes add column if not exists ativo boolean not null default true;
 alter table public.representantes add column if not exists inadimplente_desde timestamptz;
 alter table public.representantes add column if not exists controle_manual boolean not null default false;
+alter table public.representantes add column if not exists user_id uuid references auth.users (id) on delete set null;
 
 create index if not exists representantes_email_cobranca_idx
   on public.representantes (email_cobranca);
+
+create unique index if not exists representantes_user_id_uniq
+  on public.representantes (user_id)
+  where user_id is not null;
+
+create table if not exists public.assinaturas (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  plano text not null,
+  status text not null default 'ativa'
+    check (status in ('ativa', 'inadimplente', 'cancelada', 'pendente')),
+  asaas_customer_id text,
+  asaas_subscription_id text,
+  asaas_payment_id text,
+  proxima_cobranca date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists assinaturas_user_id_uniq
+  on public.assinaturas (user_id);
+
+create index if not exists assinaturas_status_idx on public.assinaturas (status);
+create index if not exists assinaturas_asaas_customer_idx
+  on public.assinaturas (asaas_customer_id);
 
 create table if not exists public.acessos (
   id uuid primary key default gen_random_uuid(),
@@ -56,6 +83,7 @@ create table if not exists public.mensagens (
   remetente_nome text,
   remetente_email text,
   slug text,
+  user_id uuid references auth.users (id) on delete set null,
   dados jsonb not null default '{}'::jsonb,
   corpo text not null default '',
   lida boolean not null default false,
@@ -66,9 +94,12 @@ create table if not exists public.mensagens (
   created_at timestamptz not null default now()
 );
 
+alter table public.mensagens add column if not exists user_id uuid references auth.users (id) on delete set null;
+
 create index if not exists mensagens_created_at_idx on public.mensagens (created_at desc);
 create index if not exists mensagens_tipo_idx on public.mensagens (tipo);
 create index if not exists mensagens_lida_idx on public.mensagens (lida);
+create index if not exists mensagens_user_id_idx on public.mensagens (user_id);
 
 create table if not exists public.mensagens_anexos (
   id uuid primary key default gen_random_uuid(),
@@ -84,6 +115,7 @@ create table if not exists public.mensagens_anexos (
 create index if not exists mensagens_anexos_mensagem_id_idx on public.mensagens_anexos (mensagem_id);
 
 alter table public.representantes enable row level security;
+alter table public.assinaturas enable row level security;
 alter table public.acessos enable row level security;
 alter table public.pagamentos_eventos enable row level security;
 alter table public.mensagens enable row level security;
@@ -93,6 +125,37 @@ drop policy if exists representantes_leitura_publica on public.representantes;
 create policy representantes_leitura_publica on public.representantes
   for select
   using (publicado = true);
+
+drop policy if exists representantes_dono_select on public.representantes;
+create policy representantes_dono_select on public.representantes
+  for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists representantes_dono_update on public.representantes;
+create policy representantes_dono_update on public.representantes
+  for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists assinaturas_dono_select on public.assinaturas;
+create policy assinaturas_dono_select on public.assinaturas
+  for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists mensagens_dono_select on public.mensagens;
+create policy mensagens_dono_select on public.mensagens
+  for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists mensagens_dono_insert on public.mensagens;
+create policy mensagens_dono_insert on public.mensagens
+  for insert
+  to authenticated
+  with check (user_id = auth.uid());
 
 insert into storage.buckets (id, name, public)
 values ('assets-clientes', 'assets-clientes', true)

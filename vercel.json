@@ -9,6 +9,10 @@
     { "source": "/admin", "destination": "/admin/" },
     { "source": "/assinantes", "destination": "/assinantes/" },
     { "source": "/alteracoes", "destination": "/alteracoes/" },
-    { "source": "/termos", "destination": "/termos/" }
+    { "source": "/termos", "destination": "/termos/" },
+    { "source": "/cadastro", "destination": "/cadastro/" },
+    { "source": "/entrar", "destination": "/entrar/" },
+    { "source": "/recuperar-senha", "destination": "/recuperar-senha/" },
+    { "source": "/painel", "destination": "/painel/" }
   ]
 }

@@ -51,6 +51,7 @@
         Caixa de entrada
         <span class="admin-tab__badge" id="badge-nao-lidas" hidden>0</span>
       </a>
+      <a class="admin-tab" href="#usuarios" data-tab="usuarios">Usuários</a>
       <a class="admin-tab" href="#paginas" data-tab="paginas">Páginas</a>
       <a class="admin-tab" href="#assinantes" data-tab="assinantes">Assinantes</a>
     </nav>
@@ -176,6 +177,40 @@
       </div>
     </div>
 
+    <!-- USUÁRIOS -->
+    <div class="admin-aba" id="aba-usuarios" data-aba="usuarios" hidden>
+      <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
+        <h2 class="assinantes-bloco__titulo">Usuários cadastrados</h2>
+        <p class="assinantes-sub">Contas Supabase Auth, assinatura local e página vinculada.</p>
+        <form id="form-vincular" class="assinantes-form assinantes-form--linha" novalidate>
+          <label class="campo">
+            <span class="campo__rotulo">E-mail do usuário</span>
+            <input name="email" type="email" required placeholder="cliente@email.com">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Slug da página</span>
+            <input name="slug" type="text" required placeholder="meu-rep" pattern="[a-z0-9-]+">
+          </label>
+          <button class="btn btn--primario" type="submit">Vincular página</button>
+        </form>
+        <p class="briefing-status" id="vincular-status" role="status"></p>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-usuarios">
+            <thead>
+              <tr>
+                <th>E-mail</th>
+                <th>Assinatura</th>
+                <th>Página</th>
+                <th>Criado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
     <!-- PÁGINAS -->
     <div class="admin-aba" id="aba-paginas" data-aba="paginas" hidden>
       <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
@@ -199,6 +234,7 @@
             <thead>
               <tr>
                 <th>Página</th>
+                <th>Dono</th>
                 <th>E-mail de cobrança</th>
                 <th>Situação</th>
                 <th>Modo</th>

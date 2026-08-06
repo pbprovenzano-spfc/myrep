@@ -17,6 +17,9 @@
   const tbodyPagResumo = document.querySelector("#tabela-pagamentos-resumo tbody");
   const tbodyAcessos = document.querySelector("#tabela-acessos tbody");
   const tbodyPaginas = document.querySelector("#tabela-paginas tbody");
+  const tbodyUsuarios = document.querySelector("#tabela-usuarios tbody");
+  const formVincular = document.getElementById("form-vincular");
+  const vincularStatus = document.getElementById("vincular-status");
   const inboxLista = document.getElementById("inbox-lista");
   const inboxDetalhe = document.getElementById("inbox-detalhe");
   const inboxVazio = document.getElementById("inbox-vazio");
@@ -85,7 +88,8 @@
       tabPart === "inbox" ||
       tabPart === "assinantes" ||
       tabPart === "visao" ||
-      tabPart === "paginas"
+      tabPart === "paginas" ||
+      tabPart === "usuarios"
         ? tabPart
         : "visao";
     const filtro =
@@ -281,7 +285,9 @@
       btn.innerHTML = `
         <span class="admin-inbox__tipo">${esc(labelTipo(m.tipo))}</span>
         <strong class="admin-inbox__assunto">${esc(m.assunto || "(sem assunto)")}</strong>
-        <span class="admin-inbox__meta">${esc(m.remetente_email || m.remetente_nome || m.slug || "—")} · ${esc(quando)}</span>
+        <span class="admin-inbox__meta">${esc(m.remetente_email || m.remetente_nome || m.slug || "—")}${
+          m.user_id ? " · conta" : ""
+        } · ${esc(quando)}</span>
         <span class="badge">${esc(labelStatus(m.status))}</span>`;
       inboxLista.appendChild(btn);
     }
@@ -547,11 +553,11 @@
     const filtrada = listaPaginasFiltrada();
     sincronizarChipsFiltro();
     if (!paginasCache.length) {
-      tbodyPaginas.innerHTML = `<tr><td colspan="5">Nenhuma página encontrada.</td></tr>`;
+      tbodyPaginas.innerHTML = `<tr><td colspan="6">Nenhuma página encontrada.</td></tr>`;
       return;
     }
     if (!filtrada.length) {
-      tbodyPaginas.innerHTML = `<tr><td colspan="5">Nenhuma página neste filtro.</td></tr>`;
+      tbodyPaginas.innerHTML = `<tr><td colspan="6">Nenhuma página neste filtro.</td></tr>`;
       return;
     }
     tbodyPaginas.innerHTML = filtrada
@@ -562,6 +568,7 @@
             <a href="/${esc(slug)}/" target="_blank" rel="noopener">/${esc(slug)}/</a>
             <div class="assinantes-meta">${esc(p.nome || "")}</div>
           </td>
+          <td>${esc(p.dono_email || "—")}</td>
           <td>
             <input type="email" class="admin-pagina-email" data-slug="${esc(slug)}" value="${esc(p.email_cobranca || "")}" placeholder="cliente@email.com">
           </td>
@@ -583,6 +590,57 @@
         </tr>`;
       })
       .join("");
+  }
+
+  function renderUsuarios(lista) {
+    if (!tbodyUsuarios) return;
+    if (!lista.length) {
+      tbodyUsuarios.innerHTML = `<tr><td colspan="5">Nenhum usuário cadastrado.</td></tr>`;
+      return;
+    }
+    tbodyUsuarios.innerHTML = lista
+      .map((u) => {
+        const ass = u.assinatura;
+        const pag = u.pagina;
+        const assHtml = ass
+          ? `<span class="badge badge--${esc(ass.status)}">${esc(ass.status)}</span>
+             <div class="assinantes-meta">${esc(ass.plano || "")}</div>`
+          : "—";
+        const pagHtml = pag
+          ? `<a href="/${esc(pag.slug)}/" target="_blank" rel="noopener">/${esc(pag.slug)}/</a>
+             <div class="assinantes-meta">${esc(pag.situacaoLabel || pag.situacao || "")}</div>`
+          : "—";
+        const criado = u.criado_em ? new Date(u.criado_em).toLocaleDateString("pt-BR") : "—";
+        return `<tr>
+          <td>
+            <strong>${esc(u.email)}</strong>
+            ${u.nome ? `<div class="assinantes-meta">${esc(u.nome)}</div>` : ""}
+            ${u.confirmado ? "" : `<div class="assinantes-meta">E-mail não confirmado</div>`}
+          </td>
+          <td>${assHtml}</td>
+          <td>${pagHtml}</td>
+          <td>${esc(criado)}</td>
+          <td class="assinantes-acoes">
+            ${
+              !ass || ass.status !== "ativa"
+                ? `<button type="button" class="btn-link" data-liberar-assinatura="${esc(u.id)}" data-plano="mensal">Marcar adimplente</button>`
+                : ""
+            }
+            <a class="btn-link" href="#inbox">Inbox</a>
+          </td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  async function carregarUsuarios(mostrarStatus = true) {
+    if (mostrarStatus) setStatus(painelStatus, "Carregando usuários…", "info");
+    const data = await api("usuarios");
+    renderUsuarios(data.usuarios || []);
+    if (mostrarStatus) {
+      setStatus(painelStatus, `${(data.usuarios || []).length} usuário(s)`, "ok");
+    }
+    return data;
   }
 
   async function carregarPaginas(mostrarStatus = true) {
@@ -620,6 +678,7 @@
     if (listarData.paginas) renderPaginas(listarData.paginas);
     if (tabAtual() === "inbox") await carregarInbox(false);
     if (tabAtual() === "paginas" && !listarData.paginas) await carregarPaginas(false);
+    if (tabAtual() === "usuarios") await carregarUsuarios(false);
     setStatus(
       painelStatus,
       `${(listarData.assinaturas || []).length} assinaturas · ${(listarData.pagamentos || []).length} pagamentos · ${(listarData.paginas || []).length} páginas`,
@@ -681,8 +740,50 @@
           ? carregarAssinantes()
           : t === "paginas"
             ? carregarPaginas()
-            : carregarTudo();
+            : t === "usuarios"
+              ? carregarUsuarios()
+              : carregarTudo();
     p.catch((erro) => setStatus(painelStatus, erro.message, "erro"));
+  });
+
+  formVincular?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(formVincular);
+    setStatus(vincularStatus, "Vinculando…", "info");
+    try {
+      await api("usuario-vincular", {
+        method: "POST",
+        body: {
+          email: String(fd.get("email") || "").trim(),
+          slug: String(fd.get("slug") || "").trim()
+        }
+      });
+      setStatus(vincularStatus, "Página vinculada ao usuário.", "ok");
+      formVincular.reset();
+      await carregarUsuarios(false);
+      await carregarPaginas(false);
+    } catch (erro) {
+      setStatus(vincularStatus, erro.message, "erro");
+    }
+  });
+
+  tbodyUsuarios?.addEventListener("click", async (ev) => {
+    const btn = ev.target.closest("[data-liberar-assinatura]");
+    if (!btn) return;
+    try {
+      await api("usuario-assinatura", {
+        method: "POST",
+        body: {
+          userId: btn.getAttribute("data-liberar-assinatura"),
+          plano: btn.getAttribute("data-plano") || "mensal",
+          status: "ativa"
+        }
+      });
+      setStatus(painelStatus, "Assinatura marcada como ativa.", "ok");
+      await carregarUsuarios(false);
+    } catch (erro) {
+      setStatus(painelStatus, erro.message, "erro");
+    }
   });
 
   btnSyncPaginas?.addEventListener("click", async () => {
@@ -892,6 +993,8 @@
       } else {
         carregarPaginas().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
       }
+    } else if (tab === "usuarios") {
+      carregarUsuarios().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
     } else if (tab === "assinantes") {
       carregarAssinantes().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
     }

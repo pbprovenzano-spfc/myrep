@@ -2840,6 +2840,179 @@ a { color: inherit; }
   word-break: break-all;
 }
 
+/* ---------- Auth + Painel do cliente ---------- */
+
+.pagina-auth,
+.pagina-painel {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%, color-mix(in srgb, var(--sinal) 18%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--papel), #fff 40%);
+}
+
+.auth-shell,
+.painel-shell {
+  width: min(720px, calc(100% - 32px));
+  margin: 0 auto 64px;
+  padding-top: 8px;
+}
+
+.painel-shell {
+  width: min(880px, calc(100% - 32px));
+}
+
+.auth-intro,
+.painel-intro {
+  margin-bottom: 28px;
+}
+
+.auth-intro__titulo,
+.painel-intro__titulo {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.auth-intro__texto,
+.painel-intro__email,
+.painel-card__texto,
+.painel-card__meta {
+  margin: 0;
+  color: var(--mutado);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-rodape {
+  margin-top: 24px;
+  color: var(--mutado);
+  font-size: 0.95rem;
+}
+
+.auth-rodape a {
+  color: var(--sinal-escuro);
+  font-weight: 700;
+}
+
+.painel-topo {
+  align-items: center;
+}
+
+.painel-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.painel-badge {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--borda) 70%, transparent);
+  color: var(--ink);
+}
+
+.painel-badge[data-status="ativa"] {
+  background: color-mix(in srgb, #2F9E5B 22%, transparent);
+  color: #1a5c34;
+}
+
+.painel-badge[data-status="inadimplente"] {
+  background: color-mix(in srgb, #C44B3A 22%, transparent);
+  color: #7a2a20;
+}
+
+.painel-badge[data-status="pendente"] {
+  background: color-mix(in srgb, var(--sinal) 28%, transparent);
+  color: var(--ink);
+}
+
+.painel-card {
+  margin: 0 0 20px;
+  padding: 22px 20px;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.painel-card__titulo {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.painel-card__texto {
+  margin-bottom: 16px;
+}
+
+.painel-planos,
+.painel-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.painel-midia-grid {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 720px) {
+  .painel-midia-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.painel-sub {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.painel-lista {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.painel-lista li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--borda);
+  font-size: 0.95rem;
+}
+
+.painel-lista__vazio {
+  color: var(--mutado);
+  border: 0 !important;
+}
+
+.painel-form-inline {
+  display: grid;
+  gap: 12px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

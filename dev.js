@@ -76,6 +76,10 @@ const ROTAS_RESERVADAS = new Set([
   "termos",
   "representantes",
   "assinantes",
+  "cadastro",
+  "entrar",
+  "recuperar-senha",
+  "painel",
   "assets-clientes",
   "inbox"
 ]);
@@ -372,7 +376,13 @@ const API_HANDLERS = {
   "/api/assinantes": () => require("./api/assinantes"),
   "/api/admin": () => require("./api/admin"),
   "/api/alteracoes": () => require("./api/alteracoes"),
-  "/api/paginas/status": () => require("./api/paginas/status")
+  "/api/paginas/status": () => require("./api/paginas/status"),
+  "/api/auth/perfil": () => require("./api/auth/perfil"),
+  "/api/auth/logout": () => require("./api/auth/logout"),
+  "/api/painel/checkout": () => require("./api/painel/checkout"),
+  "/api/painel/briefing": () => require("./api/painel/briefing"),
+  "/api/painel/alteracoes": () => require("./api/painel/alteracoes"),
+  "/api/painel/pagina": () => require("./api/painel/pagina")
 };
 
 function invocarApi(handler, req, res) {
@@ -399,7 +409,11 @@ http.createServer((req, res) => {
   }
 
   const url = req.url.split("?")[0].replace(/\/$/, "") || "/";
-  if (req.method === "POST" && (url === "/api/briefing")) {
+  if (req.method === "POST" && (url === "/api/briefing" || url === "/api/painel/briefing")) {
+    if (url === "/api/painel/briefing") {
+      invocarApi(require("./api/painel/briefing"), req, res);
+      return;
+    }
     briefingLocal(req, res);
     return;
   }
@@ -419,11 +433,13 @@ http.createServer((req, res) => {
 }).listen(PORTA, () => {
   console.log(`▸ Servidor em http://localhost:${PORTA}`);
   console.log(`  Home:       http://localhost:${PORTA}/`);
-  console.log(`  Briefing:   http://localhost:${PORTA}/briefing/`);
+  console.log(`  Cadastro:   http://localhost:${PORTA}/cadastro/`);
+  console.log(`  Entrar:     http://localhost:${PORTA}/entrar/`);
+  console.log(`  Painel:     http://localhost:${PORTA}/painel/`);
+  console.log(`  Briefing:   http://localhost:${PORTA}/briefing/ (legacy)`);
   console.log(`  Pagamento:  http://localhost:${PORTA}/pagamento/ok/`);
   console.log(`  Admin:      http://localhost:${PORTA}/admin/`);
   console.log(`  Assinantes: http://localhost:${PORTA}/assinantes/ → /admin/`);
-  console.log(`  Alterações: http://localhost:${PORTA}/alteracoes/`);
   console.log(`  Ctrl+C para parar.\n`);
   observar();
 });

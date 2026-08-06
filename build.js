@@ -675,13 +675,45 @@ function carregarEnvBuild() {
   }
 }
 
+function cfgSupabaseBrowser() {
+  carregarEnvBuild();
+  return JSON.stringify({
+    url: process.env.SUPABASE_URL || "",
+    anonKey: process.env.SUPABASE_ANON_KEY || ""
+  });
+}
+
+function injetarSupabase(html) {
+  return String(html).replace(/\{\{MYREP_SUPABASE\}\}/g, cfgSupabaseBrowser());
+}
+
 function gerarHome(template) {
   carregarEnvBuild();
   const linkOuHash = (v) => (temTexto(v) ? v : "/#precos");
-  return template
-    .replace(/\{\{LINK_MENSAL\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_MENSAL)))
-    .replace(/\{\{LINK_ANUAL_PARCELADO\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_ANUAL_PARCELADO)))
-    .replace(/\{\{LINK_ANUAL_AVISTA\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_ANUAL_AVISTA)));
+  return injetarSupabase(
+    template
+      .replace(/\{\{LINK_MENSAL\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_MENSAL)))
+      .replace(/\{\{LINK_ANUAL_PARCELADO\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_ANUAL_PARCELADO)))
+      .replace(/\{\{LINK_ANUAL_AVISTA\}\}/g, esc(linkOuHash(process.env.ASAAS_LINK_ANUAL_AVISTA)))
+  );
+}
+
+function paginaRedirect(destino, titulo = "Redirecionando...") {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="0;url=${destino}">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="${destino}">
+<title>${titulo}</title>
+<script>location.replace(${JSON.stringify(destino)}+(location.search||"")+(location.hash||""));</script>
+</head>
+<body>
+  <p><a href="${destino}">Continuar</a></p>
+</body>
+</html>
+`;
 }
 
 function gerarRepresentantes(clientes, template) {
@@ -759,17 +791,45 @@ async function build() {
   fs.writeFileSync(path.join(pastaReps, "index.html"), gerarRepresentantes(clientes, tplRepresentantes));
   console.log(`  ✓ /representantes/`);
 
+  // /briefing/ — legacy: token ?acesso= ainda serve o form; sem token redireciona
   const tplBriefing = fs.readFileSync(path.join(DIR_TEMPLATE, "briefing.html"), "utf8");
   const pastaBriefing = path.join(DIST, "briefing");
   fs.mkdirSync(pastaBriefing, { recursive: true });
-  fs.writeFileSync(path.join(pastaBriefing, "index.html"), tplBriefing);
-  console.log(`  ✓ /briefing/`);
+  const briefingComGate =
+    tplBriefing.replace(
+      "</body>",
+      `<script>
+(function(){
+  var q=new URLSearchParams(location.search);
+  if(!q.get("acesso")){
+    location.replace("/entrar/?next="+encodeURIComponent("/painel/"));
+  }
+})();
+</script>
+</body>`
+    );
+  fs.writeFileSync(path.join(pastaBriefing, "index.html"), briefingComGate);
+  console.log(`  ✓ /briefing/ (legacy + redirect)`);
 
   const tplBriefingOk = fs.readFileSync(path.join(DIR_TEMPLATE, "briefing-ok.html"), "utf8");
   const pastaBriefingOk = path.join(DIST, "briefing", "ok");
   fs.mkdirSync(pastaBriefingOk, { recursive: true });
   fs.writeFileSync(path.join(pastaBriefingOk, "index.html"), tplBriefingOk);
   console.log(`  ✓ /briefing/ok/`);
+
+  const paginasAuth = [
+    ["cadastro", "cadastro.html"],
+    ["entrar", "entrar.html"],
+    ["recuperar-senha", "recuperar-senha.html"],
+    ["painel", "painel.html"]
+  ];
+  for (const [pasta, arquivo] of paginasAuth) {
+    const tpl = fs.readFileSync(path.join(DIR_TEMPLATE, arquivo), "utf8");
+    const dest = path.join(DIST, pasta);
+    fs.mkdirSync(dest, { recursive: true });
+    fs.writeFileSync(path.join(dest, "index.html"), injetarSupabase(tpl));
+    console.log(`  ✓ /${pasta}/`);
+  }
 
   const tplTermos = fs.readFileSync(path.join(DIR_TEMPLATE, "termos.html"), "utf8");
   const pastaTermos = path.join(DIST, "termos");
@@ -811,18 +871,13 @@ async function build() {
   );
   console.log(`  ✓ /assinantes/ → /admin/`);
 
-  carregarEnvBuild();
-  const tplAlteracoes = fs.readFileSync(path.join(DIR_TEMPLATE, "alteracoes.html"), "utf8");
   const pastaAlteracoes = path.join(DIST, "alteracoes");
   fs.mkdirSync(pastaAlteracoes, { recursive: true });
   fs.writeFileSync(
     path.join(pastaAlteracoes, "index.html"),
-    tplAlteracoes.replace(
-      /\{\{SUPPORT_EMAIL\}\}/g,
-      esc(process.env.SUPPORT_EMAIL || process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com")
-    )
+    paginaRedirect("/entrar/?next=/painel/", "Redirecionando para o painel…")
   );
-  console.log(`  ✓ /alteracoes/`);
+  console.log(`  ✓ /alteracoes/ → /entrar/`);
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log(`  ✓ /404.html`);

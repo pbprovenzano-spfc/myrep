@@ -28,8 +28,8 @@
       <h1 class="hero__titulo">Sua página de representante. Um link. Pronto.</h1>
       <p class="hero__sub">O My Rep reúne WhatsApp, marcas, catálogos e área de atuação numa página limpa — fácil de compartilhar no Instagram, no cartão ou no WhatsApp.</p>
       <div class="hero__ctas">
-        <a class="btn btn--primario" href="#precos">Criar meu My Rep</a>
-        <a class="btn btn--fantasma" href="/alteracoes/">Já sou usuário</a>
+        <a class="btn btn--primario" href="/cadastro/">Criar meu My Rep</a>
+        <a class="btn btn--fantasma" href="/entrar/">Já sou usuário</a>
       </div>
     </div>
     <aside class="hero__mockup" aria-hidden="true">
@@ -93,7 +93,7 @@
   <div class="precos__interno">
     <p class="eyebrow">Assinatura</p>
     <h2 class="precos__titulo">Escolha como pagar</h2>
-    <p class="precos__sub">Pague primeiro (PIX ou cartão). Depois você libera o briefing com o e-mail do pagamento.</p>
+    <p class="precos__sub">Crie sua conta, escolha o plano e pague na Asaas (PIX ou cartão). Depois preencha o briefing no seu painel.</p>
 
     <ol class="precos__lista">
       <li class="preco">
@@ -102,7 +102,7 @@
           <p class="preco__valor"><span>R$ 17,99</span> /mês</p>
           <p class="preco__nota">Flexível. Cancele quando quiser.</p>
         </div>
-        <a class="btn btn--primario" href="{{LINK_MENSAL}}" data-plano="mensal" rel="noopener">Assinar</a>
+        <a class="btn btn--primario" href="/cadastro/?plano=mensal" data-plano="mensal">Assinar</a>
       </li>
       <li class="preco">
         <div class="preco__texto">
@@ -110,7 +110,7 @@
           <p class="preco__valor"><span>R$ 14,99</span> /mês</p>
           <p class="preco__nota">12× de R$ 14,99 · total R$ 179,88</p>
         </div>
-        <a class="btn btn--primario" href="{{LINK_ANUAL_PARCELADO}}" data-plano="anual_parcelado" rel="noopener">Assinar</a>
+        <a class="btn btn--primario" href="/cadastro/?plano=anual_parcelado" data-plano="anual_parcelado">Assinar</a>
       </li>
       <li class="preco preco--destaque">
         <div class="preco__texto">
@@ -118,7 +118,7 @@
           <p class="preco__valor"><span>R$ 161,89</span> no ano</p>
           <p class="preco__nota">10% off no anual · melhor preço</p>
         </div>
-        <a class="btn btn--primario" href="{{LINK_ANUAL_AVISTA}}" data-plano="anual_avista" rel="noopener">Assinar</a>
+        <a class="btn btn--primario" href="/cadastro/?plano=anual_avista" data-plano="anual_avista">Assinar</a>
       </li>
     </ol>
   </div>
@@ -126,10 +126,10 @@
 
 <section class="como" id="como-funciona">
   <div class="como__interno">
-    <p class="eyebrow">Depois do pagamento</p>
+    <p class="eyebrow">Depois do cadastro</p>
     <h2 class="como__titulo">Como funciona</h2>
-    <p class="como__texto">1) Escolha o plano e pague na Asaas. 2) Volte ao site e libere o briefing com o e-mail do pagamento. 3) Preencha seus dados — publicamos sua página.</p>
-    <a class="btn btn--primario" href="#precos">Ver planos</a>
+    <p class="como__texto">1) Crie sua conta com e-mail e senha. 2) Escolha o plano e pague na Asaas. 3) No painel, envie o briefing — publicamos sua página e você compartilha o cartão.</p>
+    <a class="btn btn--primario" href="/cadastro/">Criar conta</a>
   </div>
 </section>
 
@@ -145,6 +145,10 @@
   <button type="button" class="btn btn--primario cookies__btn" id="cookies-aceitar">Aceitar</button>
 </div>
 
+<script>window.MYREP_SUPABASE={{MYREP_SUPABASE}};</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
+<script src="/js/supabase-client.js" defer></script>
+<script src="/js/home-auth.js" defer></script>
 <script src="/js/cookies.js" defer></script>
 </body>
 </html>

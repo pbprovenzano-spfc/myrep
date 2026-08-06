@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recuperar senha — My Rep</title>
+<meta name="description" content="Redefina a senha da sua conta My Rep.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+<script>window.MYREP_SUPABASE={{MYREP_SUPABASE}};</script>
+</head>
+<body class="pagina-auth">
+
+<header class="briefing-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Senha</p>
+</header>
+
+<main class="auth-shell">
+  <section id="passo-pedir">
+    <header class="auth-intro">
+      <h1 class="auth-intro__titulo">Recuperar senha</h1>
+      <p class="auth-intro__texto">Enviamos um link para o seu e-mail. Use-o para definir uma senha nova.</p>
+    </header>
+
+    <form class="auth-form" id="form-recuperar" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">E-mail da conta <abbr title="obrigatório">*</abbr></span>
+        <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
+      </label>
+      <p class="briefing-status" id="auth-status" role="status" aria-live="polite"></p>
+      <button class="btn btn--primario" type="submit">Enviar link</button>
+    </form>
+  </section>
+
+  <section id="passo-nova-senha" hidden>
+    <header class="auth-intro">
+      <h1 class="auth-intro__titulo">Nova senha</h1>
+      <p class="auth-intro__texto">Defina a senha que você usará para entrar no painel.</p>
+    </header>
+
+    <form class="auth-form" id="form-nova-senha" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Nova senha <abbr title="obrigatório">*</abbr></span>
+        <input name="senha" type="password" required autocomplete="new-password" minlength="6" maxlength="72">
+      </label>
+      <label class="campo">
+        <span class="campo__rotulo">Confirmar senha <abbr title="obrigatório">*</abbr></span>
+        <input name="senha2" type="password" required autocomplete="new-password" minlength="6" maxlength="72">
+      </label>
+      <p class="briefing-status" id="auth-status-nova" role="status" aria-live="polite"></p>
+      <button class="btn btn--primario" type="submit">Salvar senha</button>
+    </form>
+  </section>
+
+  <p class="auth-rodape"><a href="/entrar/">Voltar ao login</a></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
+<script src="/js/supabase-client.js" defer></script>
+<script src="/js/auth-pages.js" defer></script>
+</body>
+</html>

@@ -50,6 +50,7 @@ function registroPadrao(slug, patch = {}) {
     ativo: patch.ativo !== false,
     inadimplente_desde: patch.inadimplente_desde ?? null,
     controle_manual: patch.controle_manual === true,
+    user_id: patch.user_id || null,
     nome: patch.nome || null,
     publicado: patch.publicado !== false,
     updated_at: patch.updated_at || new Date().toISOString()
@@ -144,6 +145,7 @@ function metaDeRow(slug, row = {}) {
     ativo: row.ativo !== false,
     inadimplente_desde: row.inadimplente_desde || null,
     controle_manual: row.controle_manual === true,
+    user_id: row.user_id || null,
     nome,
     publicado: row.publicado !== false,
     updated_at: row.updated_at
@@ -159,7 +161,7 @@ async function obterMeta(slug) {
     const { data, error } = await sb
       .from("representantes")
       .select(
-        "slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, updated_at"
+        "slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, user_id, updated_at"
       )
       .eq("slug", s)
       .maybeSingle();
@@ -208,16 +210,15 @@ async function salvarMeta(slug, patch) {
       .maybeSingle();
 
     if (existente) {
-      const { error } = await sb
-        .from("representantes")
-        .update({
-          email_cobranca: final.email_cobranca,
-          ativo: final.ativo !== false,
-          inadimplente_desde: final.inadimplente_desde,
-          controle_manual: final.controle_manual === true,
-          updated_at: final.updated_at
-        })
-        .eq("slug", s);
+      const patch = {
+        email_cobranca: final.email_cobranca,
+        ativo: final.ativo !== false,
+        inadimplente_desde: final.inadimplente_desde,
+        controle_manual: final.controle_manual === true,
+        updated_at: final.updated_at
+      };
+      if (final.user_id) patch.user_id = final.user_id;
+      const { error } = await sb.from("representantes").update(patch).eq("slug", s);
       if (error) {
         console.error("paginas salvarMeta update:", error.message);
         throw Object.assign(new Error("Falha ao salvar página."), { status: 500 });
@@ -231,6 +232,7 @@ async function salvarMeta(slug, patch) {
         ativo: final.ativo !== false,
         inadimplente_desde: final.inadimplente_desde,
         controle_manual: final.controle_manual === true,
+        user_id: final.user_id || null,
         updated_at: final.updated_at
       });
       if (error) {
@@ -319,7 +321,7 @@ async function listarPaginas() {
     const { data, error } = await sb
       .from("representantes")
       .select(
-        "slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, updated_at"
+        "slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, user_id, updated_at"
       )
       .order("slug");
     if (error) console.error("paginas listar:", error.message);
@@ -334,6 +336,7 @@ async function listarPaginas() {
         ativo: row.ativo !== false,
         inadimplente_desde: row.inadimplente_desde || null,
         controle_manual: row.controle_manual === true,
+        user_id: row.user_id || null,
         updated_at: row.updated_at
       });
     }
@@ -351,6 +354,7 @@ async function listarPaginas() {
         base.inadimplente_desde || meta.inadimplente_desde || null,
       controle_manual:
         meta.controle_manual === true || base.controle_manual === true,
+      user_id: base.user_id || meta.user_id || null,
       nome: base.nome || meta.nome || s,
       updated_at: meta.updated_at || base.updated_at
     });
