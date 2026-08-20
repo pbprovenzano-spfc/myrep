@@ -557,8 +557,46 @@
     else if (body) opts.body = JSON.stringify(body);
     const resp = await fetch("/api/painel/pagina", opts);
     const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data.erro || "Falha ao salvar");
+    if (!resp.ok) {
+      if (resp.status === 413) {
+        throw new Error("Arquivo grande demais. Use um PDF de até 50 MB.");
+      }
+      throw new Error(data.erro || "Falha ao salvar");
+    }
     return data;
+  }
+
+  const MAX_CATALOGO = 50 * 1024 * 1024;
+  const MAX_IMAGEM = 8 * 1024 * 1024;
+
+  async function enviarArquivoStorage(file, tipo, dica) {
+    const prep = await apiPagina("POST", {
+      acao: "upload_url",
+      tipo,
+      nome: file.name,
+      dica: dica || file.name.replace(/\.[^.]+$/, "")
+    });
+    const sb = window.MyRepAuth.getClient();
+    const bucket = window.MYREP_SUPABASE?.storageBucket || "assets-clientes";
+    const bucketApi = sb?.storage?.from(bucket);
+    if (typeof bucketApi?.uploadToSignedUrl === "function") {
+      const { error } = await bucketApi.uploadToSignedUrl(prep.path, prep.token, file, {
+        contentType: file.type || undefined,
+        upsert: true
+      });
+      if (error) throw new Error(error.message || "Falha no envio do arquivo.");
+      return prep.arquivo;
+    }
+    const resp = await fetch(prep.signedUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "true"
+      },
+      body: file
+    });
+    if (!resp.ok) throw new Error("Falha no envio do arquivo.");
+    return prep.arquivo;
   }
 
   function agendarSave() {
@@ -825,16 +863,21 @@
     const file = ev.target.files?.[0];
     if (!file) return;
     const status = document.getElementById("editor-status");
+    if (file.size > MAX_IMAGEM) {
+      setStatus(status, "Imagem grande demais (máx. 8 MB).", "erro");
+      return;
+    }
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
     fotoLocalUrl = URL.createObjectURL(file);
     atualizarPreview({ perfil: true });
-    const fd = new FormData();
-    fd.append("acao", "foto_set");
-    fd.append("arquivo", file);
-    fd.append("fotoTipo", document.querySelector('input[name="fotoTipo"]:checked')?.value || "pessoa");
     setStatus(status, "Enviando foto…", "info");
     try {
-      const data = await midiaRequest(fd);
+      const arquivo = await enviarArquivoStorage(file, "foto");
+      const data = await apiPagina("POST", {
+        acao: "foto_set",
+        arquivo,
+        fotoTipo: document.querySelector('input[name="fotoTipo"]:checked')?.value || "pessoa"
+      });
       if (fotoLocalUrl) {
         URL.revokeObjectURL(fotoLocalUrl);
         fotoLocalUrl = null;
@@ -849,13 +892,29 @@
   document.getElementById("form-catalogo-add")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const status = document.getElementById("editor-status");
-    const fd = new FormData(ev.currentTarget);
-    fd.append("acao", "catalogo_add");
+    const form = ev.currentTarget;
+    const titulo = form.titulo?.value?.trim() || "";
+    const marcaId = form.marcaId?.value || "";
+    const file = form.arquivo?.files?.[0];
+    if (!file) {
+      setStatus(status, "Escolha o arquivo PDF do catálogo.", "erro");
+      return;
+    }
+    if (file.size > MAX_CATALOGO) {
+      setStatus(status, "PDF grande demais (máx. 50 MB).", "erro");
+      return;
+    }
     setStatus(status, "Enviando catálogo…", "info");
     try {
-      const data = await midiaRequest(fd);
+      const arquivo = await enviarArquivoStorage(file, "catalogo", titulo || file.name);
+      const data = await apiPagina("POST", {
+        acao: "catalogo_add",
+        titulo,
+        marcaId,
+        arquivo
+      });
       aplicarPagina(data.pagina);
-      ev.currentTarget.reset();
+      form.reset();
       setStatus(status, "Catálogo adicionado.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
@@ -865,13 +924,22 @@
   document.getElementById("form-marca-add")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const status = document.getElementById("editor-status");
-    const fd = new FormData(ev.currentTarget);
-    fd.append("acao", "marca_add");
+    const form = ev.currentTarget;
+    const nome = form.nome?.value?.trim() || "";
+    const file = form.arquivo?.files?.[0];
+    if (file && file.size > MAX_IMAGEM) {
+      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
+      return;
+    }
     setStatus(status, "Enviando marca…", "info");
     try {
-      const data = await midiaRequest(fd);
+      let arquivo = "";
+      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
+      const body = { acao: "marca_add", nome };
+      if (arquivo) body.arquivo = arquivo;
+      const data = await apiPagina("POST", body);
       aplicarPagina(data.pagina);
-      ev.currentTarget.reset();
+      form.reset();
       setStatus(status, "Marca adicionada.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");

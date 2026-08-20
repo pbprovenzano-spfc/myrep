@@ -13,6 +13,8 @@ const {
   lerCorpo,
   parseMultipart,
   uploadAsset,
+  criarUrlUpload,
+  nomeAssetInformado,
   removerAsset,
   exigirAssinaturaAtiva,
   paginaResumo,
@@ -138,7 +140,27 @@ module.exports = async function handler(req, res) {
       campos = body;
     }
 
-    if (acao === "atualizar" || req.method === "PUT") {
+    if (acao === "upload_url") {
+      const tipo = String(campos.tipo || "catalogo").trim().toLowerCase();
+      const original = String(campos.nome || campos.dica || "arquivo");
+      const extBruta = (original.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const ext =
+        extBruta || (tipo === "catalogo" ? "pdf" : tipo === "marca" || tipo === "foto" ? "jpg" : "bin");
+      const dica = String(campos.dica || original.replace(/\.[^.]+$/, "") || tipo);
+      let nomeArq;
+      if (tipo === "foto") {
+        nomeArq = `foto.${ext}`.slice(0, 120);
+      } else if (tipo === "marca") {
+        nomeArq = `marca-${nomeArquivoSeguro(dica, "marca")}.${ext}`.slice(0, 120);
+      } else {
+        nomeArq = `${nomeArquivoSeguro(dica, "catalogo")}-${Date.now().toString(36)}.${ext}`.slice(
+          0,
+          120
+        );
+      }
+      const up = await criarUrlUpload(slug, nomeArq, { upsert: tipo === "foto" || tipo === "marca" });
+      return json(res, 200, { ok: true, ...up });
+    } else if (acao === "atualizar" || req.method === "PUT") {
       for (const k of CAMPOS_TEXTO) {
         if (campos[k] !== undefined) dados[k] = campos[k];
       }
@@ -156,19 +178,23 @@ module.exports = async function handler(req, res) {
       dados = normalizarDados({ ...dados, catalogos, marcas });
     } else if (acao === "foto_set") {
       const file = arquivos[0];
-      if (!file) return json(res, 400, { erro: "Envie a foto ou logo." });
-      if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
-      const ext = (file.filename.split(".").pop() || "jpg").toLowerCase();
-      const nomeArq = `foto.${ext}`.slice(0, 120);
+      let nomeArq = nomeAssetInformado(campos.arquivo);
+      if (file) {
+        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
+        const ext = (file.filename.split(".").pop() || "jpg").toLowerCase();
+        nomeArq = `foto.${ext}`.slice(0, 120);
+        if (dados.foto && dados.foto !== nomeArq) await removerAsset(slug, dados.foto);
+        await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+      }
+      if (!nomeArq) return json(res, 400, { erro: "Envie a foto ou logo." });
       if (dados.foto && dados.foto !== nomeArq) await removerAsset(slug, dados.foto);
-      await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
       dados.foto = nomeArq;
       dados.fotoTipo = campos.fotoTipo === "logo" ? "logo" : "pessoa";
     } else if (acao === "marca_add" || acao === "marca_editar") {
       const nomeMarca = String(campos.nome || "").trim().slice(0, 120);
       if (!nomeMarca) return json(res, 400, { erro: "Informe o nome da marca." });
       const file = arquivos[0];
-      let logo = null;
+      let logo = nomeAssetInformado(campos.arquivo) || null;
       if (file) {
         if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
         const ext = (file.filename.split(".").pop() || "png").toLowerCase();
@@ -197,15 +223,19 @@ module.exports = async function handler(req, res) {
       catalogos = catalogos.map((c) => (c.marcaId === item?.id ? { ...c, marcaId: undefined } : c));
     } else if (acao === "catalogo_add") {
       const file = arquivos[0];
-      if (!file) return json(res, 400, { erro: "Envie o arquivo do catálogo." });
-      if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
-      const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
-      const base = nomeArquivoSeguro(campos.titulo || file.filename.replace(/\.[^.]+$/, ""), "catalogo");
-      const nomeArq = `${base}.${ext}`.slice(0, 120);
-      await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+      let nomeArq = nomeAssetInformado(campos.arquivo);
+      if (file) {
+        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais (máx. 3,5 MB por este caminho). Envie pelo painel atualizado." });
+        const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
+        const base = nomeArquivoSeguro(campos.titulo || file.filename.replace(/\.[^.]+$/, ""), "catalogo");
+        nomeArq = `${base}.${ext}`.slice(0, 120);
+        await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+      }
+      if (!nomeArq) return json(res, 400, { erro: "Envie o arquivo do catálogo." });
+      const ext = (nomeArq.split(".").pop() || "pdf").toLowerCase();
       const cat = {
         id: novoId("c"),
-        titulo: (campos.titulo || base).slice(0, 120),
+        titulo: (campos.titulo || nomeArq.replace(/\.[^.]+$/, "")).slice(0, 120),
         arquivo: nomeArq,
         tipo: campos.tipo || (ext === "pdf" ? "PDF" : "Arquivo")
       };

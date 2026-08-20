@@ -88,6 +88,43 @@ async function uploadAsset(slug, nome, data, mime) {
   return storagePublicUrl(slug, nome);
 }
 
+async function criarUrlUpload(slug, nome, { upsert = false } = {}) {
+  if (!supabaseConfigured()) {
+    throw Object.assign(new Error("Storage não configurado."), { status: 503 });
+  }
+  const sb = getSupabase();
+  const caminho = `${slug}/${nome}`;
+  if (upsert) {
+    await sb.storage.from(assetsBucket()).remove([caminho]);
+  }
+  let result = await sb.storage.from(assetsBucket()).createSignedUploadUrl(caminho, { upsert: true });
+  if (result.error) {
+    result = await sb.storage.from(assetsBucket()).createSignedUploadUrl(caminho);
+  }
+  const data = result.data;
+  const error = result.error;
+  if (error || !data?.signedUrl) {
+    throw Object.assign(new Error(`Falha ao preparar upload: ${error?.message || "sem URL"}`), {
+      status: 500
+    });
+  }
+  return {
+    path: data.path || caminho,
+    token: data.token,
+    signedUrl: data.signedUrl,
+    arquivo: nome
+  };
+}
+
+function nomeAssetInformado(valor) {
+  const bruto = String(valor || "")
+    .split("/")
+    .pop()
+    .trim();
+  const seguro = nomeArquivoSeguro(bruto, "");
+  return seguro || "";
+}
+
 async function removerAsset(slug, nome) {
   if (!supabaseConfigured() || !nome) return;
   const sb = getSupabase();
@@ -126,6 +163,8 @@ module.exports = {
   lerCorpo,
   parseMultipart,
   uploadAsset,
+  criarUrlUpload,
+  nomeAssetInformado,
   removerAsset,
   exigirAssinaturaAtiva,
   paginaResumo,
