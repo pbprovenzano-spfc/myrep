@@ -561,14 +561,14 @@
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
       if (resp.status === 413) {
-        throw new Error("Arquivo grande demais. Use um PDF de até 50 MB.");
+        throw new Error("Arquivo grande demais. Use um PDF de até 100 MB.");
       }
       throw new Error(data.erro || "Falha ao salvar");
     }
     return data;
   }
 
-  const MAX_CATALOGO = 50 * 1024 * 1024;
+  const MAX_CATALOGO = 100 * 1024 * 1024;
   const MAX_IMAGEM = 8 * 1024 * 1024;
 
   let campoArquivoBlobUrl = null;
@@ -1079,7 +1079,7 @@
       return;
     }
     if (file.size > MAX_CATALOGO) {
-      setStatus(status, "PDF grande demais (máx. 50 MB).", "erro");
+      setStatus(status, "PDF grande demais (máx. 100 MB).", "erro");
       return;
     }
     setStatus(status, "Enviando catálogo…", "info");
