@@ -897,6 +897,71 @@ a { color: inherit; }
   padding: 2px 4px;
 }
 
+.catalogos-grupos {
+  display: grid;
+  gap: 10px;
+}
+
+.catalogo-grupo {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--papel);
+  overflow: hidden;
+}
+
+.catalogo-grupo__cabeca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  user-select: none;
+}
+
+.catalogo-grupo__cabeca::-webkit-details-marker {
+  display: none;
+}
+
+.catalogo-grupo__logo {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 28px;
+  object-fit: contain;
+  background: var(--branco);
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.catalogo-grupo__nome {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.catalogo-grupo__seta {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--mutado);
+  border-bottom: 2px solid var(--mutado);
+  transform: rotate(45deg);
+  transition: transform var(--transicao);
+  margin-top: -3px;
+}
+
+.catalogo-grupo[open] .catalogo-grupo__seta {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+
+.catalogo-grupo__links {
+  padding: 0 12px 12px;
+}
+
 .bloco {
   padding: 22px 24px;
   animation: sobe .55s cubic-bezier(.2, .7, .3, 1) both;
@@ -3247,6 +3312,64 @@ a { color: inherit; }
   padding: 8px 0;
   border-bottom: 1px solid var(--borda);
   font-size: 0.95rem;
+}
+
+.painel-lista__corpo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.painel-lista__grupo {
+  display: block;
+  padding: 10px 0 4px;
+}
+
+.painel-lista__grupo-titulo {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--mutado);
+  margin-bottom: 4px;
+}
+
+.painel-lista--aninhada {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--borda);
+}
+
+.painel-ordem {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.painel-ordem__btn {
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  background: var(--branco);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.painel-ordem__btn:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.painel-ordem__btn:disabled {
+  opacity: .35;
+  cursor: default;
 }
 
 .painel-lista__vazio {

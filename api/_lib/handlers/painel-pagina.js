@@ -7,7 +7,7 @@ const { exigirUsuario } = require("../auth");
 const { obterPaginaPorUserId } = require("../assinaturas");
 const { getSupabase, supabaseConfigured } = require("../supabase");
 const { situacaoDe } = require("../paginas");
-const { normalizarDados, novoId, normalizarCidadesInput } = require("../dados");
+const { normalizarDados, novoId, normalizarCidadesInput, reordenarPorIds } = require("../dados");
 const {
   MAX_ANEXO,
   lerCorpo,
@@ -269,8 +269,10 @@ module.exports = async function handler(req, res) {
       catalogos = catalogos.filter((c) => c !== item);
     } else if (acao === "catalogo_reordenar") {
       const ordem = Array.isArray(campos.ordem) ? campos.ordem : JSON.parse(campos.ordem || "[]");
-      const mapa = new Map(catalogos.map((c) => [c.id, c]));
-      catalogos = ordem.map((id) => mapa.get(id)).filter(Boolean);
+      catalogos = reordenarPorIds(catalogos, ordem);
+    } else if (acao === "marca_reordenar") {
+      const ordem = Array.isArray(campos.ordem) ? campos.ordem : JSON.parse(campos.ordem || "[]");
+      marcas = reordenarPorIds(marcas, ordem);
     } else if (acao === "publicar") {
       if (!dados.nome && !dados.empresa) {
         return json(res, 400, { erro: "Preencha pelo menos o nome antes de publicar." });

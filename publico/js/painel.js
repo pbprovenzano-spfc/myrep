@@ -210,6 +210,67 @@
     }
   }
 
+  function agruparCatalogos(catalogos, marcas) {
+    const marcasLista = Array.isArray(marcas) ? marcas : [];
+    const idsMarcas = new Set(marcasLista.map((m) => m.id));
+    const porMarca = new Map();
+    const outros = [];
+
+    for (const cat of Array.isArray(catalogos) ? catalogos : []) {
+      if (cat.marcaId && idsMarcas.has(cat.marcaId)) {
+        if (!porMarca.has(cat.marcaId)) porMarca.set(cat.marcaId, []);
+        porMarca.get(cat.marcaId).push(cat);
+      } else {
+        outros.push(cat);
+      }
+    }
+
+    const grupos = [];
+    for (const marca of marcasLista) {
+      const lista = porMarca.get(marca.id);
+      if (lista && lista.length) grupos.push({ tipo: "marca", marca, catalogos: lista });
+    }
+    if (outros.length) grupos.push({ tipo: "outros", marca: null, catalogos: outros });
+    return grupos;
+  }
+
+  function botoesOrdem(attrs, desabilitarUp, desabilitarDown) {
+    const up = attrs.up ? ` ${attrs.up}` : "";
+    const down = attrs.down ? ` ${attrs.down}` : "";
+    return `<span class="painel-ordem">
+      <button type="button" class="painel-ordem__btn"${up}${desabilitarUp ? " disabled" : ""} aria-label="Subir">↑</button>
+      <button type="button" class="painel-ordem__btn"${down}${desabilitarDown ? " disabled" : ""} aria-label="Descer">↓</button>
+    </span>`;
+  }
+
+  function reordenarLista(lista, id, dir) {
+    const idx = lista.findIndex((item) => item.id === id);
+    if (idx < 0) return null;
+    const novo = idx + (dir === "up" ? -1 : 1);
+    if (novo < 0 || novo >= lista.length) return null;
+    const arr = [...lista];
+    [arr[idx], arr[novo]] = [arr[novo], arr[idx]];
+    return arr;
+  }
+
+  function reordenarCatalogoNoGrupo(catalogos, marcas, id, dir) {
+    const grupos = agruparCatalogos(catalogos, marcas);
+    let alterou = false;
+    for (const grupo of grupos) {
+      const idx = grupo.catalogos.findIndex((c) => c.id === id);
+      if (idx < 0) continue;
+      const novo = idx + (dir === "up" ? -1 : 1);
+      if (novo < 0 || novo >= grupo.catalogos.length) return null;
+      const cats = [...grupo.catalogos];
+      [cats[idx], cats[novo]] = [cats[novo], cats[idx]];
+      grupo.catalogos = cats;
+      alterou = true;
+      break;
+    }
+    if (!alterou) return null;
+    return grupos.flatMap((g) => g.catalogos);
+  }
+
   function atualizarSelectMarcas(marcas) {
     const sel = document.getElementById("select-marca-catalogo");
     if (!sel) return;
@@ -225,12 +286,22 @@
   function renderMarcas(marcas) {
     const lista = document.getElementById("lista-marcas");
     if (!lista) return;
-    lista.innerHTML = (marcas || []).length
-      ? marcas
+    const itens = marcas || [];
+    lista.innerHTML = itens.length
+      ? itens
           .map(
-            (m) =>
-              `<li><span>${esc(m.nome)}</span>
-              <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}">Remover</button></li>`
+            (m, i) =>
+              `<li>
+              <span class="painel-lista__corpo">
+                ${botoesOrdem(
+                  { up: `data-marca-up="${esc(m.id)}"`, down: `data-marca-down="${esc(m.id)}"` },
+                  i === 0,
+                  i === itens.length - 1
+                )}
+                <span>${esc(m.nome)}</span>
+              </span>
+              <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}">Remover</button>
+            </li>`
           )
           .join("")
       : "<li class='painel-lista__vazio'>Nenhuma marca ainda.</li>";
@@ -240,18 +311,38 @@
   function renderCatalogos(catalogos, marcas) {
     const lista = document.getElementById("lista-catalogos");
     if (!lista) return;
-    const mapaMarcas = new Map((marcas || []).map((m) => [m.id, m.nome]));
-    lista.innerHTML = (catalogos || []).length
-      ? catalogos
-          .map((c) => {
-            const marca = c.marcaId ? mapaMarcas.get(c.marcaId) : null;
-            return `<li>
-              <span>${esc(c.titulo || c.arquivo)}${marca ? ` · ${esc(marca)}` : ""}</span>
+    const cats = catalogos || [];
+    if (!cats.length) {
+      lista.innerHTML = "<li class='painel-lista__vazio'>Nenhum catálogo ainda.</li>";
+      return;
+    }
+
+    const grupos = agruparCatalogos(cats, marcas);
+    lista.innerHTML = grupos
+      .map((grupo) => {
+        const titulo = grupo.tipo === "outros" ? "Outros" : grupo.marca.nome;
+        const itens = grupo.catalogos
+          .map(
+            (c, i) =>
+              `<li>
+              <span class="painel-lista__corpo">
+                ${botoesOrdem(
+                  { up: `data-cat-up="${esc(c.id)}"`, down: `data-cat-down="${esc(c.id)}"` },
+                  i === 0,
+                  i === grupo.catalogos.length - 1
+                )}
+                <span>${esc(c.titulo || c.arquivo)}</span>
+              </span>
               <button type="button" class="btn-link" data-rm-catalogo="${esc(c.id)}">Remover</button>
-            </li>`;
-          })
-          .join("")
-      : "<li class='painel-lista__vazio'>Nenhum catálogo ainda.</li>";
+            </li>`
+          )
+          .join("");
+        return `<li class="painel-lista__grupo">
+          <span class="painel-lista__grupo-titulo">${esc(titulo)}</span>
+          <ul class="painel-lista painel-lista--aninhada">${itens}</ul>
+        </li>`;
+      })
+      .join("");
   }
 
   function preencherEditor(dados) {
@@ -417,6 +508,52 @@
   </div>`;
   }
 
+  function htmlItemCatalogoPreview(cat, marcas) {
+    let meta = `<span class="link-btn__meta">${esc(cat.tipo || "PDF")}</span>`;
+    if (cat.marcaId) {
+      const marca = marcas.find((m) => m.id === cat.marcaId);
+      if (marca?.logo) {
+        meta = `<img class="link-btn__logo" src="${esc(urlAsset(marca.logo))}" alt="">`;
+      }
+    } else if (cat.logo) {
+      meta = `<img class="link-btn__logo" src="${esc(urlAsset(cat.logo))}" alt="">`;
+    }
+    const href = urlAsset(cat.arquivo) || "#";
+    return `<li><a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener"><span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>${meta}</a></li>`;
+  }
+
+  function htmlCabecaGrupoPreview(marca, titulo) {
+    const logo = marca?.logo
+      ? `<img class="catalogo-grupo__logo" src="${esc(urlAsset(marca.logo))}" alt="">`
+      : "";
+    const nome = esc(titulo || marca?.nome || "Outros");
+    return `<summary class="catalogo-grupo__cabeca">${logo}<span class="catalogo-grupo__nome">${nome}</span><span class="catalogo-grupo__seta" aria-hidden="true"></span></summary>`;
+  }
+
+  function htmlCatalogosPreview(c) {
+    const catalogos = Array.isArray(c.catalogos) ? c.catalogos : [];
+    if (!catalogos.length) return "";
+
+    const marcas = Array.isArray(c.marcas) ? c.marcas : [];
+    const grupos = agruparCatalogos(catalogos, marcas);
+    const temGruposMarca = grupos.some((g) => g.tipo === "marca");
+
+    if (!temGruposMarca) {
+      const itens = catalogos.map((cat) => htmlItemCatalogoPreview(cat, marcas)).join("");
+      return `<section class="bloco bloco--links"><h2 class="rotulo">Catálogos</h2><ul class="links">${itens}</ul></section>`;
+    }
+
+    const detalhes = grupos
+      .map((grupo) => {
+        const titulo = grupo.tipo === "outros" ? "Outros" : null;
+        const itens = grupo.catalogos.map((cat) => htmlItemCatalogoPreview(cat, marcas)).join("");
+        return `<details class="catalogo-grupo">${htmlCabecaGrupoPreview(grupo.marca, titulo)}<ul class="links catalogo-grupo__links">${itens}</ul></details>`;
+      })
+      .join("");
+
+    return `<section class="bloco bloco--links"><h2 class="rotulo">Catálogos</h2><div class="catalogos-grupos">${detalhes}</div></section>`;
+  }
+
   function htmlBlocosPreview(c) {
     const partes = [];
     const marcas = Array.isArray(c.marcas) ? c.marcas : [];
@@ -446,25 +583,8 @@
   </section>`);
     }
 
-    const catalogos = Array.isArray(c.catalogos) ? c.catalogos : [];
-    if (catalogos.length) {
-      const itens = catalogos
-        .map((cat) => {
-          let meta = `<span class="link-btn__meta">${esc(cat.tipo || "PDF")}</span>`;
-          if (cat.marcaId) {
-            const marca = marcas.find((m) => m.id === cat.marcaId);
-            if (marca?.logo) {
-              meta = `<img class="link-btn__logo" src="${esc(urlAsset(marca.logo))}" alt="">`;
-            }
-          } else if (cat.logo) {
-            meta = `<img class="link-btn__logo" src="${esc(urlAsset(cat.logo))}" alt="">`;
-          }
-          const href = urlAsset(cat.arquivo) || "#";
-          return `<li><a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener"><span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>${meta}</a></li>`;
-        })
-        .join("");
-      partes.push(`<section class="bloco bloco--links"><h2 class="rotulo">Catálogos</h2><ul class="links">${itens}</ul></section>`);
-    }
+    const catalogosHtml = htmlCatalogosPreview(c);
+    if (catalogosHtml) partes.push(catalogosHtml);
 
     const contatos = Array.isArray(c.contatos) ? c.contatos : [];
     if (contatos.length) {
@@ -1127,9 +1247,31 @@
   });
 
   document.getElementById("lista-catalogos")?.addEventListener("click", async (ev) => {
+    const btnUp = ev.target.closest("[data-cat-up]");
+    const btnDown = ev.target.closest("[data-cat-down]");
     const btn = ev.target.closest("[data-rm-catalogo]");
-    if (!btn) return;
     const status = document.getElementById("editor-status");
+
+    if (btnUp || btnDown) {
+      const id = (btnUp || btnDown).getAttribute(btnUp ? "data-cat-up" : "data-cat-down");
+      const dir = btnUp ? "up" : "down";
+      const marcas = paginaDados.marcas || [];
+      const novaOrdem = reordenarCatalogoNoGrupo(paginaDados.catalogos || [], marcas, id, dir);
+      if (!novaOrdem) return;
+      try {
+        const data = await apiPagina("POST", {
+          acao: "catalogo_reordenar",
+          ordem: novaOrdem.map((c) => c.id)
+        });
+        aplicarPagina(data.pagina);
+        setStatus(status, "Ordem dos catálogos atualizada.", "ok");
+      } catch (erro) {
+        setStatus(status, erro.message, "erro");
+      }
+      return;
+    }
+
+    if (!btn) return;
     const fd = new FormData();
     fd.append("acao", "catalogo_remover");
     fd.append("id", btn.getAttribute("data-rm-catalogo"));
@@ -1143,9 +1285,30 @@
   });
 
   document.getElementById("lista-marcas")?.addEventListener("click", async (ev) => {
+    const btnUp = ev.target.closest("[data-marca-up]");
+    const btnDown = ev.target.closest("[data-marca-down]");
     const btn = ev.target.closest("[data-rm-marca]");
-    if (!btn) return;
     const status = document.getElementById("editor-status");
+
+    if (btnUp || btnDown) {
+      const id = (btnUp || btnDown).getAttribute(btnUp ? "data-marca-up" : "data-marca-down");
+      const dir = btnUp ? "up" : "down";
+      const novaOrdem = reordenarLista(paginaDados.marcas || [], id, dir);
+      if (!novaOrdem) return;
+      try {
+        const data = await apiPagina("POST", {
+          acao: "marca_reordenar",
+          ordem: novaOrdem.map((m) => m.id)
+        });
+        aplicarPagina(data.pagina);
+        setStatus(status, "Ordem das marcas atualizada.", "ok");
+      } catch (erro) {
+        setStatus(status, erro.message, "erro");
+      }
+      return;
+    }
+
+    if (!btn) return;
     const fd = new FormData();
     fd.append("acao", "marca_remover");
     fd.append("id", btn.getAttribute("data-rm-marca"));
@@ -1204,8 +1367,12 @@
 
   document.getElementById("form-suporte")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
+    const form = document.getElementById("form-suporte");
     const status = document.getElementById("suporte-status");
-    const fd = new FormData(ev.currentTarget);
+    const btn = form?.querySelector('button[type="submit"]');
+    if (!form) return;
+    const fd = new FormData(form);
+    if (btn) btn.disabled = true;
     setStatus(status, "Enviando…", "info");
     try {
       const resp = await fetch("/api/painel/suporte", {
@@ -1213,14 +1380,19 @@
         headers: { Authorization: `Bearer ${await window.MyRepAuth.accessToken()}` },
         body: fd
       });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.erro);
-      ev.currentTarget.reset();
-      limparArquivoCampo(ev.currentTarget.querySelector(".campo-arquivo__input"));
-      setStatus(status, data.aviso, "ok");
-      carregarSuporte();
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.erro || "Não foi possível enviar.");
+      const assunto = form.querySelector('[name="assunto"]');
+      const mensagem = form.querySelector('[name="mensagem"]');
+      if (assunto) assunto.value = "";
+      if (mensagem) mensagem.value = "";
+      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+      setStatus(status, "Mensagem enviada com sucesso. Responderemos em breve.", "ok");
+      await carregarSuporte();
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      if (btn) btn.disabled = false;
     }
   });
 

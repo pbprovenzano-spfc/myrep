@@ -187,25 +187,88 @@ ${seg}
   </section>`;
 }
 
-function blocoCatalogos(c) {
-  if (!temItens(c.catalogos)) return "";
-  const itens = c.catalogos
-    .map((cat) => {
-      const meta = logoCatalogo(c, cat);
-      return `        <li>
+function itemCatalogoHtml(c, cat) {
+  const meta = logoCatalogo(c, cat);
+  return `        <li>
           <a class="link-btn" href="${caminhoAsset(c.slug, cat.arquivo)}" target="_blank" rel="noopener">
             <span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>
             ${meta}
           </a>
         </li>`;
-    })
-    .join("\n");
+}
 
-  return `  <section class="bloco bloco--links">
+function cabecaGrupoCatalogo(c, marca, titulo) {
+  const logo = marca?.logo
+    ? `<img class="catalogo-grupo__logo" src="${caminhoAsset(c.slug, marca.logo)}" alt="" loading="lazy">`
+    : "";
+  const nome = esc(titulo || marca?.nome || "Outros");
+  return `      <summary class="catalogo-grupo__cabeca">
+        ${logo}
+        <span class="catalogo-grupo__nome">${nome}</span>
+        <span class="catalogo-grupo__seta" aria-hidden="true"></span>
+      </summary>`;
+}
+
+function blocoCatalogos(c) {
+  if (!temItens(c.catalogos)) return "";
+
+  const marcas = temItens(c.marcas) ? c.marcas : [];
+  const idsMarcas = new Set(marcas.map((m) => m.id));
+  const porMarca = new Map();
+  const outros = [];
+
+  for (const cat of c.catalogos) {
+    if (cat.marcaId && idsMarcas.has(cat.marcaId)) {
+      if (!porMarca.has(cat.marcaId)) porMarca.set(cat.marcaId, []);
+      porMarca.get(cat.marcaId).push(cat);
+    } else {
+      outros.push(cat);
+    }
+  }
+
+  const gruposComMarca = marcas.filter((m) => {
+    const lista = porMarca.get(m.id);
+    return lista && lista.length;
+  });
+
+  if (!gruposComMarca.length) {
+    const itens = c.catalogos.map((cat) => itemCatalogoHtml(c, cat)).join("\n");
+    return `  <section class="bloco bloco--links">
     <h2 class="rotulo">Catálogos</h2>
     <ul class="links">
 ${itens}
     </ul>
+  </section>`;
+  }
+
+  const detalhes = gruposComMarca
+    .map((marca) => {
+      const cats = porMarca.get(marca.id);
+      const itens = cats.map((cat) => itemCatalogoHtml(c, cat)).join("\n");
+      return `    <details class="catalogo-grupo">
+${cabecaGrupoCatalogo(c, marca)}
+      <ul class="links catalogo-grupo__links">
+${itens}
+      </ul>
+    </details>`;
+    })
+    .join("\n");
+
+  const outrosHtml = outros.length
+    ? `    <details class="catalogo-grupo">
+${cabecaGrupoCatalogo(c, null, "Outros")}
+      <ul class="links catalogo-grupo__links">
+${outros.map((cat) => itemCatalogoHtml(c, cat)).join("\n")}
+      </ul>
+    </details>`
+    : "";
+
+  return `  <section class="bloco bloco--links">
+    <h2 class="rotulo">Catálogos</h2>
+    <div class="catalogos-grupos">
+${detalhes}
+${outrosHtml}
+    </div>
   </section>`;
 }
 

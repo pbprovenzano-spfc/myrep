@@ -2,11 +2,19 @@
    GET/POST /api/painel/suporte — pedidos de ajuda do representante
    ========================================================= */
 
+const { Resend } = require("resend");
 const { json, lerJsonBody } = require("../pagamento");
 const { exigirUsuario } = require("../auth");
 const { obterPaginaPorUserId } = require("../assinaturas");
 const { getSupabase, supabaseConfigured } = require("../supabase");
-const { criarMensagem, salvarAnexos, listarMensagens } = require("../inbox");
+const {
+  criarMensagem,
+  salvarAnexos,
+  listarMensagens,
+  atualizarMensagemEmail,
+  mimePorNome,
+  nomeArquivoSeguro
+} = require("../inbox");
 const {
   lerCorpo,
   parseMultipart,
@@ -88,21 +96,98 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { erro: "Descreva sua solicitação." });
     }
 
+    const email = String(user.email || "")
+      .trim()
+      .toLowerCase();
     const nome =
-      user.user_metadata?.nome || user.user_metadata?.full_name || user.email || "Representante";
+      user.user_metadata?.nome || user.user_metadata?.full_name || email || "Representante";
+    const slug = pagina?.slug || null;
+    const assuntoFinal = assunto || "Pedido de suporte";
+    const texto = [
+      `Pedido de suporte (painel).`,
+      ``,
+      `E-mail da conta: ${email || "—"}`,
+      `User ID: ${user.id}`,
+      slug ? `Slug / página: ${slug}` : null,
+      ``,
+      `Assunto: ${assuntoFinal}`,
+      ``,
+      String(corpo).slice(0, 8000)
+    ]
+      .filter((linha) => linha !== null)
+      .join("\n");
+
+    const anexosValidos = arquivos
+      .filter((a) => a.data && a.data.length && a.data.length <= MAX_ANEXO)
+      .map((a) => {
+        const original = String(a.nome || "arquivo").replace(/[/\\]/g, "").slice(0, 120) || "arquivo";
+        return {
+          nome: nomeArquivoSeguro(original, "arquivo"),
+          data: a.data,
+          mime: mimePorNome(original),
+          origem: "upload",
+          content: a.data.toString("base64")
+        };
+      });
+
     const msg = await criarMensagem({
       tipo: "suporte",
-      assunto: assunto || "Pedido de suporte",
+      assunto: assuntoFinal,
       remetenteNome: nome,
-      remetenteEmail: user.email,
-      slug: pagina?.slug || null,
+      remetenteEmail: email || null,
+      slug,
       userId: user.id,
-      corpo: String(corpo).slice(0, 8000)
+      dados: {
+        email: email || null,
+        userId: user.id,
+        slug,
+        assunto: assuntoFinal
+      },
+      corpo: texto
     });
 
-    const anexosValidos = arquivos.filter((a) => a.data.length <= MAX_ANEXO);
     if (anexosValidos.length) {
       await salvarAnexos(msg.id, anexosValidos);
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const para = process.env.BRIEFING_TO_EMAIL || process.env.SUPPORT_EMAIL || "myrep.sup@gmail.com";
+    const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
+    let emailId = null;
+    let emailErro = null;
+
+    if (!apiKey) {
+      emailErro = "Servidor sem RESEND_API_KEY configurada.";
+    } else {
+      try {
+        const resend = new Resend(apiKey);
+        const payload = {
+          from: de,
+          to: [para],
+          replyTo: email || undefined,
+          subject: `My Rep suporte — ${assuntoFinal}${slug ? ` (${slug})` : email ? ` (${email})` : ""}`,
+          text: texto
+        };
+        if (anexosValidos.length) {
+          payload.attachments = anexosValidos.map((a) => ({
+            filename: a.nome,
+            content: a.content
+          }));
+        }
+        const { data, error } = await resend.emails.send(payload);
+        if (error) {
+          emailErro = error.message || "Falha ao enviar e-mail.";
+        } else {
+          emailId = data && data.id;
+        }
+      } catch (erroEmail) {
+        console.error("painel suporte e-mail:", erroEmail);
+        emailErro = erroEmail.message || "Falha ao enviar e-mail.";
+      }
+    }
+
+    if (msg?.id) {
+      await atualizarMensagemEmail(msg.id, { emailId, emailErro });
     }
 
     return json(res, 201, {

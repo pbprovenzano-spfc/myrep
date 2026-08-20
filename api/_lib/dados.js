@@ -109,11 +109,56 @@ function normalizarDados(dados = {}) {
   };
 }
 
+function reordenarPorIds(itens, ordem) {
+  if (!Array.isArray(itens)) return [];
+  const mapa = new Map(itens.map((item) => [item.id, item]));
+  const vistos = new Set();
+  const resultado = [];
+  const ids = Array.isArray(ordem) ? ordem : [];
+  for (const id of ids) {
+    const item = mapa.get(id);
+    if (item && !vistos.has(item.id)) {
+      resultado.push(item);
+      vistos.add(item.id);
+    }
+  }
+  for (const item of itens) {
+    if (!vistos.has(item.id)) resultado.push(item);
+  }
+  return resultado;
+}
+
+function agruparCatalogos(catalogos, marcas) {
+  const marcasLista = Array.isArray(marcas) ? marcas : [];
+  const idsMarcas = new Set(marcasLista.map((m) => m.id));
+  const porMarca = new Map();
+  const outros = [];
+
+  for (const cat of Array.isArray(catalogos) ? catalogos : []) {
+    if (cat.marcaId && idsMarcas.has(cat.marcaId)) {
+      if (!porMarca.has(cat.marcaId)) porMarca.set(cat.marcaId, []);
+      porMarca.get(cat.marcaId).push(cat);
+    } else {
+      outros.push(cat);
+    }
+  }
+
+  const grupos = [];
+  for (const marca of marcasLista) {
+    const lista = porMarca.get(marca.id);
+    if (lista && lista.length) grupos.push({ tipo: "marca", marca, catalogos: lista });
+  }
+  if (outros.length) grupos.push({ tipo: "outros", marca: null, catalogos: outros });
+  return grupos;
+}
+
 module.exports = {
   novoId,
   normalizarMarcas,
   normalizarCatalogos,
   normalizarContatos,
   normalizarCidadesInput,
-  normalizarDados
+  normalizarDados,
+  reordenarPorIds,
+  agruparCatalogos
 };
