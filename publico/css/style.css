@@ -1599,6 +1599,195 @@ a { color: inherit; }
   outline-offset: 2px;
 }
 
+/* Campo de arquivo — dropzone moderna */
+.campo-arquivo {
+  margin-bottom: 14px;
+}
+
+.campo-arquivo__zona {
+  position: relative;
+  display: block;
+  min-height: 132px;
+  padding: 20px 16px;
+  border: 2px dashed var(--borda);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--papel) 55%, var(--branco));
+  cursor: pointer;
+  transition:
+    border-color var(--transicao),
+    background var(--transicao),
+    box-shadow var(--transicao);
+}
+
+.campo-arquivo__zona:hover,
+.campo-arquivo__zona:focus-visible {
+  border-color: color-mix(in srgb, var(--sinal) 55%, var(--borda));
+  background: color-mix(in srgb, var(--sinal) 8%, var(--branco));
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sinal) 22%, transparent);
+}
+
+.campo-arquivo__zona.is-dragover {
+  border-color: var(--sinal);
+  background: color-mix(in srgb, var(--sinal) 14%, var(--branco));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sinal) 28%, transparent);
+}
+
+.campo-arquivo__zona.is-preenchido {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--sinal) 35%, var(--borda));
+  background: var(--branco);
+  cursor: default;
+  min-height: 0;
+  padding: 14px 16px;
+}
+
+.campo-arquivo__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.campo-arquivo__zona.is-preenchido .campo-arquivo__input {
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.campo-arquivo__vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.campo-arquivo__zona.is-preenchido .campo-arquivo__vazio {
+  display: none;
+}
+
+.campo-arquivo__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--sinal) 16%, transparent);
+  color: var(--sinal-escuro);
+}
+
+.campo-arquivo__titulo {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.campo-arquivo__dica {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mutado);
+  line-height: 1.35;
+}
+
+.campo-arquivo__preenchido {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.campo-arquivo__preenchido[hidden] {
+  display: none !important;
+}
+
+.campo-arquivo__zona.is-preenchido .campo-arquivo__preenchido {
+  display: flex;
+}
+
+.campo-arquivo__thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--papel);
+  box-shadow: 0 0 0 2px var(--branco), 0 0 0 3px var(--borda);
+}
+
+.campo-arquivo[data-tipo="imagem"] .campo-arquivo__thumb--logo {
+  object-fit: contain;
+  background: #000;
+  padding: 6px;
+}
+
+.campo-arquivo__badge {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--sinal) 22%, var(--papel));
+  box-shadow: 0 0 0 2px var(--branco), 0 0 0 3px var(--borda);
+}
+
+.campo-arquivo__info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.campo-arquivo__nome {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campo-arquivo__trocar {
+  pointer-events: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sinal-escuro);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.campo-arquivo__trocar:hover {
+  color: var(--ink);
+}
+
+.campo-arquivo__trocar:focus-visible {
+  outline: 3px solid var(--sinal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .opcao {
   display: flex;
   align-items: center;

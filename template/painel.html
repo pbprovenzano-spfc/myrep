@@ -86,10 +86,26 @@
 
       <fieldset class="briefing-secao">
         <legend>Identidade</legend>
-        <label class="campo">
+        <div class="campo campo-arquivo" data-tipo="imagem">
           <span class="campo__rotulo">Foto ou logo principal</span>
-          <input id="input-foto" type="file" accept="image/*">
-        </label>
+          <div class="campo-arquivo__zona" tabindex="0">
+            <input id="input-foto" type="file" accept="image/*" class="campo-arquivo__input">
+            <div class="campo-arquivo__vazio">
+              <span class="campo-arquivo__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+              </span>
+              <p class="campo-arquivo__titulo">Clique ou solte a foto ou logo aqui</p>
+              <p class="campo-arquivo__dica">JPG, PNG ou WEBP · até 8 MB</p>
+            </div>
+            <div class="campo-arquivo__preenchido" hidden>
+              <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+              <div class="campo-arquivo__info">
+                <p class="campo-arquivo__nome"></p>
+                <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <fieldset class="campo campo--opcoes">
           <legend class="campo__rotulo">Tipo da imagem</legend>
           <label class="opcao"><input type="radio" name="fotoTipo" value="pessoa" checked> Foto de pessoa</label>
@@ -142,10 +158,26 @@
             <span class="campo__rotulo">Nome da marca</span>
             <input name="nome" type="text" maxlength="120" required>
           </label>
-          <label class="campo">
+          <div class="campo campo-arquivo" data-tipo="imagem">
             <span class="campo__rotulo">Logo</span>
-            <input name="arquivo" type="file" accept="image/*">
-          </label>
+            <div class="campo-arquivo__zona" tabindex="0">
+              <input name="arquivo" type="file" accept="image/*" class="campo-arquivo__input">
+              <div class="campo-arquivo__vazio">
+                <span class="campo-arquivo__icone" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                </span>
+                <p class="campo-arquivo__titulo">Clique ou solte o logo da marca</p>
+                <p class="campo-arquivo__dica">JPG, PNG ou WEBP · até 8 MB</p>
+              </div>
+              <div class="campo-arquivo__preenchido" hidden>
+                <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+                <div class="campo-arquivo__info">
+                  <p class="campo-arquivo__nome"></p>
+                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                </div>
+              </div>
+            </div>
+          </div>
           <button class="btn btn--primario" type="submit">Adicionar marca</button>
         </form>
       </fieldset>
@@ -180,10 +212,26 @@
               <option value="">Nenhuma</option>
             </select>
           </label>
-          <label class="campo">
+          <div class="campo campo-arquivo" data-tipo="pdf">
             <span class="campo__rotulo">Arquivo PDF (até 50 MB)</span>
-            <input name="arquivo" type="file" accept="application/pdf,.pdf" required>
-          </label>
+            <div class="campo-arquivo__zona" tabindex="0">
+              <input name="arquivo" type="file" accept="application/pdf,.pdf" required class="campo-arquivo__input">
+              <div class="campo-arquivo__vazio">
+                <span class="campo-arquivo__icone" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+                </span>
+                <p class="campo-arquivo__titulo">Clique ou solte o PDF do catálogo</p>
+                <p class="campo-arquivo__dica">Somente PDF · até 50 MB</p>
+              </div>
+              <div class="campo-arquivo__preenchido" hidden>
+                <span class="campo-arquivo__badge" aria-hidden="true">PDF</span>
+                <div class="campo-arquivo__info">
+                  <p class="campo-arquivo__nome"></p>
+                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                </div>
+              </div>
+            </div>
+          </div>
           <button class="btn btn--primario" type="submit">Adicionar catálogo</button>
         </form>
       </fieldset>
@@ -227,10 +275,27 @@
           <span class="campo__rotulo">Mensagem</span>
           <textarea name="mensagem" rows="4" maxlength="4000" required placeholder="Descreva o que precisa…"></textarea>
         </label>
-        <label class="campo">
+        <div class="campo campo-arquivo" data-tipo="anexo">
           <span class="campo__rotulo">Anexo (opcional)</span>
-          <input name="anexo" type="file" accept="image/*,.pdf,application/pdf">
-        </label>
+          <div class="campo-arquivo__zona" tabindex="0">
+            <input name="anexo" type="file" accept="image/*,.pdf,application/pdf" class="campo-arquivo__input">
+            <div class="campo-arquivo__vazio">
+              <span class="campo-arquivo__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+              </span>
+              <p class="campo-arquivo__titulo">Clique ou solte um anexo (opcional)</p>
+              <p class="campo-arquivo__dica">Imagem ou PDF</p>
+            </div>
+            <div class="campo-arquivo__preenchido" hidden>
+              <img class="campo-arquivo__thumb" alt="" width="56" height="56" hidden>
+              <span class="campo-arquivo__badge" aria-hidden="true" hidden>PDF</span>
+              <div class="campo-arquivo__info">
+                <p class="campo-arquivo__nome"></p>
+                <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <button class="btn btn--primario" type="submit">Enviar para o suporte</button>
       </form>
       <p class="briefing-status" id="suporte-status" role="status"></p>

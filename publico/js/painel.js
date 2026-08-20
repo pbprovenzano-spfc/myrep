@@ -293,6 +293,7 @@
 
     renderMarcas(paginaDados.marcas);
     renderCatalogos(paginaDados.catalogos, paginaDados.marcas);
+    sincronizarFotoSalvaCampo();
     atualizarPreview();
   }
 
@@ -548,6 +549,7 @@
     assetVersao = Date.now();
     if (pagina.marcas) renderMarcas(pagina.marcas);
     if (pagina.catalogos) renderCatalogos(pagina.catalogos, pagina.marcas || paginaDados.marcas);
+    sincronizarFotoSalvaCampo();
     atualizarPreview();
   }
 
@@ -568,6 +570,175 @@
 
   const MAX_CATALOGO = 50 * 1024 * 1024;
   const MAX_IMAGEM = 8 * 1024 * 1024;
+
+  let campoArquivoBlobUrl = null;
+
+  function revogarCampoArquivoBlob() {
+    if (campoArquivoBlobUrl) {
+      URL.revokeObjectURL(campoArquivoBlobUrl);
+      campoArquivoBlobUrl = null;
+    }
+  }
+
+  function limparArquivoCampo(input) {
+    if (!input) return;
+    input.value = "";
+    revogarCampoArquivoBlob();
+    const zona = input.closest(".campo-arquivo__zona");
+    if (!zona) return;
+    zona.classList.remove("is-preenchido", "is-dragover");
+    const thumb = zona.querySelector(".campo-arquivo__thumb");
+    const badge = zona.querySelector(".campo-arquivo__badge");
+    const nomeEl = zona.querySelector(".campo-arquivo__nome");
+    if (nomeEl) nomeEl.textContent = "";
+    if (thumb) {
+      thumb.hidden = true;
+      thumb.removeAttribute("src");
+      thumb.classList.remove("campo-arquivo__thumb--logo");
+    }
+    if (badge) badge.hidden = true;
+    const preenchido = zona.querySelector(".campo-arquivo__preenchido");
+    if (preenchido) preenchido.hidden = true;
+  }
+
+  function atualizarArquivoCampo(input, opts = {}) {
+    if (!input) return;
+    const file = opts.file;
+    const nome = opts.nome || file?.name || "";
+    let previewUrl = opts.previewUrl || "";
+
+    if (!nome && !previewUrl && !file) {
+      limparArquivoCampo(input);
+      return;
+    }
+
+    if (file && !previewUrl && file.type?.startsWith("image/")) {
+      revogarCampoArquivoBlob();
+      previewUrl = URL.createObjectURL(file);
+      campoArquivoBlobUrl = previewUrl;
+    } else if (opts.previewUrl && !file) {
+      revogarCampoArquivoBlob();
+    }
+
+    const zona = input.closest(".campo-arquivo__zona");
+    const campo = input.closest(".campo-arquivo");
+    if (!zona) return;
+
+    const tipoCampo = campo?.dataset.tipo || "";
+    const isPdf =
+      file?.type === "application/pdf" ||
+      /\.pdf$/i.test(nome) ||
+      (tipoCampo === "pdf" && !!nome);
+    const isImage =
+      file?.type?.startsWith("image/") ||
+      /\.(jpe?g|png|webp|gif|svg)$/i.test(nome) ||
+      (tipoCampo === "imagem" && !!previewUrl && !isPdf);
+
+    zona.classList.add("is-preenchido");
+    const preenchido = zona.querySelector(".campo-arquivo__preenchido");
+    const nomeEl = zona.querySelector(".campo-arquivo__nome");
+    if (preenchido) preenchido.hidden = false;
+    if (nomeEl) nomeEl.textContent = nome;
+
+    const thumb = zona.querySelector(".campo-arquivo__thumb");
+    const badge = zona.querySelector(".campo-arquivo__badge");
+
+    if (thumb) {
+      const mostrarThumb = isImage && previewUrl;
+      thumb.hidden = !mostrarThumb;
+      if (mostrarThumb) {
+        thumb.src = previewUrl;
+        const logoThumb =
+          (input.id === "input-foto" &&
+            document.querySelector('input[name="fotoTipo"]:checked')?.value === "logo") ||
+          !!input.closest("#form-marca-add");
+        thumb.classList.toggle("campo-arquivo__thumb--logo", logoThumb);
+      } else {
+        thumb.removeAttribute("src");
+      }
+    }
+
+    if (badge) {
+      if (tipoCampo === "pdf") {
+        badge.hidden = false;
+      } else if (tipoCampo === "anexo") {
+        badge.hidden = !(isPdf && !isImage);
+      } else {
+        badge.hidden = true;
+      }
+    }
+  }
+
+  function initCamposArquivo(raiz = document) {
+    raiz.querySelectorAll(".campo-arquivo").forEach((campo) => {
+      const input = campo.querySelector(".campo-arquivo__input");
+      const zona = campo.querySelector(".campo-arquivo__zona");
+      const btnTrocar = campo.querySelector(".campo-arquivo__trocar");
+      if (!input || !zona || input.dataset.arquivoInit) return;
+      input.dataset.arquivoInit = "1";
+
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (file) atualizarArquivoCampo(input, { file });
+        else limparArquivoCampo(input);
+      });
+
+      btnTrocar?.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        limparArquivoCampo(input);
+        input.click();
+      });
+
+      ["dragenter", "dragover"].forEach((evName) => {
+        zona.addEventListener(evName, (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          zona.classList.add("is-dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((evName) => {
+        zona.addEventListener(evName, (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          zona.classList.remove("is-dragover");
+        });
+      });
+
+      zona.addEventListener("drop", (ev) => {
+        const file = ev.dataTransfer?.files?.[0];
+        if (!file) return;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      zona.addEventListener("keydown", (ev) => {
+        if (zona.classList.contains("is-preenchido")) return;
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          input.click();
+        }
+      });
+    });
+  }
+
+  function sincronizarFotoSalvaCampo() {
+    const inputFoto = document.getElementById("input-foto");
+    if (!inputFoto) return;
+    if (paginaDados?.foto) {
+      inputFoto.value = "";
+      revogarCampoArquivoBlob();
+      atualizarArquivoCampo(inputFoto, {
+        nome: String(paginaDados.foto).split("/").pop(),
+        previewUrl: urlAsset(paginaDados.foto)
+      });
+      return;
+    }
+    if (!inputFoto.files?.[0]) limparArquivoCampo(inputFoto);
+  }
 
   async function enviarArquivoStorage(file, tipo, dica) {
     const prep = await apiPagina("POST", {
@@ -835,8 +1006,15 @@
     agendarSave();
   });
 
-  document.querySelectorAll('input[name="destaque"], input[name="fotoTipo"]').forEach((el) => {
+  document.querySelectorAll('input[name="destaque"]').forEach((el) => {
     el.addEventListener("change", agendarSave);
+  });
+
+  document.querySelectorAll('input[name="fotoTipo"]').forEach((el) => {
+    el.addEventListener("change", () => {
+      sincronizarFotoSalvaCampo();
+      agendarSave();
+    });
   });
 
   document.querySelectorAll('input[name="paleta"]').forEach((el) => {
@@ -915,6 +1093,7 @@
       });
       aplicarPagina(data.pagina);
       form.reset();
+      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
       setStatus(status, "Catálogo adicionado.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
@@ -940,6 +1119,7 @@
       const data = await apiPagina("POST", body);
       aplicarPagina(data.pagina);
       form.reset();
+      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
       setStatus(status, "Marca adicionada.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
@@ -1036,6 +1216,7 @@
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.erro);
       ev.currentTarget.reset();
+      limparArquivoCampo(ev.currentTarget.querySelector(".campo-arquivo__input"));
       setStatus(status, data.aviso, "ok");
       carregarSuporte();
     } catch (erro) {
@@ -1054,5 +1235,6 @@
     location.href = "/";
   });
 
+  initCamposArquivo();
   carregar();
 })();
