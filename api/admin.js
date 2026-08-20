@@ -67,7 +67,7 @@ function mrrDeAssinatura(sub) {
   if (!sub || String(sub.status).toUpperCase() !== "ACTIVE") return 0;
   const plano = planoPorValor(sub.value);
   const valor = Number(sub.value) || 0;
-  if (plano?.id === "anual_avista") return valor / 12;
+  if (plano?.id === "anual") return valor / 12;
   if (String(sub.cycle || "").toUpperCase() === "YEARLY") return valor / 12;
   return valor;
 }
@@ -695,6 +695,40 @@ module.exports = async function handler(req, res) {
     if (req.method === "POST" && acao === "sincronizar-paginas") {
       const resultado = await sincronizarPaginas();
       return json(res, 200, { ok: true, ...resultado });
+    }
+
+    if (req.method === "POST" && acao === "mensagem-responder") {
+      const body = await lerJsonBody(req);
+      const id = String(body.id || "").trim();
+      const corpo = String(body.corpo || "").trim();
+      if (!id || corpo.length < 1) {
+        return json(res, 400, { erro: "Informe a resposta." });
+      }
+      const mensagem = await obterMensagem(id);
+      if (!mensagem) return json(res, 404, { erro: "Mensagem não encontrada." });
+      if (mensagem.tipo !== "suporte") {
+        return json(res, 400, { erro: "Só é possível responder pedidos de suporte." });
+      }
+      const { getSupabase, supabaseConfigured } = require("./_lib/supabase");
+      if (!supabaseConfigured()) {
+        return json(res, 503, { erro: "Supabase não configurado." });
+      }
+      const sb = getSupabase();
+      const { data: resposta, error } = await sb
+        .from("mensagens_respostas")
+        .insert({
+          mensagem_id: id,
+          autor: "admin",
+          corpo: corpo.slice(0, 8000)
+        })
+        .select()
+        .single();
+      if (error) {
+        console.error("mensagem-responder:", error.message);
+        return json(res, 500, { erro: "Falha ao enviar resposta." });
+      }
+      await mudarStatus(id, "em_andamento");
+      return json(res, 200, { ok: true, resposta });
     }
 
     if (req.method === "POST" && acao === "mensagem-excluir") {

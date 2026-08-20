@@ -1,4 +1,4 @@
-/* Home: se logado, planos apontam para /painel/?plano= */
+/* Home: se logado, CTAs apontam para o painel */
 (function () {
   function tick(n) {
     if (!window.MyRepAuth || !window.MyRepAuth.pronto()) {
@@ -7,10 +7,6 @@
     }
     window.MyRepAuth.sessaoAtual().then((sessao) => {
       if (!sessao) return;
-      document.querySelectorAll("a[data-plano]").forEach((a) => {
-        const plano = a.getAttribute("data-plano");
-        if (plano) a.href = `/painel/?plano=${encodeURIComponent(plano)}`;
-      });
       const criar = document.querySelector('.hero__ctas a.btn--primario[href="/cadastro/"]');
       if (criar) criar.href = "/painel/";
       const ja = document.querySelector('.hero__ctas a[href="/entrar/"]');
@@ -18,6 +14,12 @@
         ja.href = "/painel/";
         ja.textContent = "Meu painel";
       }
+      document.querySelectorAll('#precos a[href="/cadastro/"]').forEach((a) => {
+        a.href = "/painel/";
+        a.textContent = "Meu painel";
+      });
+      const entrarPrecos = document.querySelector('#precos .precos__rodape a[href="/entrar/"]');
+      if (entrarPrecos) entrarPrecos.href = "/painel/";
     });
   }
   tick(0);

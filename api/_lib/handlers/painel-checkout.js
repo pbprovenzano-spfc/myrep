@@ -11,7 +11,7 @@ const {
   buscarClientePorEmail
 } = require("../pagamento");
 const { exigirUsuario } = require("../auth");
-const { upsertAssinatura } = require("../assinaturas");
+const { upsertAssinatura, obterAssinaturaPorUserId } = require("../assinaturas");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -36,6 +36,18 @@ module.exports = async function handler(req, res) {
     const links = linksPlanos();
     let linkPagamento = links[planoId] || "";
     let customerId = null;
+
+    const assinaturaAtual = await obterAssinaturaPorUserId(user.id);
+    if (assinaturaAtual?.status === "ativa") {
+      return json(res, 409, { erro: "Você já possui assinatura ativa." });
+    }
+
+    if (!linkPagamento) {
+      return json(res, 400, {
+        erro: "Link de pagamento não configurado para este plano. Contate o suporte.",
+        plano: planoId
+      });
+    }
 
     if (process.env.ASAAS_API_KEY) {
       try {
@@ -65,13 +77,6 @@ module.exports = async function handler(req, res) {
       status: "pendente",
       asaas_customer_id: customerId
     });
-
-    if (!linkPagamento) {
-      return json(res, 400, {
-        erro: "Link de pagamento não configurado para este plano. Contate o suporte.",
-        plano: planoId
-      });
-    }
 
     // Prefill email quando o link Asaas aceita query (nem todos aceitam)
     const sep = linkPagamento.includes("?") ? "&" : "?";

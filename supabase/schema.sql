@@ -13,10 +13,12 @@ create table if not exists public.representantes (
   controle_manual boolean not null default false,
   user_id uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  publicado_em timestamptz
 );
 
 -- Projetos já existentes: acrescenta colunas sem quebrar
+alter table public.representantes add column if not exists publicado_em timestamptz;
 alter table public.representantes add column if not exists email_cobranca text;
 alter table public.representantes add column if not exists ativo boolean not null default true;
 alter table public.representantes add column if not exists inadimplente_desde timestamptz;
@@ -78,7 +80,7 @@ create index if not exists pagamentos_eventos_payment_id_idx on public.pagamento
 
 create table if not exists public.mensagens (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null check (tipo in ('briefing', 'alteracao')),
+  tipo text not null check (tipo in ('briefing', 'alteracao', 'suporte')),
   assunto text not null default '',
   remetente_nome text,
   remetente_email text,
@@ -114,12 +116,24 @@ create table if not exists public.mensagens_anexos (
 
 create index if not exists mensagens_anexos_mensagem_id_idx on public.mensagens_anexos (mensagem_id);
 
+create table if not exists public.mensagens_respostas (
+  id uuid primary key default gen_random_uuid(),
+  mensagem_id uuid not null references public.mensagens (id) on delete cascade,
+  autor text not null check (autor in ('admin', 'usuario')),
+  corpo text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists mensagens_respostas_mensagem_id_idx
+  on public.mensagens_respostas (mensagem_id);
+
 alter table public.representantes enable row level security;
 alter table public.assinaturas enable row level security;
 alter table public.acessos enable row level security;
 alter table public.pagamentos_eventos enable row level security;
 alter table public.mensagens enable row level security;
 alter table public.mensagens_anexos enable row level security;
+alter table public.mensagens_respostas enable row level security;
 
 drop policy if exists representantes_leitura_publica on public.representantes;
 create policy representantes_leitura_publica on public.representantes
@@ -137,6 +151,12 @@ create policy representantes_dono_update on public.representantes
   for update
   to authenticated
   using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists representantes_dono_insert on public.representantes;
+create policy representantes_dono_insert on public.representantes
+  for insert
+  to authenticated
   with check (user_id = auth.uid());
 
 drop policy if exists assinaturas_dono_select on public.assinaturas;
@@ -157,6 +177,17 @@ create policy mensagens_dono_insert on public.mensagens
   to authenticated
   with check (user_id = auth.uid());
 
+drop policy if exists mensagens_respostas_dono_select on public.mensagens_respostas;
+create policy mensagens_respostas_dono_select on public.mensagens_respostas
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.mensagens m
+      where m.id = mensagem_id and m.user_id = auth.uid()
+    )
+  );
+
 insert into storage.buckets (id, name, public)
 values ('assets-clientes', 'assets-clientes', true)
 on conflict (id) do update set public = true;
@@ -168,4 +199,23 @@ on conflict (id) do update set public = false;
 drop policy if exists assets_clientes_leitura_publica on storage.objects;
 create policy assets_clientes_leitura_publica on storage.objects
   for select
+  using (bucket_id = 'assets-clientes');
+
+drop policy if exists assets_clientes_dono_insert on storage.objects;
+create policy assets_clientes_dono_insert on storage.objects
+  for insert
+  to authenticated
+  with check (bucket_id = 'assets-clientes');
+
+drop policy if exists assets_clientes_dono_update on storage.objects;
+create policy assets_clientes_dono_update on storage.objects
+  for update
+  to authenticated
+  using (bucket_id = 'assets-clientes')
+  with check (bucket_id = 'assets-clientes');
+
+drop policy if exists assets_clientes_dono_delete on storage.objects;
+create policy assets_clientes_dono_delete on storage.objects
+  for delete
+  to authenticated
   using (bucket_id = 'assets-clientes');

@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadEnv } = require("./load-env");
 const { getSupabase, supabaseConfigured } = require("../api/_lib/supabase");
+const { normalizarDados } = require("../api/_lib/dados");
 
 const RAIZ = path.join(__dirname, "..");
 const DIR_CLIENTES = path.join(RAIZ, "clientes");
@@ -91,7 +92,8 @@ async function main() {
       continue;
     }
 
-    const assets = coletarAssets(dados);
+    const normalizado = normalizarDados(dados);
+    const assets = coletarAssets(normalizado);
     for (const a of assets) {
       await uploadArquivo(sb, dados.slug, a);
     }
@@ -108,9 +110,10 @@ async function main() {
 
     const { error } = await sb.from("representantes").upsert(
       {
-        slug: dados.slug,
-        dados,
+        slug: normalizado.slug,
+        dados: normalizado,
         publicado: true,
+        publicado_em: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       { onConflict: "slug" }

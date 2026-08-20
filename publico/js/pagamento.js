@@ -12,9 +12,8 @@
   if (!form) return;
 
   const NOMES = {
-    mensal: "Mensal (R$ 17,99/mês)",
-    anual_parcelado: "Anual parcelado (12× R$ 14,99)",
-    anual_avista: "Anual à vista (R$ 161,89)"
+    mensal: "Mensal (R$ 19,90/mês)",
+    anual: "Anual (R$ 202,80 · 12× R$ 16,90)"
   };
 
   const params = new URLSearchParams(location.search);

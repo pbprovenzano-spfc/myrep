@@ -1,11 +1,7 @@
 # Supabase — My Rep
 
 1. Abra o projeto [Supabase](https://supabase.com/dashboard).
-2. **SQL Editor** → cole e execute [`schema.sql`](schema.sql). Inclui:
-   - `representantes` com `email_cobranca`, `ativo`, `inadimplente_desde`, `controle_manual`, `user_id`
-   - tabela `assinaturas` (espelho local da assinatura Asaas por usuário)
-   - `mensagens` / `mensagens_anexos` + bucket privado `inbox`
-   - políticas RLS para o dono autenticado ler/atualizar a própria página e inserir mensagens
+2. **SQL Editor** → cole e execute [`schema.sql`](schema.sql). Projetos já existentes: execute também [`migration-self-service.sql`](migration-self-service.sql).
 3. **Authentication → Providers**: habilite **Email** (email + senha).
 4. **Authentication → URL Configuration**:
    - Site URL: `https://seu-dominio`
@@ -13,10 +9,12 @@
 5. **Settings → API**: copie `URL`, `anon key` e `service_role key` para `.env` e Vercel.
    - `SUPABASE_ANON_KEY` é injetada no HTML pelo `build.js` (browser).
    - `SUPABASE_SERVICE_ROLE_KEY` fica só no servidor.
-6. Na raiz do projeto: `npm run seed:supabase` (sobe JSONs + assets).
+6. Migração dos representantes demo: `npm run seed:supabase` (sobe JSONs de `clientes/` + assets para Storage).
 
-## Contas de cliente
+## Fluxo self-service
 
-Fluxo: `/cadastro/` → confirma e-mail → `/painel/` → escolhe plano (Asaas) → webhook atualiza `assinaturas` e vincula `user_id` em `representantes` → briefing / alterações na inbox do `/admin/`.
+`/cadastro/` → confirma e-mail → assina no `/painel/` (Asaas) → escolhe URL definitiva → edita a página no painel → publica → compartilha `/{slug}/`.
 
-Páginas antigas sem `user_id` continuam no ar. No admin, use **Usuários → Vincular página** (e-mail + slug) para associar contas novas.
+Páginas são renderizadas em tempo real via `/api/pagina` (não dependem mais de deploy para atualizar conteúdo).
+
+Pedidos de **suporte** vão para a inbox do `/admin/` (filtro tipo Suporte), com resposta gravada em `mensagens_respostas`.

@@ -9,7 +9,7 @@ const { getSupabase, supabaseConfigured } = require("./supabase");
 
 const DIR_INBOX = path.join(__dirname, "..", "..", "inbox");
 const STATUS_OK = new Set(["nova", "em_andamento", "publicada", "arquivada"]);
-const TIPOS_OK = new Set(["briefing", "alteracao"]);
+const TIPOS_OK = new Set(["briefing", "alteracao", "suporte"]);
 
 function inboxBucket() {
   return process.env.SUPABASE_INBOX_BUCKET || "inbox";
@@ -330,7 +330,13 @@ async function obterMensagem(id) {
       })
     );
 
-    return { ...msg, anexos: comUrl };
+    const { data: respostas } = await sb
+      .from("mensagens_respostas")
+      .select("id, mensagem_id, autor, corpo, created_at")
+      .eq("mensagem_id", id)
+      .order("created_at", { ascending: true });
+
+    return { ...msg, anexos: comUrl, respostas: respostas || [] };
   }
 
   const msg = lerMensagemLocal(id);

@@ -1,6 +1,5 @@
 /* =========================================================
-   /api/painel — checkout, briefing, alteracoes, pagina
-   Rewrites: /api/painel/<acao> → ?acao=<acao>
+   /api/painel — checkout, pagina, slug, suporte
    ========================================================= */
 
 const { json } = require("./_lib/pagamento");
@@ -12,7 +11,7 @@ function acaoDe(req) {
   const path = url.pathname.replace(/\/+$/, "");
   const partes = path.split("/").filter(Boolean);
   const ultimo = partes[partes.length - 1] || "";
-  if (["checkout", "briefing", "alteracoes", "pagina"].includes(ultimo)) return ultimo;
+  if (["checkout", "pagina", "slug", "suporte"].includes(ultimo)) return ultimo;
   return "";
 }
 
@@ -21,21 +20,20 @@ module.exports = async function handler(req, res) {
   if (acao === "checkout") {
     return require("./_lib/handlers/painel-checkout")(req, res);
   }
-  if (acao === "briefing") {
-    return require("./_lib/handlers/painel-briefing")(req, res);
-  }
-  if (acao === "alteracoes") {
-    return require("./_lib/handlers/painel-alteracoes")(req, res);
-  }
   if (acao === "pagina") {
     return require("./_lib/handlers/painel-pagina")(req, res);
   }
+  if (acao === "slug") {
+    return require("./_lib/handlers/painel-slug")(req, res);
+  }
+  if (acao === "suporte") {
+    return require("./_lib/handlers/painel-suporte")(req, res);
+  }
   return json(res, 400, {
-    erro: "Ação inválida. Use checkout, briefing, alteracoes ou pagina."
+    erro: "Ação inválida. Use checkout, pagina, slug ou suporte."
   });
 };
 
-// Multipart (briefing / alteracoes / pagina) — não parsear body automaticamente
 module.exports.config = {
   api: {
     bodyParser: false

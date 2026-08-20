@@ -12,7 +12,7 @@ const { execFileSync } = require("child_process");
 const PORTA = process.env.PORT || 3000;
 const RAIZ = __dirname;
 const DIST = path.join(RAIZ, "dist");
-const OBSERVAR = ["clientes", "template", "publico", "assets-clientes", "api"];
+const OBSERVAR = ["template", "publico", "geo", "api"];
 
 function carregarEnvLocal() {
   const caminho = path.join(RAIZ, ".env");
@@ -80,7 +80,7 @@ const ROTAS_RESERVADAS = new Set([
   "entrar",
   "recuperar-senha",
   "painel",
-  "assets-clientes",
+  "geo",
   "inbox"
 ]);
 
@@ -143,6 +143,14 @@ async function servir(req, res) {
   }
 
   if (!fs.existsSync(caminho) || fs.statSync(caminho).isDirectory()) {
+    if (slugCliente) {
+      const fakeReq = {
+        method: req.method,
+        url: `/api/pagina?slug=${encodeURIComponent(slugCliente)}`,
+        headers: req.headers
+      };
+      return invocarApi(require("./api/pagina"), fakeReq, res);
+    }
     servir404(res);
     return;
   }
@@ -203,172 +211,6 @@ function observar() {
 
 /* ---------------- start ---------------- */
 
-rodarBuild();
-
-function parseMultipartDev(buffer, contentType) {
-  const m = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType || "");
-  const boundary = m && (m[1] || m[2]);
-  if (!boundary) throw new Error("Content-Type inválido");
-
-  const sep = Buffer.from(`--${boundary}`);
-  const parts = [];
-  let start = buffer.indexOf(sep) + sep.length;
-
-  while (start < buffer.length) {
-    if (buffer[start] === 45 && buffer[start + 1] === 45) break;
-    if (buffer[start] === 13 && buffer[start + 1] === 10) start += 2;
-    const next = buffer.indexOf(sep, start);
-    if (next < 0) break;
-    let part = buffer.slice(start, next);
-    if (part.length >= 2 && part[part.length - 2] === 13 && part[part.length - 1] === 10) {
-      part = part.slice(0, -2);
-    }
-    const headerEnd = part.indexOf("\r\n\r\n");
-    if (headerEnd >= 0) {
-      const headers = part.slice(0, headerEnd).toString("utf8");
-      const body = part.slice(headerEnd + 4);
-      const nameMatch = /name="([^"]+)"/i.exec(headers);
-      const fileMatch = /filename="([^"]*)"/i.exec(headers);
-      if (nameMatch) {
-        parts.push({
-          name: nameMatch[1],
-          filename: fileMatch ? fileMatch[1] : null,
-          data: body
-        });
-      }
-    }
-    start = next + sep.length;
-  }
-  return parts;
-}
-
-function briefingLocal(req, res) {
-  const chunks = [];
-  req.on("data", (c) => chunks.push(c));
-  req.on("end", async () => {
-    try {
-      const buffer = Buffer.concat(chunks);
-      const parts = parseMultipartDev(buffer, req.headers["content-type"]);
-      const slugPart = parts.find((p) => p.name === "slug" && !p.filename);
-      const nomePart = parts.find((p) => p.name === "nome" && !p.filename);
-      const emailPart = parts.find((p) => p.name === "emailCliente" && !p.filename);
-      const acessoPart = parts.find((p) => p.name === "acesso" && !p.filename);
-      const zipPart = parts.find((p) => p.name === "zip");
-      const slug = slugPart ? slugPart.data.toString("utf8").trim() : "briefing";
-      const nome = nomePart ? nomePart.data.toString("utf8").trim() : slug;
-      const emailCliente = emailPart ? emailPart.data.toString("utf8").trim() : "";
-      const acesso = acessoPart ? acessoPart.data.toString("utf8").trim() : "";
-      if (!zipPart) throw new Error("ZIP ausente");
-
-      let acessoDados = null;
-      if (process.env.PAGAMENTO_TOKEN_SECRET || process.env.ASAAS_API_KEY) {
-        const { lerToken } = require("./api/_lib/pagamento");
-        acessoDados = lerToken(acesso);
-      }
-
-      const { lerZip } = require("./api/_lib/zip");
-      const {
-        criarMensagem,
-        salvarAnexos,
-        mimePorNome,
-        nomeArquivoSeguro
-      } = require("./api/_lib/inbox");
-
-      let dadosJson = null;
-      const anexosInbox = [];
-      try {
-        for (const entrada of lerZip(zipPart.data)) {
-          const n = entrada.nome.replace(/^\/+/, "");
-          if (n.endsWith(".json") && !dadosJson) {
-            try {
-              dadosJson = JSON.parse(entrada.data.toString("utf8"));
-            } catch {
-              /* ignore */
-            }
-            continue;
-          }
-          const prefixo = `assets-clientes/${slug}/`;
-          let nomeArq = null;
-          if (n.startsWith(prefixo)) nomeArq = n.slice(prefixo.length);
-          else if (n.startsWith("assets-clientes/") && n.includes("/")) nomeArq = n.split("/").pop();
-          if (nomeArq && !nomeArq.includes("/")) {
-            anexosInbox.push({
-              nome: nomeArquivoSeguro(nomeArq),
-              data: entrada.data,
-              mime: mimePorNome(nomeArq),
-              origem: "zip"
-            });
-          }
-        }
-      } catch (erroZip) {
-        console.error("briefing local zip:", erroZip.message || erroZip);
-      }
-      anexosInbox.push({
-        nome: `${slug}-myrep.zip`,
-        data: zipPart.data,
-        mime: "application/zip",
-        origem: "upload"
-      });
-
-      const assunto = `My Rep briefing — ${nome} (${slug})`;
-      const texto = [
-        `Novo briefing My Rep (dev).`,
-        ``,
-        `Nome: ${nome}`,
-        `Slug: ${slug}`,
-        emailCliente ? `E-mail do cliente: ${emailCliente}` : null,
-        acessoDados ? `E-mail do pagamento: ${acessoDados.email}` : null
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const mensagem = await criarMensagem({
-        tipo: "briefing",
-        assunto,
-        remetenteNome: nome,
-        remetenteEmail: emailCliente || acessoDados?.email || null,
-        slug,
-        dados: {
-          ...(dadosJson && typeof dadosJson === "object" ? dadosJson : {}),
-          slug,
-          nome,
-          emailCliente: emailCliente || null
-        },
-        corpo: texto
-      });
-      if (mensagem?.id) await salvarAnexos(mensagem.id, anexosInbox);
-      console.log(`  ✓ briefing inbox: ${mensagem?.id || "?"}`);
-
-      const emailAssoc = emailCliente || acessoDados?.email || null;
-      if (mensagem?.id && slug && emailAssoc) {
-        try {
-          const { associarEmailSeVazio } = require("./api/_lib/paginas");
-          await associarEmailSeVazio(slug, emailAssoc);
-        } catch (erroAssoc) {
-          console.error("briefing associar e-mail:", erroAssoc.message || erroAssoc);
-        }
-      }
-
-      if (!mensagem?.id) {
-        throw Object.assign(new Error("Falha ao gravar briefing na inbox."), { status: 500 });
-      }
-
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(
-        JSON.stringify({
-          ok: true,
-          modo: "local",
-          mensagemId: mensagem.id
-        })
-      );
-    } catch (erro) {
-      console.error(erro);
-      res.writeHead(erro.status || 400, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ erro: erro.message || "Falha no briefing local" }));
-    }
-  });
-}
-
 const API_HANDLERS = {
   "/api/pagamento": () => require("./api/pagamento"),
   "/api/pagamento/liberar": () => require("./api/_lib/handlers/pagamento-liberar"),
@@ -376,16 +218,16 @@ const API_HANDLERS = {
   "/api/asaas/webhook": () => require("./api/asaas/webhook"),
   "/api/assinantes": () => require("./api/admin"),
   "/api/admin": () => require("./api/admin"),
-  "/api/alteracoes": () => require("./api/alteracoes"),
   "/api/paginas/status": () => require("./api/paginas/status"),
+  "/api/pagina": () => require("./api/pagina"),
   "/api/auth": () => require("./api/auth"),
   "/api/auth/perfil": () => require("./api/_lib/handlers/auth-perfil"),
   "/api/auth/logout": () => require("./api/_lib/handlers/auth-logout"),
   "/api/painel": () => require("./api/painel"),
   "/api/painel/checkout": () => require("./api/_lib/handlers/painel-checkout"),
-  "/api/painel/briefing": () => require("./api/_lib/handlers/painel-briefing"),
-  "/api/painel/alteracoes": () => require("./api/_lib/handlers/painel-alteracoes"),
-  "/api/painel/pagina": () => require("./api/_lib/handlers/painel-pagina")
+  "/api/painel/pagina": () => require("./api/_lib/handlers/painel-pagina"),
+  "/api/painel/slug": () => require("./api/_lib/handlers/painel-slug"),
+  "/api/painel/suporte": () => require("./api/_lib/handlers/painel-suporte")
 };
 
 function invocarApi(handler, req, res) {
@@ -397,6 +239,8 @@ function invocarApi(handler, req, res) {
     }
   });
 }
+
+rodarBuild();
 
 http.createServer((req, res) => {
   if (req.url === "/__recarga") {
@@ -412,14 +256,6 @@ http.createServer((req, res) => {
   }
 
   const url = req.url.split("?")[0].replace(/\/$/, "") || "/";
-  if (req.method === "POST" && (url === "/api/briefing" || url === "/api/painel/briefing")) {
-    if (url === "/api/painel/briefing") {
-      invocarApi(require("./api/_lib/handlers/painel-briefing"), req, res);
-      return;
-    }
-    briefingLocal(req, res);
-    return;
-  }
 
   const carregar = API_HANDLERS[url];
   if (carregar) {
@@ -439,7 +275,6 @@ http.createServer((req, res) => {
   console.log(`  Cadastro:   http://localhost:${PORTA}/cadastro/`);
   console.log(`  Entrar:     http://localhost:${PORTA}/entrar/`);
   console.log(`  Painel:     http://localhost:${PORTA}/painel/`);
-  console.log(`  Briefing:   http://localhost:${PORTA}/briefing/ (legacy)`);
   console.log(`  Pagamento:  http://localhost:${PORTA}/pagamento/ok/`);
   console.log(`  Admin:      http://localhost:${PORTA}/admin/`);
   console.log(`  Assinantes: http://localhost:${PORTA}/assinantes/ → /admin/`);

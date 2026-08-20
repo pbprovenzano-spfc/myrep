@@ -1,115 +1,64 @@
-﻿/* =========================================================
-   GET/PUT /api/painel/pagina — ler/editar dados da página
+/* =========================================================
+   GET/PUT/POST /api/painel/pagina — editor self-service
    ========================================================= */
 
 const { json, lerJsonBody } = require("../pagamento");
 const { exigirUsuario } = require("../auth");
 const { obterPaginaPorUserId } = require("../assinaturas");
-const { getSupabase, supabaseConfigured, storagePublicUrl } = require("../supabase");
-const { nomeArquivoSeguro, mimePorNome } = require("../inbox");
+const { getSupabase, supabaseConfigured } = require("../supabase");
+const { situacaoDe } = require("../paginas");
+const { normalizarDados, novoId, normalizarCidadesInput } = require("../dados");
+const {
+  MAX_ANEXO,
+  lerCorpo,
+  parseMultipart,
+  uploadAsset,
+  removerAsset,
+  exigirAssinaturaAtiva,
+  paginaResumo,
+  nomeArquivoSeguro,
+  mimePorNome
+} = require("../painel-helpers");
 
-const MAX_BYTES = 4.5 * 1024 * 1024;
-const MAX_ANEXO = 3.5 * 1024 * 1024;
+const CAMPOS_TEXTO = [
+  "nome",
+  "empresa",
+  "cargo",
+  "bio",
+  "whatsapp",
+  "mensagemWhatsapp",
+  "segmentos",
+  "paleta",
+  "destaque",
+  "fotoTipo"
+];
 
-function lerCorpo(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let total = 0;
-    req.on("data", (chunk) => {
-      total += chunk.length;
-      if (total > MAX_BYTES) {
-        reject(Object.assign(new Error("Pacote muito grande (máx. ~4 MB)."), { status: 413 }));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => resolve(Buffer.concat(chunks)));
-    req.on("error", reject);
-  });
+function montarWhatsapp(ddd, numero) {
+  const d = String(ddd || "").replace(/\D/g, "").slice(0, 2);
+  const n = String(numero || "").replace(/\D/g, "").slice(0, 9);
+  if (!d || !n) return "";
+  return `55${d}${n}`;
 }
 
-function parseMultipart(buffer, contentType) {
-  const m = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType || "");
-  const boundary = m && (m[1] || m[2]);
-  if (!boundary) throw Object.assign(new Error("Content-Type inválido."), { status: 400 });
-
-  const sep = Buffer.from(`--${boundary}`);
-  const parts = [];
-  let start = buffer.indexOf(sep) + sep.length;
-
-  while (start < buffer.length) {
-    if (buffer[start] === 45 && buffer[start + 1] === 45) break;
-    if (buffer[start] === 13 && buffer[start + 1] === 10) start += 2;
-
-    const next = buffer.indexOf(sep, start);
-    if (next < 0) break;
-
-    let part = buffer.slice(start, next);
-    if (part.length >= 2 && part[part.length - 2] === 13 && part[part.length - 1] === 10) {
-      part = part.slice(0, -2);
-    }
-
-    const headerEnd = part.indexOf("\r\n\r\n");
-    if (headerEnd >= 0) {
-      const headers = part.slice(0, headerEnd).toString("utf8");
-      const body = part.slice(headerEnd + 4);
-      const nameMatch = /name="([^"]+)"/i.exec(headers);
-      const fileMatch = /filename="([^"]*)"/i.exec(headers);
-      if (nameMatch) {
-        parts.push({
-          name: nameMatch[1],
-          filename: fileMatch ? fileMatch[1] : null,
-          data: body
-        });
-      }
-    }
-
-    start = next + sep.length;
-  }
-
-  return parts;
-}
-
-function assetsBucket() {
-  return process.env.SUPABASE_STORAGE_BUCKET || "assets-clientes";
-}
-
-async function uploadAsset(slug, nome, data, mime) {
-  if (!supabaseConfigured()) {
-    throw Object.assign(new Error("Storage não configurado."), { status: 503 });
-  }
+async function salvarPagina(userId, dados, patchMeta = {}) {
   const sb = getSupabase();
-  const caminho = `${slug}/${nome}`;
-  const { error } = await sb.storage.from(assetsBucket()).upload(caminho, data, {
-    contentType: mime || mimePorNome(nome),
-    upsert: true
-  });
-  if (error) {
-    throw Object.assign(new Error(`Falha no upload: ${error.message}`), { status: 500 });
-  }
-  return storagePublicUrl(slug, nome);
-}
-
-async function removerAsset(slug, nome) {
-  if (!supabaseConfigured() || !nome) return;
-  const sb = getSupabase();
-  await sb.storage.from(assetsBucket()).remove([`${slug}/${nome}`]);
-}
-
-function paginaResumo(pagina) {
-  const dados = pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {};
-  return {
-    slug: pagina.slug,
-    publicado: pagina.publicado !== false,
-    ativo: pagina.ativo !== false,
-    nome: dados.nome || dados.empresa || pagina.slug,
-    catalogos: Array.isArray(dados.catalogos) ? dados.catalogos : [],
-    marcas: Array.isArray(dados.marcas) ? dados.marcas : [],
-    foto: dados.foto || null,
-    url: `/${pagina.slug}/`,
-    dados
+  const normalizado = normalizarDados(dados);
+  const update = {
+    dados: normalizado,
+    updated_at: new Date().toISOString(),
+    ...patchMeta
   };
+  const { data, error } = await sb
+    .from("representantes")
+    .update(update)
+    .eq("user_id", userId)
+    .select()
+    .single();
+  if (error) {
+    console.error("salvarPagina:", error.message);
+    throw Object.assign(new Error("Falha ao salvar alterações."), { status: 500 });
+  }
+  return data;
 }
 
 module.exports = async function handler(req, res) {
@@ -118,12 +67,26 @@ module.exports = async function handler(req, res) {
     const pagina = await obterPaginaPorUserId(user.id);
     if (!pagina) {
       return json(res, 404, {
-        erro: "Você ainda não tem uma página vinculada. Envie o briefing primeiro."
+        erro: "Você ainda não escolheu sua URL. Defina o endereço da página primeiro."
       });
     }
 
     if (req.method === "GET") {
-      return json(res, 200, { ok: true, pagina: paginaResumo(pagina) });
+      const sit = situacaoDe({
+        slug: pagina.slug,
+        email_cobranca: pagina.email_cobranca,
+        ativo: pagina.ativo !== false,
+        inadimplente_desde: pagina.inadimplente_desde,
+        controle_manual: pagina.controle_manual === true
+      });
+      return json(res, 200, {
+        ok: true,
+        pagina: {
+          ...paginaResumo(pagina),
+          situacao: sit.codigo,
+          situacaoLabel: sit.label
+        }
+      });
     }
 
     if (req.method !== "PUT" && req.method !== "POST") {
@@ -131,13 +94,19 @@ module.exports = async function handler(req, res) {
     }
 
     if (!supabaseConfigured()) {
-      return json(res, 503, { erro: "Supabase não configurado para editar página." });
+      return json(res, 503, { erro: "Supabase não configurado." });
     }
 
+    await exigirAssinaturaAtiva(user.id);
+
     const slug = pagina.slug;
-    let dados = { ...(pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {}) };
-    let catalogos = Array.isArray(dados.catalogos) ? [...dados.catalogos] : [];
-    let marcas = Array.isArray(dados.marcas) ? [...dados.marcas] : [];
+    let dados = normalizarDados({
+      ...(pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {}),
+      slug
+    });
+    let catalogos = [...dados.catalogos];
+    let marcas = [...dados.marcas];
+    let patchMeta = {};
 
     const ct = req.headers["content-type"] || "";
     let acao = "";
@@ -155,8 +124,12 @@ module.exports = async function handler(req, res) {
       campos = {
         titulo: campo("titulo"),
         nome: campo("nome"),
+        id: campo("id"),
+        marcaId: campo("marcaId"),
         arquivoNome: campo("arquivo"),
-        tipo: campo("tipo") || "PDF"
+        tipo: campo("tipo") || "PDF",
+        fotoTipo: campo("fotoTipo") || "pessoa",
+        ordem: campo("ordem")
       };
       arquivos = parts.filter((p) => p.filename && p.data && p.data.length);
     } else {
@@ -165,82 +138,127 @@ module.exports = async function handler(req, res) {
       campos = body;
     }
 
-    if (acao === "catalogo_add") {
-      const file = arquivos[0];
-      if (!file) return json(res, 400, { erro: "Envie o arquivo do catálogo." });
-      if (file.data.length > MAX_ANEXO) {
-        return json(res, 413, { erro: "Arquivo grande demais." });
+    if (acao === "atualizar" || req.method === "PUT") {
+      for (const k of CAMPOS_TEXTO) {
+        if (campos[k] !== undefined) dados[k] = campos[k];
       }
-      const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
-      const base = nomeArquivoSeguro(
-        campos.titulo || file.filename.replace(/\.[^.]+$/, ""),
-        "catalogo"
-      );
-      const nomeArq = `${base}.${ext}`.slice(0, 120);
-      await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
-      catalogos.push({
-        titulo: (campos.titulo || base).slice(0, 120),
-        arquivo: nomeArq,
-        tipo: campos.tipo || (ext === "pdf" ? "PDF" : "Arquivo")
-      });
-    } else if (acao === "catalogo_remover") {
-      const alvo = String(campos.arquivoNome || campos.arquivo || "").trim();
-      const item = catalogos.find((c) => c.arquivo === alvo || c.titulo === alvo);
-      if (item?.arquivo) await removerAsset(slug, item.arquivo);
-      catalogos = catalogos.filter((c) => c.arquivo !== alvo && c.titulo !== alvo);
-    } else if (acao === "marca_add") {
+      if (campos.estados !== undefined) {
+        dados.estados = Array.isArray(campos.estados)
+          ? campos.estados.map((u) => String(u).toUpperCase())
+          : [];
+      }
+      if (campos.cidades !== undefined) {
+        dados.cidades = normalizarCidadesInput(campos.cidades, dados.estados || []);
+      }
+      if (campos.contatos !== undefined && Array.isArray(campos.contatos)) {
+        dados.contatos = campos.contatos;
+      }
+      dados = normalizarDados({ ...dados, catalogos, marcas });
+    } else if (acao === "foto_set") {
       const file = arquivos[0];
+      if (!file) return json(res, 400, { erro: "Envie a foto ou logo." });
+      if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
+      const ext = (file.filename.split(".").pop() || "jpg").toLowerCase();
+      const nomeArq = `foto.${ext}`.slice(0, 120);
+      if (dados.foto && dados.foto !== nomeArq) await removerAsset(slug, dados.foto);
+      await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+      dados.foto = nomeArq;
+      dados.fotoTipo = campos.fotoTipo === "logo" ? "logo" : "pessoa";
+    } else if (acao === "marca_add" || acao === "marca_editar") {
       const nomeMarca = String(campos.nome || "").trim().slice(0, 120);
       if (!nomeMarca) return json(res, 400, { erro: "Informe o nome da marca." });
+      const file = arquivos[0];
       let logo = null;
       if (file) {
-        if (file.data.length > MAX_ANEXO) {
-          return json(res, 413, { erro: "Arquivo grande demais." });
-        }
+        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
         const ext = (file.filename.split(".").pop() || "png").toLowerCase();
         logo = `marca-${nomeArquivoSeguro(nomeMarca, "marca")}.${ext}`.slice(0, 120);
         await uploadAsset(slug, logo, file.data, mimePorNome(logo));
       }
-      const idx = marcas.findIndex(
-        (m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase()
-      );
-      const entrada = { nome: nomeMarca, ...(logo ? { logo } : {}) };
-      if (idx >= 0) {
-        if (!logo && marcas[idx].logo) entrada.logo = marcas[idx].logo;
-        marcas[idx] = entrada;
-      } else {
-        marcas.push(entrada);
-      }
+      const idAlvo = campos.id || null;
+      const idx = idAlvo
+        ? marcas.findIndex((m) => m.id === idAlvo)
+        : marcas.findIndex((m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase());
+      const entrada = {
+        id: idx >= 0 ? marcas[idx].id : novoId("m"),
+        nome: nomeMarca,
+        ...(logo ? { logo } : idx >= 0 && marcas[idx].logo ? { logo: marcas[idx].logo } : {})
+      };
+      if (idx >= 0) marcas[idx] = entrada;
+      else marcas.push(entrada);
     } else if (acao === "marca_remover") {
+      const idAlvo = campos.id || campos.marcaId;
       const nomeMarca = String(campos.nome || "").trim().toLowerCase();
-      const item = marcas.find((m) => String(m.nome || "").toLowerCase() === nomeMarca);
+      const item = idAlvo
+        ? marcas.find((m) => m.id === idAlvo)
+        : marcas.find((m) => String(m.nome || "").toLowerCase() === nomeMarca);
       if (item?.logo) await removerAsset(slug, item.logo);
-      marcas = marcas.filter((m) => String(m.nome || "").toLowerCase() !== nomeMarca);
-    } else {
-      return json(res, 400, {
-        erro: "Ação inválida. Use catalogo_add, catalogo_remover, marca_add ou marca_remover."
-      });
+      marcas = marcas.filter((m) => m !== item);
+      catalogos = catalogos.map((c) => (c.marcaId === item?.id ? { ...c, marcaId: undefined } : c));
+    } else if (acao === "catalogo_add") {
+      const file = arquivos[0];
+      if (!file) return json(res, 400, { erro: "Envie o arquivo do catálogo." });
+      if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
+      const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
+      const base = nomeArquivoSeguro(campos.titulo || file.filename.replace(/\.[^.]+$/, ""), "catalogo");
+      const nomeArq = `${base}.${ext}`.slice(0, 120);
+      await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+      const cat = {
+        id: novoId("c"),
+        titulo: (campos.titulo || base).slice(0, 120),
+        arquivo: nomeArq,
+        tipo: campos.tipo || (ext === "pdf" ? "PDF" : "Arquivo")
+      };
+      if (campos.marcaId) cat.marcaId = campos.marcaId;
+      catalogos.push(cat);
+    } else if (acao === "catalogo_editar") {
+      const idAlvo = campos.id;
+      const idx = catalogos.findIndex((c) => c.id === idAlvo || c.arquivo === campos.arquivoNome);
+      if (idx < 0) return json(res, 404, { erro: "Catálogo não encontrado." });
+      const cat = { ...catalogos[idx] };
+      if (campos.titulo) cat.titulo = String(campos.titulo).slice(0, 120);
+      if (campos.marcaId !== undefined) {
+        if (campos.marcaId) cat.marcaId = campos.marcaId;
+        else delete cat.marcaId;
+      }
+      const file = arquivos[0];
+      if (file) {
+        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
+        if (cat.arquivo) await removerAsset(slug, cat.arquivo);
+        const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
+        const base = nomeArquivoSeguro(campos.titulo || cat.titulo || "catalogo", "catalogo");
+        const nomeArq = `${base}.${ext}`.slice(0, 120);
+        await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
+        cat.arquivo = nomeArq;
+      }
+      catalogos[idx] = cat;
+    } else if (acao === "catalogo_remover") {
+      const alvo = String(campos.id || campos.arquivoNome || campos.arquivo || "").trim();
+      const item = catalogos.find((c) => c.id === alvo || c.arquivo === alvo || c.titulo === alvo);
+      if (item?.arquivo) await removerAsset(slug, item.arquivo);
+      catalogos = catalogos.filter((c) => c !== item);
+    } else if (acao === "catalogo_reordenar") {
+      const ordem = Array.isArray(campos.ordem) ? campos.ordem : JSON.parse(campos.ordem || "[]");
+      const mapa = new Map(catalogos.map((c) => [c.id, c]));
+      catalogos = ordem.map((id) => mapa.get(id)).filter(Boolean);
+    } else if (acao === "publicar") {
+      if (!dados.nome && !dados.empresa) {
+        return json(res, 400, { erro: "Preencha pelo menos o nome antes de publicar." });
+      }
+      patchMeta = { publicado: true, publicado_em: new Date().toISOString() };
+    } else if (acao === "despublicar") {
+      patchMeta = { publicado: false };
+    } else if (acao !== "atualizar" && req.method === "POST") {
+      return json(res, 400, { erro: "Ação inválida." });
     }
 
-    dados = { ...dados, catalogos, marcas };
-    const sb = getSupabase();
-    const { data, error } = await sb
-      .from("representantes")
-      .update({ dados, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("painel pagina update:", error.message);
-      return json(res, 500, { erro: "Falha ao salvar alterações." });
-    }
+    dados = normalizarDados({ ...dados, catalogos, marcas });
+    const data = await salvarPagina(user.id, dados, patchMeta);
 
     return json(res, 200, {
       ok: true,
       pagina: paginaResumo(data),
-      aviso:
-        "Alterações salvas no banco. A página pública atualiza no próximo deploy/build do site."
+      aviso: patchMeta.publicado ? "Página publicada e no ar." : "Alterações salvas."
     });
   } catch (erro) {
     console.error("painel pagina:", erro);
@@ -249,7 +267,5 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.config = {
-  api: {
-    bodyParser: false
-  }
+  api: { bodyParser: false }
 };

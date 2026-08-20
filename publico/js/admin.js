@@ -255,7 +255,9 @@
   }
 
   function labelTipo(t) {
-    return t === "alteracao" ? "Alteração" : "Briefing";
+    if (t === "alteracao") return "Alteração";
+    if (t === "suporte") return "Suporte";
+    return "Briefing";
   }
 
   function labelStatus(s) {
@@ -431,6 +433,36 @@
         ${renderAnexos(mensagem.anexos)}
       </section>
       ${
+        (mensagem.respostas || []).length
+          ? `<section class="admin-detalhe__bloco">
+        <h3 class="assinantes-bloco__titulo">Respostas</h3>
+        <ul class="admin-respostas">${mensagem.respostas
+          .map(
+            (r) =>
+              `<li class="admin-resposta admin-resposta--${esc(r.autor)}">
+                <span class="assinantes-meta">${esc(r.autor === "admin" ? "Suporte" : "Usuário")} · ${new Date(r.created_at).toLocaleString("pt-BR")}</span>
+                <pre class="admin-corpo">${esc(r.corpo)}</pre>
+              </li>`
+          )
+          .join("")}</ul>
+      </section>`
+          : ""
+      }
+      ${
+        mensagem.tipo === "suporte"
+          ? `<section class="admin-detalhe__bloco">
+        <h3 class="assinantes-bloco__titulo">Responder ao representante</h3>
+        <form id="form-resposta-suporte" class="assinantes-form">
+          <label class="campo">
+            <span class="campo__rotulo">Resposta</span>
+            <textarea name="corpo" rows="4" maxlength="8000" required placeholder="Sua resposta…"></textarea>
+          </label>
+          <button type="submit" class="btn btn--primario">Enviar resposta</button>
+        </form>
+      </section>`
+          : ""
+      }
+      ${
         mensagem.email_erro
           ? `<p class="briefing-status" data-tipo="erro">E-mail: ${esc(mensagem.email_erro)}</p>`
           : mensagem.email_id
@@ -479,6 +511,23 @@
         await carregarInbox();
         await carregarResumo();
         setStatus(painelStatus, "Mensagem excluída.", "ok");
+      } catch (erro) {
+        setStatus(painelStatus, erro.message, "erro");
+      }
+    });
+
+    document.getElementById("form-resposta-suporte")?.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const corpo = ev.currentTarget.corpo?.value?.trim();
+      if (!corpo) return;
+      try {
+        await api("mensagem-responder", {
+          method: "POST",
+          body: { id: mensagem.id, corpo }
+        });
+        const data = await api("mensagem", { params: { id: mensagem.id } });
+        renderDetalhe(data.mensagem);
+        setStatus(painelStatus, "Resposta enviada.", "ok");
       } catch (erro) {
         setStatus(painelStatus, erro.message, "erro");
       }

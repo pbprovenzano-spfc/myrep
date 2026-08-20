@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    GET /api/auth/perfil — dados do cliente logado
    ========================================================= */
 
@@ -9,30 +9,8 @@ const {
   obterPaginaPorUserId,
   obterPaginaPorEmail
 } = require("../assinaturas");
-const { getSupabase, supabaseConfigured } = require("../supabase");
 const { situacaoDe } = require("../paginas");
-
-async function briefingEnviado(userId, email) {
-  if (!supabaseConfigured()) return false;
-  const sb = getSupabase();
-  let q = sb
-    .from("mensagens")
-    .select("id", { count: "exact", head: true })
-    .eq("tipo", "briefing");
-  if (userId) {
-    q = q.eq("user_id", userId);
-  } else if (email) {
-    q = q.eq("remetente_email", email);
-  } else {
-    return false;
-  }
-  const { count, error } = await q;
-  if (error) {
-    console.error("briefingEnviado:", error.message);
-    return false;
-  }
-  return (count || 0) > 0;
-}
+const { paginaResumo } = require("../painel-helpers");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") {
@@ -51,7 +29,7 @@ module.exports = async function handler(req, res) {
       pagina = await obterPaginaPorEmail(email);
     }
 
-    let paginaResumo = null;
+    let paginaOut = null;
     if (pagina) {
       const sit = situacaoDe({
         slug: pagina.slug,
@@ -60,23 +38,12 @@ module.exports = async function handler(req, res) {
         inadimplente_desde: pagina.inadimplente_desde,
         controle_manual: pagina.controle_manual === true
       });
-      const dados = pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {};
-      paginaResumo = {
-        slug: pagina.slug,
-        nome: dados.nome || dados.empresa || pagina.slug,
-        publicado: pagina.publicado !== false,
-        ativo: pagina.ativo !== false,
-        email_cobranca: pagina.email_cobranca,
+      paginaOut = {
+        ...paginaResumo(pagina),
         situacao: sit.codigo,
-        situacaoLabel: sit.label,
-        catalogos: Array.isArray(dados.catalogos) ? dados.catalogos : [],
-        marcas: Array.isArray(dados.marcas) ? dados.marcas : [],
-        foto: dados.foto || null,
-        url: `/${pagina.slug}/`
+        situacaoLabel: sit.label
       };
     }
-
-    const enviado = await briefingEnviado(user.id, email);
 
     return json(res, 200, {
       ok: true,
@@ -95,8 +62,7 @@ module.exports = async function handler(req, res) {
             asaas_subscription_id: assinatura.asaas_subscription_id
           }
         : null,
-      pagina: paginaResumo,
-      briefingEnviado: enviado
+      pagina: paginaOut
     });
   } catch (erro) {
     return json(res, erro.status || 500, { erro: erro.message || "Erro ao carregar perfil." });

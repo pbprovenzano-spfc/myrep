@@ -138,23 +138,13 @@ function projetarFeatures(features) {
   };
 }
 
-function ufsMunicipaisDosClientes() {
-  if (!fs.existsSync(DIR_CLIENTES)) return [];
-  const ufs = new Set();
+const TODAS_UFS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
 
-  for (const arq of fs.readdirSync(DIR_CLIENTES).filter((f) => f.endsWith(".json"))) {
-    try {
-      const c = JSON.parse(fs.readFileSync(path.join(DIR_CLIENTES, arq), "utf8"));
-      // Todas as UFs usadas (inclui multi-estado para drill-down)
-      if (Array.isArray(c.estados)) {
-        for (const uf of c.estados) ufs.add(String(uf).toUpperCase());
-      }
-    } catch {
-      /* ignora JSON inválido — o build avisa depois */
-    }
-  }
-
-  return [...ufs].sort();
+function ufsMunicipais() {
+  return [...TODAS_UFS];
 }
 
 async function gerarBrasil() {
@@ -216,13 +206,9 @@ async function main() {
 
   await gerarBrasil();
 
-  const ufs = ufsMunicipaisDosClientes();
-  if (!ufs.length) {
-    console.log("  Nenhuma UF nos clientes — pulando malhas municipais.");
-  } else {
-    console.log(`  UFs municipais: ${ufs.join(", ")}`);
-    for (const uf of ufs) await gerarUf(uf);
-  }
+  const ufs = ufsMunicipais();
+  console.log(`  Gerando malhas municipais (${ufs.length} UFs)…`);
+  for (const uf of ufs) await gerarUf(uf);
 
   console.log(`\n▸ Geo pronto em ${Date.now() - inicio}ms → /geo\n`);
 }

@@ -8,31 +8,23 @@ const PLANOS = {
   mensal: {
     id: "mensal",
     nome: "Mensal",
-    valor: 17.99,
+    valor: 19.9,
     tipo: "recorrente",
-    descricao: "R$ 17,99 por mês",
-    labelPreco: "R$ 17,99",
+    descricao: "R$ 19,90 por mês",
+    labelPreco: "R$ 19,90",
     labelCiclo: "/mês"
   },
-  anual_parcelado: {
-    id: "anual_parcelado",
-    nome: "Anual parcelado",
-    valor: 14.99,
-    tipo: "recorrente",
-    descricao: "12× de R$ 14,99",
-    labelPreco: "R$ 14,99",
-    labelCiclo: "/mês · 12 meses",
-    total: 179.88
-  },
-  anual_avista: {
-    id: "anual_avista",
-    nome: "Anual à vista",
-    valor: 161.89,
+  anual: {
+    id: "anual",
+    nome: "Anual",
+    valor: 202.8,
     tipo: "avulso",
-    descricao: "R$ 161,89 à vista (−10%)",
-    labelPreco: "R$ 161,89",
+    descricao: "R$ 202,80 no ano (12× de R$ 16,90)",
+    labelPreco: "R$ 202,80",
     labelCiclo: "no ano",
-    economia: "10% off"
+    parcelas: 12,
+    valorParcela: 16.9,
+    total: 202.8
   }
 };
 
@@ -226,8 +218,7 @@ function json(res, status, body) {
 function linksPlanos() {
   return {
     mensal: process.env.ASAAS_LINK_MENSAL || "",
-    anual_parcelado: process.env.ASAAS_LINK_ANUAL_PARCELADO || "",
-    anual_avista: process.env.ASAAS_LINK_ANUAL_AVISTA || ""
+    anual: process.env.ASAAS_LINK_ANUAL || ""
   };
 }
 
