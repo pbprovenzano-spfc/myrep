@@ -46,6 +46,10 @@
       <span class="campo__rotulo">Confirmar senha <abbr title="obrigatório">*</abbr></span>
       <input name="senha2" type="password" required autocomplete="new-password" minlength="6" maxlength="72">
     </label>
+    <label class="campo">
+      <span class="campo__rotulo">Código vitalício (opcional)</span>
+      <input name="codigo_vitalicio" type="text" autocomplete="off" maxlength="20" placeholder="MYREP-XXXXXX" spellcheck="false">
+    </label>
 
     <p class="briefing-status" id="auth-status" role="status" aria-live="polite"></p>
     <button class="btn btn--primario" type="submit" id="btn-cadastro">Criar conta</button>

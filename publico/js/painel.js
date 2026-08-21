@@ -128,6 +128,9 @@
 
   function labelStatus(assinatura) {
     if (!assinatura) return { texto: "Sem assinatura", status: "pendente" };
+    if (assinatura.plano === "vitalicio" && assinatura.status === "ativa") {
+      return { texto: "Vitalício", status: "ativa" };
+    }
     const mapa = {
       ativa: "Adimplente",
       inadimplente: "Inadimplente",
@@ -964,9 +967,13 @@
     } else if (assinatura.status === "pendente") {
       assTexto.textContent = `Plano ${assinatura.plano} — conclua o pagamento na Asaas.`;
     } else if (assinatura.status === "ativa") {
-      assTexto.textContent = `Plano ${assinatura.plano} ativo${
-        assinatura.proxima_cobranca ? ` · próxima cobrança ${assinatura.proxima_cobranca}` : ""
-      }.`;
+      if (assinatura.plano === "vitalicio") {
+        assTexto.textContent = "Plano Vitalício ativo · sem cobranças.";
+      } else {
+        assTexto.textContent = `Plano ${assinatura.plano} ativo${
+          assinatura.proxima_cobranca ? ` · próxima cobrança ${assinatura.proxima_cobranca}` : ""
+        }.`;
+      }
     } else if (assinatura.status === "inadimplente") {
       assTexto.textContent =
         "Pagamento em atraso. Regularize para manter a página no ar (carência de 3 dias).";

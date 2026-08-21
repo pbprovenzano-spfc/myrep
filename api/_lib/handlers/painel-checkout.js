@@ -22,8 +22,12 @@ module.exports = async function handler(req, res) {
     const { user } = await exigirUsuario(req);
     const body = await lerJsonBody(req);
     const planoId = String(body.plano || "").trim();
-    if (!PLANOS[planoId]) {
+    const plano = PLANOS[planoId];
+    if (!plano) {
       return json(res, 400, { erro: "Plano inválido." });
+    }
+    if (plano.checkout === false) {
+      return json(res, 400, { erro: "Este plano não possui checkout." });
     }
 
     const email = String(user.email || "")

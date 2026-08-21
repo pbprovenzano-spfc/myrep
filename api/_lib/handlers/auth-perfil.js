@@ -7,8 +7,10 @@ const { exigirUsuario } = require("../auth");
 const {
   obterAssinaturaPorUserId,
   obterPaginaPorUserId,
-  obterPaginaPorEmail
+  obterPaginaPorEmail,
+  upsertAssinatura
 } = require("../assinaturas");
+const { resgatarCodigoReservado } = require("../codigos-vitalicios");
 const { situacaoDe } = require("../paginas");
 const { paginaResumo } = require("../painel-helpers");
 
@@ -24,6 +26,20 @@ module.exports = async function handler(req, res) {
       .toLowerCase();
 
     let assinatura = await obterAssinaturaPorUserId(user.id);
+
+    const jaTemVitalicio =
+      assinatura?.plano === "vitalicio" && assinatura?.status === "ativa";
+    if (!jaTemVitalicio) {
+      const resgate = await resgatarCodigoReservado(user.id, email);
+      if (resgate) {
+        assinatura = await upsertAssinatura(user.id, {
+          plano: "vitalicio",
+          status: "ativa",
+          proxima_cobranca: null
+        });
+      }
+    }
+
     let pagina = await obterPaginaPorUserId(user.id);
     if (!pagina && email) {
       pagina = await obterPaginaPorEmail(email);

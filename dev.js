@@ -212,9 +212,6 @@ function observar() {
 /* ---------------- start ---------------- */
 
 const API_HANDLERS = {
-  "/api/pagamento": () => require("./api/pagamento"),
-  "/api/pagamento/liberar": () => require("./api/_lib/handlers/pagamento-liberar"),
-  "/api/pagamento/validar": () => require("./api/_lib/handlers/pagamento-validar"),
   "/api/asaas/webhook": () => require("./api/asaas/webhook"),
   "/api/assinantes": () => require("./api/admin"),
   "/api/admin": () => require("./api/admin"),
@@ -223,6 +220,7 @@ const API_HANDLERS = {
   "/api/auth": () => require("./api/auth"),
   "/api/auth/perfil": () => require("./api/_lib/handlers/auth-perfil"),
   "/api/auth/logout": () => require("./api/_lib/handlers/auth-logout"),
+  "/api/auth/reservar-codigo": () => require("./api/_lib/handlers/auth-reservar-codigo"),
   "/api/painel": () => require("./api/painel"),
   "/api/painel/checkout": () => require("./api/_lib/handlers/painel-checkout"),
   "/api/painel/pagina": () => require("./api/_lib/handlers/painel-pagina"),

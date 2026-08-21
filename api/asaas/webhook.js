@@ -7,12 +7,14 @@ const {
 const { buscarUsuarioPorEmail } = require("../_lib/auth");
 const {
   upsertAssinatura,
-  associarUserIdPorEmail
+  associarUserIdPorEmail,
+  obterAssinaturaPorUserId
 } = require("../_lib/assinaturas");
 
 function identificarPlano(pagamento) {
   if (!pagamento || pagamento.value == null) return null;
   for (const plano of Object.values(PLANOS)) {
+    if (plano.checkout === false) continue;
     if (valoresIguais(pagamento.value, plano.valor)) return plano;
   }
   return null;
@@ -33,6 +35,11 @@ async function sincronizarContaPorEmail(email, {
 
   const user = await buscarUsuarioPorEmail(e);
   if (!user) return null;
+
+  const assinaturaAtual = await obterAssinaturaPorUserId(user.id);
+  if (assinaturaAtual?.plano === "vitalicio" && assinaturaAtual?.status === "ativa") {
+    return user;
+  }
 
   await upsertAssinatura(user.id, {
     plano: planoId || "mensal",
@@ -130,15 +137,25 @@ module.exports = async function handler(req, res) {
       try {
         const cliente = await asaasFetch(`/customers/${encodeURIComponent(pagamento.customer)}`);
         if (cliente?.email) {
-          await marcarInadimplentePorEmail(cliente.email);
-          const planoOverdue = identificarPlano(pagamento);
-          await sincronizarContaPorEmail(cliente.email, {
-            planoId: planoOverdue?.id,
-            status: "inadimplente",
-            customerId: pagamento.customer,
-            subscriptionId: pagamento.subscription || null,
-            paymentId: pagamento.id
-          });
+          let pularOverdue = false;
+          const userOverdue = await buscarUsuarioPorEmail(cliente.email);
+          if (userOverdue) {
+            const assVitalicio = await obterAssinaturaPorUserId(userOverdue.id);
+            if (assVitalicio?.plano === "vitalicio" && assVitalicio?.status === "ativa") {
+              pularOverdue = true;
+            }
+          }
+          if (!pularOverdue) {
+            await marcarInadimplentePorEmail(cliente.email);
+            const planoOverdue = identificarPlano(pagamento);
+            await sincronizarContaPorEmail(cliente.email, {
+              planoId: planoOverdue?.id,
+              status: "inadimplente",
+              customerId: pagamento.customer,
+              subscriptionId: pagamento.subscription || null,
+              paymentId: pagamento.id
+            });
+          }
         }
       } catch (erroOverdue) {
         console.error("Webhook overdue páginas:", erroOverdue.message || erroOverdue);

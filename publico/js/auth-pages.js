@@ -7,6 +7,42 @@
   const plano = params.get("plano") || "";
   const next = params.get("next") || "";
 
+  const MSG_LINK_EXPIRADO =
+    "Este link expirou ou já foi usado. Entre na conta ou peça um novo e-mail.";
+
+  function hashAuthParams() {
+    const raw = location.hash.replace(/^#/, "");
+    return raw ? new URLSearchParams(raw) : null;
+  }
+
+  function linkAuthInvalido(hashParams) {
+    if (!hashParams) return false;
+    const code = hashParams.get("error_code") || "";
+    const err = hashParams.get("error") || "";
+    return code === "otp_expired" || err === "access_denied";
+  }
+
+  function limparHash() {
+    if (location.hash) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+
+  function tratarErroLinkAuth() {
+    const hashParams = hashAuthParams();
+    if (!linkAuthInvalido(hashParams)) return false;
+
+    limparHash();
+    if (params.get("erro") === "link_expirado") return true;
+
+    const destino =
+      location.pathname.includes("/cadastro/") ? "/cadastro/?erro=link_expirado" : "/entrar/?erro=link_expirado";
+    location.replace(destino);
+    return true;
+  }
+
+  if (tratarErroLinkAuth()) return;
+
   function destinoAposLogin() {
     if (next && next.startsWith("/")) return next;
     if (plano) return `/painel/?plano=${encodeURIComponent(plano)}`;
@@ -45,6 +81,13 @@
 
   redirecionarSeLogado();
 
+  if (params.get("erro") === "link_expirado") {
+    const statusAuth = document.getElementById("auth-status");
+    if (statusAuth && (document.getElementById("form-cadastro") || document.getElementById("form-entrar"))) {
+      setStatus(statusAuth, MSG_LINK_EXPIRADO, "erro");
+    }
+  }
+
   /* -------- Cadastro -------- */
   const formCadastro = document.getElementById("form-cadastro");
   if (formCadastro) {
@@ -57,6 +100,7 @@
       const senha = String(fd.get("senha") || "");
       const senha2 = String(fd.get("senha2") || "");
       const nome = String(fd.get("nome") || "").trim();
+      const codigoVitalicio = String(fd.get("codigo_vitalicio") || "").trim();
 
       if (!email.includes("@")) return setStatus(status, "Informe um e-mail válido.", "erro");
       if (senha.length < 6) return setStatus(status, "A senha precisa ter ao menos 6 caracteres.", "erro");
@@ -65,6 +109,19 @@
       btn.disabled = true;
       setStatus(status, "Criando conta…", "info");
       try {
+        if (codigoVitalicio) {
+          setStatus(status, "Validando código…", "info");
+          const respReserva = await fetch("/api/auth/reservar-codigo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ codigo: codigoVitalicio, email })
+          });
+          const dataReserva = await respReserva.json().catch(() => ({}));
+          if (!respReserva.ok) {
+            throw new Error(dataReserva.erro || "Código inválido ou indisponível.");
+          }
+        }
+
         const sb = await esperarSupabase();
         const { data, error } = await sb.auth.signUp({
           email,
@@ -84,7 +141,9 @@
 
         setStatus(
           status,
-          "Conta criada. Confirme o e-mail que enviamos e depois entre na sua conta.",
+          codigoVitalicio
+            ? "Conta criada. Confirme o e-mail que enviamos — o plano vitalício será ativado ao entrar."
+            : "Conta criada. Confirme o e-mail que enviamos e depois entre na sua conta.",
           "ok"
         );
         formCadastro.reset();

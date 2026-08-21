@@ -7,7 +7,9 @@
     "build": "node build.js",
     "dev": "node dev.js",
     "geo": "node scripts/geo.js",
-    "seed:supabase": "node scripts/seed-supabase.js"
+    "seed:supabase": "node scripts/seed-supabase.js",
+    "configure:auth-urls": "node scripts/configure-auth-urls.js",
+    "migrate:codigos-vitalicios": "node scripts/apply-codigos-vitalicios-migration.js"
   },
   "engines": {
     "node": ">=18"

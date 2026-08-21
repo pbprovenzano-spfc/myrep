@@ -25,6 +25,16 @@ const PLANOS = {
     parcelas: 12,
     valorParcela: 16.9,
     total: 202.8
+  },
+  vitalicio: {
+    id: "vitalicio",
+    nome: "Vitalício",
+    valor: 0,
+    tipo: "vitalicio",
+    checkout: false,
+    descricao: "Acesso permanente (código)",
+    labelPreco: "Vitalício",
+    labelCiclo: ""
   }
 };
 
@@ -102,19 +112,6 @@ function assinar(payloadB64) {
   return crypto.createHmac("sha256", tokenSecret()).update(payloadB64).digest("base64url");
 }
 
-function emitirToken({ email, plano, paymentId, dias = 7 }) {
-  const exp = Math.floor(Date.now() / 1000) + dias * 24 * 60 * 60;
-  const payload = b64url(
-    JSON.stringify({
-      email: String(email).trim().toLowerCase(),
-      plano,
-      paymentId,
-      exp
-    })
-  );
-  return `${payload}.${assinar(payload)}`;
-}
-
 function lerToken(token) {
   if (!token || typeof token !== "string" || !token.includes(".")) {
     const erro = new Error("Token inválido.");
@@ -163,33 +160,6 @@ async function buscarClientePorEmail(email) {
 async function listarPagamentosCliente(customerId, { limit = 20 } = {}) {
   const data = await asaasFetch(`/payments?customer=${encodeURIComponent(customerId)}&limit=${limit}`);
   return data?.data || [];
-}
-
-async function encontrarPagamentoDoPlano(email, planoId) {
-  const plano = PLANOS[planoId];
-  if (!plano) {
-    const erro = new Error("Plano inválido.");
-    erro.status = 400;
-    throw erro;
-  }
-  const cliente = await buscarClientePorEmail(email);
-  if (!cliente) {
-    const erro = new Error("Nenhum cliente Asaas com esse e-mail. Use o mesmo e-mail do pagamento.");
-    erro.status = 404;
-    throw erro;
-  }
-  const pagamentos = await listarPagamentosCliente(cliente.id, { limit: 30 });
-  const pago = pagamentos.find(
-    (p) => STATUS_PAGO.has(p.status) && valoresIguais(p.value, plano.valor)
-  );
-  if (!pago) {
-    const erro = new Error(
-      `Não achei pagamento confirmado de ${plano.descricao} para este e-mail. Aguarde a confirmação (PIX) e tente de novo.`
-    );
-    erro.status = 404;
-    throw erro;
-  }
-  return { cliente, pagamento: pago, plano };
 }
 
 function lerJsonBody(req) {
@@ -262,9 +232,7 @@ module.exports = {
   PLANOS,
   STATUS_PAGO,
   asaasFetch,
-  emitirToken,
   lerToken,
-  encontrarPagamentoDoPlano,
   buscarClientePorEmail,
   listarPagamentosCliente,
   lerJsonBody,

@@ -4,7 +4,6 @@
 
 const {
   asaasFetch,
-  emitirToken,
   lerJsonBody,
   json,
   PLANOS,
@@ -17,7 +16,6 @@ const {
   buscarClientePorEmail,
   listarPagamentosCliente
 } = require("./_lib/pagamento");
-const { listarAcessos, registrarAcesso } = require("./_lib/acessos");
 const {
   listarMensagens,
   obterMensagem,
@@ -40,8 +38,14 @@ const {
   listarAssinaturasLocais,
   upsertAssinatura,
   vincularUserIdNaPagina,
-  obterPaginaPorUserId
+  obterPaginaPorUserId,
+  obterAssinaturaPorUserId
 } = require("./_lib/assinaturas");
+const {
+  listarCodigos,
+  criarCodigo,
+  revogarCodigo
+} = require("./_lib/codigos-vitalicios");
 const { supabaseConfigured } = require("./_lib/supabase");
 
 function exigirAdmin(req) {
@@ -58,6 +62,7 @@ function exigirAdmin(req) {
 
 function planoPorValor(valor) {
   for (const p of Object.values(PLANOS)) {
+    if (p.checkout === false) continue;
     if (valoresIguais(valor, p.valor)) return p;
   }
   return null;
@@ -136,6 +141,19 @@ async function listarPagamentosDesde(dataIso) {
     `/payments?limit=100&offset=0&paymentDate[ge]=${encodeURIComponent(dataIso)}`
   );
   return data?.data || [];
+}
+
+async function avaliarAdimplenciaPagina(p) {
+  if (p.user_id && supabaseConfigured()) {
+    const ass = await obterAssinaturaPorUserId(p.user_id);
+    if (ass?.plano === "vitalicio" && ass?.status === "ativa") {
+      return { estado: "adimplente", motivo: "Plano vitalício ativo" };
+    }
+  }
+  if (!p.email_cobranca) {
+    return { estado: "desconhecido", motivo: "Sem e-mail" };
+  }
+  return avaliarAdimplenciaEmail(p.email_cobranca);
 }
 
 async function avaliarAdimplenciaEmail(email) {
@@ -226,7 +244,7 @@ async function sincronizarPaginaSlug(slug) {
       resultado: { slug: p.slug, ok: true, situacao: p.situacao, nota: "Sem e-mail" }
     };
   }
-  const av = await avaliarAdimplenciaEmail(p.email_cobranca);
+  const av = await avaliarAdimplenciaPagina(p);
   const resultado = await aplicarAvaliacaoNaPagina(p, av);
   const lista = await listarPaginas();
   return {
@@ -252,7 +270,7 @@ async function sincronizarPaginas() {
       continue;
     }
     try {
-      const av = await avaliarAdimplenciaEmail(p.email_cobranca);
+      const av = await avaliarAdimplenciaPagina(p);
       resultados.push(await aplicarAvaliacaoNaPagina(p, av, { agora }));
     } catch (erro) {
       resultados.push({
@@ -412,7 +430,6 @@ module.exports = async function handler(req, res) {
     exigirAdmin(req);
 
     if (req.method === "GET" && acao === "listar") {
-      const acessosPromise = listarAcessos({ limit: 50 });
       const paginasPromise = listarPaginas().catch((erro) => {
         console.error("admin páginas:", erro.message || erro);
         return [];
@@ -429,7 +446,7 @@ module.exports = async function handler(req, res) {
           console.error("admin Asaas:", erroAsaas.message || erroAsaas);
         }
       }
-      const [acessos, paginas] = await Promise.all([acessosPromise, paginasPromise]);
+      const paginas = await paginasPromise;
 
       // Enriquecer páginas com e-mail do dono (auth)
       let emailPorUserId = {};
@@ -470,7 +487,6 @@ module.exports = async function handler(req, res) {
         ok: true,
         assinaturas: assinaturasComPagina,
         pagamentos,
-        acessos,
         paginas: paginasComDono,
         emailParaPagina,
         planos: PLANOS
@@ -648,7 +664,11 @@ module.exports = async function handler(req, res) {
       const status = String(body.status || "ativa").trim();
       if (!userId) return json(res, 400, { erro: "Informe userId." });
       if (!PLANOS[plano]) return json(res, 400, { erro: "Plano inválido." });
-      const ass = await upsertAssinatura(userId, { plano, status });
+      const patch = { plano, status };
+      if (plano === "vitalicio") {
+        patch.proxima_cobranca = null;
+      }
+      const ass = await upsertAssinatura(userId, patch);
       return json(res, 200, { ok: true, assinatura: ass });
     }
 
@@ -739,38 +759,6 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ok: true });
     }
 
-    if (req.method === "POST" && acao === "liberar") {
-      const body = await lerJsonBody(req);
-      const email = String(body.email || "").trim().toLowerCase();
-      const plano = String(body.plano || "mensal").trim();
-      const paymentId = String(body.paymentId || "manual").trim();
-
-      if (!email || !email.includes("@")) {
-        return json(res, 400, { erro: "E-mail inválido." });
-      }
-      if (!PLANOS[plano]) {
-        return json(res, 400, { erro: "Plano inválido." });
-      }
-
-      const token = emitirToken({ email, plano, paymentId, dias: 14 });
-      await registrarAcesso({
-        email,
-        plano,
-        paymentId,
-        asaasCustomerId: null,
-        token,
-        dias: 14,
-        origem: "admin"
-      });
-      return json(res, 200, {
-        ok: true,
-        token,
-        briefingUrl: `/briefing/?acesso=${encodeURIComponent(token)}`,
-        email,
-        plano
-      });
-    }
-
     if (req.method === "POST" && acao === "cancelar") {
       const body = await lerJsonBody(req);
       const id = String(body.subscriptionId || "").trim();
@@ -793,6 +781,24 @@ module.exports = async function handler(req, res) {
       }
       if (!cliente) return json(res, 404, { erro: "Cliente não encontrado." });
       return json(res, 200, { ok: true, cliente });
+    }
+
+    if (req.method === "GET" && acao === "codigos") {
+      const codigos = await listarCodigos({ limit: 200 });
+      return json(res, 200, { ok: true, codigos });
+    }
+
+    if (req.method === "POST" && acao === "codigo-gerar") {
+      const codigo = await criarCodigo();
+      return json(res, 200, { ok: true, codigo });
+    }
+
+    if (req.method === "POST" && acao === "codigo-revogar") {
+      const body = await lerJsonBody(req);
+      const id = String(body.id || "").trim();
+      if (!id) return json(res, 400, { erro: "Informe o id do código." });
+      await revogarCodigo(id);
+      return json(res, 200, { ok: true });
     }
 
     return json(res, 400, { erro: "Ação inválida." });

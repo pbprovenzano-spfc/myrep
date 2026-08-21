@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pagamento — My Rep</title>
-<meta name="description" content="Confirme seu pagamento My Rep e libere o formulário de briefing.">
+<meta name="description" content="Confirme seu pagamento My Rep e acesse o painel para montar sua página.">
 <meta name="robots" content="noindex">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,26 +25,13 @@
 <main class="pagamento-shell">
   <header class="pagamento-intro">
     <h1 class="pagamento-intro__titulo">Pagamento recebido</h1>
-    <p class="pagamento-intro__texto" id="pagamento-plano-texto">Se você já tem conta, abra o painel para enviar o briefing. Contas novas: use o mesmo e-mail do pagamento.</p>
+    <p class="pagamento-intro__texto" id="pagamento-plano-texto">Entre no painel com a mesma conta ou e-mail usado no pagamento para montar e publicar sua página.</p>
   </header>
 
   <div class="painel-acoes" style="margin-bottom:24px">
     <a class="btn btn--primario" href="/painel/">Abrir meu painel</a>
     <a class="btn btn--fantasma-ink" href="/entrar/?next=/painel/">Entrar</a>
   </div>
-
-  <details class="pagamento-legado">
-    <summary>Liberação legado (sem conta)</summary>
-    <form class="pagamento-form" id="pagamento-form" novalidate>
-      <input type="hidden" name="plano" id="pagamento-plano" value="">
-      <label class="campo">
-        <span class="campo__rotulo">E-mail do pagamento</span>
-        <input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="voce@email.com">
-      </label>
-      <p class="briefing-status" id="pagamento-status" role="status" aria-live="polite"></p>
-      <button class="btn btn--primario" type="submit" id="pagamento-enviar">Liberar briefing (legado)</button>
-    </form>
-  </details>
 
   <p class="pagamento-voltar"><a href="/">Voltar ao início</a></p>
 </main>

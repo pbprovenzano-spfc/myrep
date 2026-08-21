@@ -8,13 +8,13 @@ A home (`/`) é a landing do produto. A lista interna de perfis fica em
 
 Gerador estático: um script Node lê os JSONs e gera `/dist`. Clientes criam
 conta (Supabase Auth), assinam na Asaas e usam o **painel** (`/painel/`) para
-enviar briefing, gerenciar catálogos/logos e compartilhar o cartão. A operação
+montar a página, gerenciar catálogos/logos e compartilhar o cartão. A operação
 fica no `/admin/` (usuários, adimplência, inbox).
 
 ## Rodar
 
 ```bash
-npm install          # só precisa por causa do Resend (api/briefing)
+npm install
 npm run geo          # baixa malhas do IBGE → /geo (quando muda UF/cidade)
 npm run dev          # http://localhost:3000 + rebuild ao salvar
 npm run build        # gera /dist
@@ -34,16 +34,14 @@ template/
   entrar.html          login
   recuperar-senha.html
   painel.html          área do cliente
-  briefing.html        formulário legado (?acesso=)
   admin.html           painel /admin/
 publico/
   css/style.css
   js/painel.js         painel do cliente
-  js/briefing.js       monta JSON + ZIP
   js/admin.js          painel admin
 api/
   auth/perfil.js       sessão do cliente
-  painel/*             checkout, briefing, alterações, página
+  painel/*             checkout, alterações, página, suporte
   asaas/webhook.js     adimplência + assinaturas
   admin.js             KPIs, inbox, usuários, páginas
   _lib/auth.js         Supabase Auth (Bearer)
@@ -62,23 +60,23 @@ vercel.json
 1. `/cadastro/` — cria conta Supabase (email + senha)
 2. Escolhe plano → Asaas (checkout no painel)
 3. Webhook confirma pagamento → `assinaturas` + adimplência
-4. `/painel/` — briefing, catálogos/logos, alteração manual, **Compartilhar Cartão**
-5. Admin publica a página a partir da inbox
+4. `/painel/` — edita a página, catálogos/logos, suporte e **Compartilhar Cartão**
+5. A página publica em `/{slug}/` após configuração no painel
 
 ## Painel do cliente (`/painel/`)
 
 Requer login. Seções: assinatura, sua página (com botão compartilhar),
-catálogos/logos, solicitação de alteração e formulário de briefing.
+catálogos/logos, escolha de URL e suporte.
 
 ## Painel admin (`/admin/`)
 
 Login com `ADMIN_PASSWORD`. Abas:
 
 - **Visão geral** — MRR, assinaturas ativas, recebido no mês, ticket médio, vencidos; KPIs de páginas
-- **Caixa de entrada** — briefings e alterações (vinculados a `user_id` quando houver)
+- **Caixa de entrada** — alterações e suporte (vinculados a `user_id` quando houver)
 - **Usuários** — contas Auth, assinatura local, página vinculada; vincular slug ↔ e-mail
 - **Páginas** — dono, e-mail de cobrança, adimplência, Automático/Manual
-- **Assinantes** — liberar briefing legado, acessos, assinaturas e pagamentos Asaas
+- **Assinantes** — assinaturas e pagamentos Asaas
 
 ### Ativação e inadimplência
 
@@ -92,23 +90,8 @@ Rode o [`supabase/schema.sql`](supabase/schema.sql) atualizado (inclui `user_id`
 tabela `assinaturas` e RLS). Veja também [`supabase/README.md`](supabase/README.md)
 para Auth (email/senha) e redirect URLs.
 
-`/assinantes/` redireciona para `/admin/`. `/alteracoes/` redireciona para login.
-`/briefing/` sem `?acesso=` redireciona para `/entrar/`. Em produção a inbox usa
-`mensagens` / `mensagens_anexos` e o bucket privado `inbox` do Supabase.
-
-## Briefing
-
-Fluxo principal: formulário dentro de `/painel/` → `POST /api/painel/briefing`.
-
-Legado: `/briefing/?acesso=TOKEN` → `POST /api/briefing` (tokens HMAC antigos).
-
-1. Cliente preenche dados, anexa foto, logos e PDFs.
-2. O browser gera o `slug` e monta o ZIP (`clientes/<slug>.json` + `assets-clientes/<slug>/`).
-3. A API grava na inbox do `/admin/`.
-4. Você publica a página no projeto.
-
-Limite prático: ~**4 MB** por envio na Hobby da Vercel (painéis autenticados
-aceitam até ~25 MB no handler; o limite da plataforma ainda vale).
+`/assinantes/` redireciona para `/admin/`. `/alteracoes/` e `/briefing/` redirecionam para `/painel/`.
+Em produção a inbox usa `mensagens` / `mensagens_anexos` e o bucket privado `inbox` do Supabase.
 
 ### Configurar Resend + Vercel
 
@@ -121,7 +104,7 @@ SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 RESEND_API_KEY=re_xxxxxxxx
 BRIEFING_TO_EMAIL=myrep.sup@gmail.com
-BRIEFING_FROM_EMAIL=My Rep <ola@seudominio.com>
+BRIEFING_FROM_EMAIL=My Rep <ola@myrep.com.br>
 SUPPORT_EMAIL=myrep.sup@gmail.com
 ADMIN_PASSWORD=...
 ASAAS_API_KEY=...
@@ -135,19 +118,6 @@ ASAAS_LINK_MENSAL=...
 Em `npm run dev` sem Supabase, a inbox grava em `/inbox/<id>/`. Auth de cliente
 exige Supabase configurado.
 
-### Pacote que chega no e-mail
-
-```
-clientes/<slug>.json
-assets-clientes/<slug>/
-  foto.ext
-  marca-*.ext
-  catalogo-*.pdf
-```
-
-Checklist: `slug` válido → WhatsApp só dígitos → nomes no JSON = arquivos na
-pasta → `paleta` ∈ `ambar|oceano|floresta|rubi|ardosia`.
-
 ## Cadastrar um representante novo
 
 1. Crie `clientes/nome-do-cliente.json`
@@ -159,7 +129,7 @@ pasta → `paleta` ∈ `ambar|oceano|floresta|rubi|ardosia`.
 
 | Campo | Obrigatório | Observação |
 |---|---|---|
-| `slug` | sim | só minúsculas, números e hífen. Vira a URL (no briefing, gerado sozinho) |
+| `slug` | sim | só minúsculas, números e hífen. Vira a URL |
 | `nome` | sim | |
 | `whatsapp` | sim | `55` + DDD + número, só dígitos |
 | `destaque` | não | `"pessoa"` (padrão) ou `"empresa"` — quem vira o título principal |

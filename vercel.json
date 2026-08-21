@@ -14,12 +14,11 @@
     { "source": "/api/assinantes", "destination": "/api/admin" },
     { "source": "/api/auth/perfil", "destination": "/api/auth?acao=perfil" },
     { "source": "/api/auth/logout", "destination": "/api/auth?acao=logout" },
+    { "source": "/api/auth/reservar-codigo", "destination": "/api/auth?acao=reservar-codigo" },
     { "source": "/api/painel/checkout", "destination": "/api/painel?acao=checkout" },
     { "source": "/api/painel/pagina", "destination": "/api/painel?acao=pagina" },
     { "source": "/api/painel/slug", "destination": "/api/painel?acao=slug" },
     { "source": "/api/painel/suporte", "destination": "/api/painel?acao=suporte" },
-    { "source": "/api/pagamento/liberar", "destination": "/api/pagamento?acao=liberar" },
-    { "source": "/api/pagamento/validar", "destination": "/api/pagamento?acao=validar" },
     { "source": "/:slug", "destination": "/api/pagina?slug=:slug" },
     { "source": "/:slug/", "destination": "/api/pagina?slug=:slug" }
   ]

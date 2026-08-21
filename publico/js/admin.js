@@ -6,20 +6,21 @@
   const telaLogin = document.getElementById("tela-login");
   const telaPainel = document.getElementById("tela-painel");
   const formLogin = document.getElementById("form-login");
-  const formLiberar = document.getElementById("form-liberar");
   const loginStatus = document.getElementById("login-status");
   const painelStatus = document.getElementById("painel-status");
-  const liberarResultado = document.getElementById("liberar-resultado");
   const btnSair = document.getElementById("btn-sair");
   const btnAtualizar = document.getElementById("btn-atualizar");
   const tbodyAss = document.querySelector("#tabela-assinaturas tbody");
   const tbodyPag = document.querySelector("#tabela-pagamentos tbody");
   const tbodyPagResumo = document.querySelector("#tabela-pagamentos-resumo tbody");
-  const tbodyAcessos = document.querySelector("#tabela-acessos tbody");
   const tbodyPaginas = document.querySelector("#tabela-paginas tbody");
   const tbodyUsuarios = document.querySelector("#tabela-usuarios tbody");
+  const tbodyCodigos = document.querySelector("#tabela-codigos tbody");
   const formVincular = document.getElementById("form-vincular");
   const vincularStatus = document.getElementById("vincular-status");
+  const codigosStatus = document.getElementById("codigos-status");
+  const codigoGerado = document.getElementById("codigo-gerado");
+  const btnGerarCodigo = document.getElementById("btn-gerar-codigo");
   const inboxLista = document.getElementById("inbox-lista");
   const inboxDetalhe = document.getElementById("inbox-detalhe");
   const inboxVazio = document.getElementById("inbox-vazio");
@@ -89,7 +90,8 @@
       tabPart === "assinantes" ||
       tabPart === "visao" ||
       tabPart === "paginas" ||
-      tabPart === "usuarios"
+      tabPart === "usuarios" ||
+      tabPart === "codigos"
         ? tabPart
         : "visao";
     const filtro =
@@ -128,16 +130,66 @@
     });
   }
 
+  function labelStatusCodigo(status) {
+    const mapa = {
+      disponivel: "Disponível",
+      reservado: "Reservado",
+      usado: "Usado"
+    };
+    return mapa[status] || status;
+  }
+
+  function renderCodigos(lista) {
+    if (!tbodyCodigos) return;
+    if (!lista.length) {
+      tbodyCodigos.innerHTML = `<tr><td colspan="6">Nenhum código gerado.</td></tr>`;
+      return;
+    }
+    tbodyCodigos.innerHTML = lista
+      .map((c) => {
+        const criado = c.criado_em ? new Date(c.criado_em).toLocaleString("pt-BR") : "—";
+        const usado = c.usado_em ? new Date(c.usado_em).toLocaleString("pt-BR") : "—";
+        const podeRevogar = c.status !== "usado";
+        return `<tr>
+          <td>
+            <code>${esc(c.codigo)}</code>
+            <button type="button" class="btn-link" data-copiar-codigo="${esc(c.codigo)}">Copiar</button>
+          </td>
+          <td><span class="badge badge--${esc(c.status)}">${esc(labelStatusCodigo(c.status))}</span></td>
+          <td>${esc(c.reservado_email || "—")}</td>
+          <td>${esc(criado)}</td>
+          <td>${esc(usado)}</td>
+          <td class="assinantes-acoes">
+            ${
+              podeRevogar
+                ? `<button type="button" class="btn-link btn-link--risco" data-revogar-codigo="${esc(c.id)}">Revogar</button>`
+                : ""
+            }
+          </td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  async function carregarCodigos(mostrarStatus = true) {
+    if (mostrarStatus) setStatus(codigosStatus, "Carregando códigos…", "info");
+    const data = await api("codigos");
+    renderCodigos(data.codigos || []);
+    if (mostrarStatus) {
+      setStatus(codigosStatus, `${(data.codigos || []).length} código(s)`, "ok");
+    }
+    return data;
+  }
+
   function renderAssinaturas(lista) {
     if (!tbodyAss) return;
     if (!lista.length) {
-      tbodyAss.innerHTML = `<tr><td colspan="6">Nenhuma assinatura encontrada.</td></tr>`;
+      tbodyAss.innerHTML = `<tr><td colspan="5">Nenhuma assinatura encontrada.</td></tr>`;
       return;
     }
     tbodyAss.innerHTML = lista
       .map((a) => {
         const email = a.cliente?.email || "";
-        const plano = a.planoId || "mensal";
         const pg = a.pagina;
         const paginaHtml = pg
           ? `<a href="/${esc(pg.slug)}/" target="_blank" rel="noopener">/${esc(pg.slug)}/</a>
@@ -156,7 +208,6 @@
           <td><span class="badge badge--${esc(String(a.status).toLowerCase())}">${esc(a.status)}</span></td>
           <td>${esc(a.proximoVencimento || "—")}</td>
           <td class="assinantes-acoes">
-            <button type="button" class="btn-link" data-liberar-email="${esc(email)}" data-liberar-plano="${esc(plano)}">Link briefing</button>
             ${
               a.status === "ACTIVE"
                 ? `<button type="button" class="btn-link btn-link--risco" data-cancelar="${esc(a.id)}">Cancelar</button>`
@@ -168,41 +219,14 @@
       .join("");
   }
 
-  function renderAcessos(lista) {
-    if (!tbodyAcessos) return;
-    if (!lista.length) {
-      tbodyAcessos.innerHTML = `<tr><td colspan="5">Nenhum acesso registrado.</td></tr>`;
-      return;
-    }
-    tbodyAcessos.innerHTML = lista
-      .map((a) => {
-        const exp = a.expira_em ? new Date(a.expira_em).toLocaleString("pt-BR") : "—";
-        return `<tr>
-          <td>${esc(a.email)}</td>
-          <td>${esc(a.plano)}</td>
-          <td>${esc(a.origem)}</td>
-          <td>${esc(exp)}</td>
-          <td><code>${esc(a.payment_id || "—")}</code></td>
-        </tr>`;
-      })
-      .join("");
-  }
-
-  function renderPagamentos(lista, tbody, comAcoes) {
+  function renderPagamentos(lista, tbody) {
     if (!tbody) return;
-    const cols = comAcoes ? 7 : 6;
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="${cols}">Nenhum pagamento recente.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6">Nenhum pagamento recente.</td></tr>`;
       return;
     }
     tbody.innerHTML = lista
       .map((p) => {
-        const plano = p.planoId || "mensal";
-        const acoes = comAcoes
-          ? `<td class="assinantes-acoes">
-            <button type="button" class="btn-link" data-liberar-pagamento="${esc(p.id)}" data-liberar-plano="${esc(plano)}" data-customer="${esc(p.customer || "")}">Link</button>
-          </td>`
-          : "";
         return `<tr>
           <td><code>${esc(p.id)}</code></td>
           <td>${esc(p.planoNome)}</td>
@@ -210,7 +234,6 @@
           <td><span class="badge badge--${esc(String(p.status).toLowerCase())}">${esc(p.status)}</span></td>
           <td>${esc(p.billingType || "—")}</td>
           <td>${esc(p.pagamento || p.vencimento || "—")}</td>
-          ${acoes}
         </tr>`;
       })
       .join("");
@@ -251,13 +274,14 @@
       badgeNaoLidas.textContent = String(n);
     }
 
-    renderPagamentos(r.pagamentosRecentes || [], tbodyPagResumo, false);
+    renderPagamentos(r.pagamentosRecentes || [], tbodyPagResumo);
   }
 
   function labelTipo(t) {
     if (t === "alteracao") return "Alteração";
     if (t === "suporte") return "Suporte";
-    return "Briefing";
+    if (t === "briefing") return "Envio legado";
+    return t || "—";
   }
 
   function labelStatus(s) {
@@ -672,7 +696,8 @@
           <td class="assinantes-acoes">
             ${
               !ass || ass.status !== "ativa"
-                ? `<button type="button" class="btn-link" data-liberar-assinatura="${esc(u.id)}" data-plano="mensal">Marcar adimplente</button>`
+                ? `<button type="button" class="btn-link" data-liberar-assinatura="${esc(u.id)}" data-plano="mensal">Marcar adimplente</button>
+                   <button type="button" class="btn-link" data-liberar-assinatura="${esc(u.id)}" data-plano="vitalicio">Marcar vitalício</button>`
                 : ""
             }
             <a class="btn-link" href="#inbox">Inbox</a>
@@ -711,8 +736,7 @@
   async function carregarAssinantes() {
     const data = await api("listar");
     renderAssinaturas(data.assinaturas || []);
-    renderPagamentos(data.pagamentos || [], tbodyPag, true);
-    renderAcessos(data.acessos || []);
+    renderPagamentos(data.pagamentos || [], tbodyPag);
     if (data.paginas) paginasCache = data.paginas;
     return data;
   }
@@ -722,12 +746,12 @@
     const [resumoData, listarData] = await Promise.all([api("resumo"), api("listar")]);
     renderKpis(resumoData.resumo);
     renderAssinaturas(listarData.assinaturas || []);
-    renderPagamentos(listarData.pagamentos || [], tbodyPag, true);
-    renderAcessos(listarData.acessos || []);
+    renderPagamentos(listarData.pagamentos || [], tbodyPag);
     if (listarData.paginas) renderPaginas(listarData.paginas);
     if (tabAtual() === "inbox") await carregarInbox(false);
     if (tabAtual() === "paginas" && !listarData.paginas) await carregarPaginas(false);
     if (tabAtual() === "usuarios") await carregarUsuarios(false);
+    if (tabAtual() === "codigos") await carregarCodigos(false);
     setStatus(
       painelStatus,
       `${(listarData.assinaturas || []).length} assinaturas · ${(listarData.pagamentos || []).length} pagamentos · ${(listarData.paginas || []).length} páginas`,
@@ -791,7 +815,9 @@
             ? carregarPaginas()
             : t === "usuarios"
               ? carregarUsuarios()
-              : carregarTudo();
+              : t === "codigos"
+                ? carregarCodigos()
+                : carregarTudo();
     p.catch((erro) => setStatus(painelStatus, erro.message, "erro"));
   });
 
@@ -819,19 +845,84 @@
   tbodyUsuarios?.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-liberar-assinatura]");
     if (!btn) return;
+    const plano = btn.getAttribute("data-plano") || "mensal";
+    const msg =
+      plano === "vitalicio"
+        ? "Marcar este usuário com plano vitalício ativo?"
+        : "Marcar assinatura como ativa (mensal)?";
+    if (!confirm(msg)) return;
     try {
       await api("usuario-assinatura", {
         method: "POST",
         body: {
           userId: btn.getAttribute("data-liberar-assinatura"),
-          plano: btn.getAttribute("data-plano") || "mensal",
+          plano,
           status: "ativa"
         }
       });
-      setStatus(painelStatus, "Assinatura marcada como ativa.", "ok");
+      setStatus(
+        painelStatus,
+        plano === "vitalicio" ? "Plano vitalício ativado." : "Assinatura marcada como ativa.",
+        "ok"
+      );
       await carregarUsuarios(false);
     } catch (erro) {
       setStatus(painelStatus, erro.message, "erro");
+    }
+  });
+
+  btnGerarCodigo?.addEventListener("click", async () => {
+    setStatus(codigosStatus, "Gerando código…", "info");
+    try {
+      const data = await api("codigo-gerar", { method: "POST", body: {} });
+      const codigo = data.codigo?.codigo || "";
+      if (codigoGerado) {
+        codigoGerado.hidden = false;
+        codigoGerado.innerHTML = `Novo código: <code>${esc(codigo)}</code> <button type="button" class="btn-link" data-copiar-codigo="${esc(codigo)}">Copiar</button>`;
+      }
+      setStatus(codigosStatus, "Código gerado.", "ok");
+      await carregarCodigos(false);
+    } catch (erro) {
+      setStatus(codigosStatus, erro.message, "erro");
+    }
+  });
+
+  tbodyCodigos?.addEventListener("click", async (ev) => {
+    const copiar = ev.target.closest("[data-copiar-codigo]");
+    if (copiar) {
+      const texto = copiar.getAttribute("data-copiar-codigo") || "";
+      try {
+        await navigator.clipboard.writeText(texto);
+        setStatus(codigosStatus, "Código copiado.", "ok");
+      } catch {
+        setStatus(codigosStatus, "Não foi possível copiar.", "erro");
+      }
+      return;
+    }
+    const revogar = ev.target.closest("[data-revogar-codigo]");
+    if (!revogar) return;
+    if (!confirm("Revogar este código? Ele não poderá mais ser usado.")) return;
+    try {
+      await api("codigo-revogar", {
+        method: "POST",
+        body: { id: revogar.getAttribute("data-revogar-codigo") }
+      });
+      setStatus(codigosStatus, "Código revogado.", "ok");
+      await carregarCodigos(false);
+    } catch (erro) {
+      setStatus(codigosStatus, erro.message, "erro");
+    }
+  });
+
+  codigoGerado?.addEventListener("click", async (ev) => {
+    const copiar = ev.target.closest("[data-copiar-codigo]");
+    if (!copiar) return;
+    const texto = copiar.getAttribute("data-copiar-codigo") || "";
+    try {
+      await navigator.clipboard.writeText(texto);
+      setStatus(codigosStatus, "Código copiado.", "ok");
+    } catch {
+      setStatus(codigosStatus, "Não foi possível copiar.", "erro");
     }
   });
 
@@ -856,38 +947,6 @@
       setStatus(painelStatus, erro.message, "erro");
     }
   });
-
-  formLiberar?.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const fd = new FormData(formLiberar);
-    try {
-      const data = await api("liberar", {
-        method: "POST",
-        body: { email: fd.get("email"), plano: fd.get("plano") }
-      });
-      const abs = location.origin + data.briefingUrl;
-      liberarResultado.hidden = false;
-      liberarResultado.innerHTML = `Link gerado: <a href="${esc(data.briefingUrl)}">${esc(abs)}</a>`;
-    } catch (erro) {
-      liberarResultado.hidden = false;
-      liberarResultado.textContent = erro.message;
-    }
-  });
-
-  async function liberarRapido(email, plano, paymentId) {
-    if (!email) {
-      const informado = prompt("E-mail do cliente para o link do briefing:");
-      if (!informado) return;
-      email = informado;
-    }
-    const data = await api("liberar", {
-      method: "POST",
-      body: { email, plano, paymentId }
-    });
-    const abs = location.origin + data.briefingUrl;
-    await navigator.clipboard?.writeText(abs);
-    setStatus(painelStatus, `Link copiado: ${abs}`, "ok");
-  }
 
   document.getElementById("filtro-paginas")?.addEventListener("click", (ev) => {
     const btn = ev.target.closest("[data-filtro-pagina]");
@@ -929,29 +988,6 @@
         setStatus(painelStatus, "Assinatura cancelada.", "ok");
         await carregarAssinantes();
         await carregarResumo();
-      } catch (erro) {
-        setStatus(painelStatus, erro.message, "erro");
-      }
-      return;
-    }
-
-    if (t.dataset.liberarEmail) {
-      try {
-        await liberarRapido(t.dataset.liberarEmail, t.dataset.liberarPlano);
-      } catch (erro) {
-        setStatus(painelStatus, erro.message, "erro");
-      }
-      return;
-    }
-
-    if (t.dataset.liberarPagamento) {
-      try {
-        let email = "";
-        if (t.dataset.customer) {
-          const info = await api("cliente", { params: { id: t.dataset.customer } });
-          email = info.cliente?.email || "";
-        }
-        await liberarRapido(email, t.dataset.liberarPlano, t.dataset.liberarPagamento);
       } catch (erro) {
         setStatus(painelStatus, erro.message, "erro");
       }
@@ -1044,6 +1080,8 @@
       }
     } else if (tab === "usuarios") {
       carregarUsuarios().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
+    } else if (tab === "codigos") {
+      carregarCodigos().catch((erro) => setStatus(codigosStatus, erro.message, "erro"));
     } else if (tab === "assinantes") {
       carregarAssinantes().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
     }

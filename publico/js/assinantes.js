@@ -6,15 +6,12 @@
   const telaLogin = document.getElementById("tela-login");
   const telaPainel = document.getElementById("tela-painel");
   const formLogin = document.getElementById("form-login");
-  const formLiberar = document.getElementById("form-liberar");
   const loginStatus = document.getElementById("login-status");
   const painelStatus = document.getElementById("painel-status");
-  const liberarResultado = document.getElementById("liberar-resultado");
   const btnSair = document.getElementById("btn-sair");
   const btnAtualizar = document.getElementById("btn-atualizar");
   const tbodyAss = document.querySelector("#tabela-assinaturas tbody");
   const tbodyPag = document.querySelector("#tabela-pagamentos tbody");
-  const tbodyAcessos = document.querySelector("#tabela-acessos tbody");
 
   let tokenMemoria = sessionStorage.getItem("myrep_admin_token") || "";
 
@@ -75,7 +72,6 @@
     tbodyAss.innerHTML = lista
       .map((a) => {
         const email = a.cliente?.email || "";
-        const plano = a.planoId || "mensal";
         return `<tr>
           <td>
             <strong>${esc(a.cliente?.nome || "—")}</strong><br>
@@ -85,7 +81,6 @@
           <td><span class="badge badge--${esc(String(a.status).toLowerCase())}">${esc(a.status)}</span></td>
           <td>${esc(a.proximoVencimento || "—")}</td>
           <td class="assinantes-acoes">
-            <button type="button" class="btn-link" data-liberar-email="${esc(email)}" data-liberar-plano="${esc(plano)}">Link briefing</button>
             ${
               a.status === "ACTIVE"
                 ? `<button type="button" class="btn-link btn-link--risco" data-cancelar="${esc(a.id)}">Cancelar</button>`
@@ -97,34 +92,13 @@
       .join("");
   }
 
-  function renderAcessos(lista) {
-    if (!tbodyAcessos) return;
-    if (!lista.length) {
-      tbodyAcessos.innerHTML = `<tr><td colspan="5">Nenhum acesso registrado.</td></tr>`;
-      return;
-    }
-    tbodyAcessos.innerHTML = lista
-      .map((a) => {
-        const exp = a.expira_em ? new Date(a.expira_em).toLocaleString("pt-BR") : "—";
-        return `<tr>
-          <td>${esc(a.email)}</td>
-          <td>${esc(a.plano)}</td>
-          <td>${esc(a.origem)}</td>
-          <td>${esc(exp)}</td>
-          <td><code>${esc(a.payment_id || "—")}</code></td>
-        </tr>`;
-      })
-      .join("");
-  }
-
   function renderPagamentos(lista) {
     if (!lista.length) {
-      tbodyPag.innerHTML = `<tr><td colspan="7">Nenhum pagamento recente.</td></tr>`;
+      tbodyPag.innerHTML = `<tr><td colspan="6">Nenhum pagamento recente.</td></tr>`;
       return;
     }
     tbodyPag.innerHTML = lista
       .map((p) => {
-        const plano = p.planoId || "mensal";
         return `<tr>
           <td><code>${esc(p.id)}</code></td>
           <td>${esc(p.planoNome)}</td>
@@ -132,9 +106,6 @@
           <td><span class="badge badge--${esc(String(p.status).toLowerCase())}">${esc(p.status)}</span></td>
           <td>${esc(p.billingType || "—")}</td>
           <td>${esc(p.pagamento || p.vencimento || "—")}</td>
-          <td class="assinantes-acoes">
-            <button type="button" class="btn-link" data-liberar-pagamento="${esc(p.id)}" data-liberar-plano="${esc(plano)}" data-customer="${esc(p.customer || "")}">Link</button>
-          </td>
         </tr>`;
       })
       .join("");
@@ -145,10 +116,9 @@
     const data = await api("listar");
     renderAssinaturas(data.assinaturas || []);
     renderPagamentos(data.pagamentos || []);
-    renderAcessos(data.acessos || []);
     setStatus(
       painelStatus,
-      `${(data.assinaturas || []).length} assinaturas · ${(data.pagamentos || []).length} pagamentos · ${(data.acessos || []).length} acessos`,
+      `${(data.assinaturas || []).length} assinaturas · ${(data.pagamentos || []).length} pagamentos`,
       "ok"
     );
   }
@@ -195,38 +165,6 @@
     carregar().catch((erro) => setStatus(painelStatus, erro.message, "erro"));
   });
 
-  formLiberar.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const fd = new FormData(formLiberar);
-    try {
-      const data = await api("liberar", {
-        method: "POST",
-        body: { email: fd.get("email"), plano: fd.get("plano") }
-      });
-      const abs = location.origin + data.briefingUrl;
-      liberarResultado.hidden = false;
-      liberarResultado.innerHTML = `Link gerado: <a href="${esc(data.briefingUrl)}">${esc(abs)}</a>`;
-    } catch (erro) {
-      liberarResultado.hidden = false;
-      liberarResultado.textContent = erro.message;
-    }
-  });
-
-  async function liberarRapido(email, plano, paymentId) {
-    if (!email) {
-      const informado = prompt("E-mail do cliente para o link do briefing:");
-      if (!informado) return;
-      email = informado;
-    }
-    const data = await api("liberar", {
-      method: "POST",
-      body: { email, plano, paymentId }
-    });
-    const abs = location.origin + data.briefingUrl;
-    await navigator.clipboard?.writeText(abs);
-    setStatus(painelStatus, `Link copiado: ${abs}`, "ok");
-  }
-
   document.addEventListener("click", async (ev) => {
     const t = ev.target;
     if (!(t instanceof HTMLElement)) return;
@@ -237,29 +175,6 @@
         await api("cancelar", { method: "POST", body: { subscriptionId: t.dataset.cancelar } });
         setStatus(painelStatus, "Assinatura cancelada.", "ok");
         await carregar();
-      } catch (erro) {
-        setStatus(painelStatus, erro.message, "erro");
-      }
-      return;
-    }
-
-    if (t.dataset.liberarEmail) {
-      try {
-        await liberarRapido(t.dataset.liberarEmail, t.dataset.liberarPlano);
-      } catch (erro) {
-        setStatus(painelStatus, erro.message, "erro");
-      }
-      return;
-    }
-
-    if (t.dataset.liberarPagamento) {
-      try {
-        let email = "";
-        if (t.dataset.customer) {
-          const info = await api("cliente", { params: { id: t.dataset.customer } });
-          email = info.cliente?.email || "";
-        }
-        await liberarRapido(email, t.dataset.liberarPlano, t.dataset.liberarPagamento);
       } catch (erro) {
         setStatus(painelStatus, erro.message, "erro");
       }

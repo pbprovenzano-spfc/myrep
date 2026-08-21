@@ -1,5 +1,13 @@
-/* Home: se logado, CTAs apontam para o painel */
+/* Home: se logado, CTAs apontam para o painel; trata link de auth inválido na raiz */
 (function () {
+  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const code = hashParams.get("error_code") || "";
+  const err = hashParams.get("error") || "";
+  if (code === "otp_expired" || err === "access_denied") {
+    location.replace("/entrar/?erro=link_expirado");
+    return;
+  }
+
   function tick(n) {
     if (!window.MyRepAuth || !window.MyRepAuth.pronto()) {
       if (n < 40) setTimeout(() => tick(n + 1), 50);

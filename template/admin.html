@@ -52,6 +52,7 @@
         <span class="admin-tab__badge" id="badge-nao-lidas" hidden>0</span>
       </a>
       <a class="admin-tab" href="#usuarios" data-tab="usuarios">Usuários</a>
+      <a class="admin-tab" href="#codigos" data-tab="codigos">Códigos</a>
       <a class="admin-tab" href="#paginas" data-tab="paginas">Páginas</a>
       <a class="admin-tab" href="#assinantes" data-tab="assinantes">Assinantes</a>
     </nav>
@@ -89,7 +90,7 @@
         <article class="admin-kpi">
           <p class="admin-kpi__rotulo">Inbox não lidas</p>
           <p class="admin-kpi__valor" id="kpi-nao-lidas">—</p>
-          <p class="admin-kpi__meta">Briefings e alterações</p>
+          <p class="admin-kpi__meta">Mensagens não lidas</p>
         </article>
       </div>
 
@@ -146,7 +147,7 @@
           <span class="campo__rotulo">Tipo</span>
           <select id="filtro-tipo">
             <option value="">Todos</option>
-            <option value="briefing">Briefing</option>
+            <option value="briefing">Envio legado</option>
             <option value="alteracao">Alteração</option>
             <option value="suporte">Suporte</option>
           </select>
@@ -212,6 +213,36 @@
       </section>
     </div>
 
+    <!-- CÓDIGOS VITALÍCIOS -->
+    <div class="admin-aba" id="aba-codigos" data-aba="codigos" hidden>
+      <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
+        <div class="admin-paginas-topo">
+          <div>
+            <h2 class="assinantes-bloco__titulo">Códigos vitalícios</h2>
+            <p class="assinantes-sub">Gere códigos de uso único para o cadastro. Cada código libera plano vitalício sem pagamento na Asaas.</p>
+          </div>
+          <button type="button" class="btn btn--primario" id="btn-gerar-codigo">Gerar código</button>
+        </div>
+        <p class="assinantes-link" id="codigo-gerado" hidden></p>
+        <p class="briefing-status" id="codigos-status" role="status"></p>
+        <div class="assinantes-tabela-wrap">
+          <table class="assinantes-tabela" id="tabela-codigos">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Status</th>
+                <th>E-mail</th>
+                <th>Criado</th>
+                <th>Usado em</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
     <!-- PÁGINAS -->
     <div class="admin-aba" id="aba-paginas" data-aba="paginas" hidden>
       <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
@@ -250,43 +281,6 @@
 
     <!-- ASSINANTES -->
     <div class="admin-aba" id="aba-assinantes" data-aba="assinantes" hidden>
-      <section class="assinantes-bloco" style="margin-top:0;border-top:0;padding-top:0">
-        <h2 class="assinantes-bloco__titulo">Liberar briefing manualmente</h2>
-        <form id="form-liberar" class="assinantes-form assinantes-form--linha" novalidate>
-          <label class="campo">
-            <span class="campo__rotulo">E-mail</span>
-            <input name="email" type="email" required placeholder="cliente@email.com">
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Plano</span>
-            <select name="plano">
-              <option value="mensal">Mensal (R$ 19,90)</option>
-              <option value="anual">Anual (R$ 202,80)</option>
-            </select>
-          </label>
-          <button class="btn btn--primario" type="submit">Gerar link</button>
-        </form>
-        <p class="assinantes-link" id="liberar-resultado" hidden></p>
-      </section>
-
-      <section class="assinantes-bloco">
-        <h2 class="assinantes-bloco__titulo">Acessos ao briefing (Supabase)</h2>
-        <div class="assinantes-tabela-wrap">
-          <table class="assinantes-tabela" id="tabela-acessos">
-            <thead>
-              <tr>
-                <th>E-mail</th>
-                <th>Plano</th>
-                <th>Origem</th>
-                <th>Expira</th>
-                <th>Pagamento</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-
       <section class="assinantes-bloco">
         <h2 class="assinantes-bloco__titulo">Assinaturas</h2>
         <div class="assinantes-tabela-wrap">
@@ -298,7 +292,6 @@
                 <th>Plano</th>
                 <th>Status</th>
                 <th>Próx. cobr.</th>
-                <th></th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -318,7 +311,6 @@
                 <th>Status</th>
                 <th>Meio</th>
                 <th>Data</th>
-                <th></th>
               </tr>
             </thead>
             <tbody></tbody>
