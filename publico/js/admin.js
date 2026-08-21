@@ -672,6 +672,11 @@
                 : ""
             }
             <button type="button" class="btn btn--fantasma-ink" data-alterar-slug="${esc(slug)}">Alterar URL</button>
+            ${
+              p.ativo === false
+                ? `<button type="button" class="btn btn--fantasma-ink btn-link--risco" data-pagina-excluir="${esc(slug)}">Excluir</button>`
+                : ""
+            }
           </td>
         </tr>`;
       })
@@ -1173,6 +1178,26 @@
         await carregarPaginas(false);
         await carregarResumo();
         setStatus(painelStatus, `/${slug}/ voltou ao automático.`, "ok");
+      } catch (erro) {
+        setStatus(painelStatus, erro.message, "erro");
+      }
+      return;
+    }
+
+    if (t.dataset.paginaExcluir) {
+      const slug = t.dataset.paginaExcluir;
+      if (
+        !confirm(
+          `Excluir permanentemente /${slug}/?\n\nA página, arquivos e mensagens deste endereço serão removidos. A URL ficará livre para outro usuário.\n\nA conta do dono NÃO será apagada — ele poderá reservar uma URL nova no painel.`
+        )
+      ) {
+        return;
+      }
+      try {
+        await api("pagina-excluir", { method: "POST", body: { slug } });
+        await carregarPaginas(false);
+        await carregarResumo();
+        setStatus(painelStatus, `/${slug}/ excluída. URL disponível para novo usuário.`, "ok");
       } catch (erro) {
         setStatus(painelStatus, erro.message, "erro");
       }

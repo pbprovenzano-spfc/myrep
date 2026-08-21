@@ -40,8 +40,26 @@ function lerLocal() {
 }
 
 function escreverLocal(mapa) {
-  fs.mkdirSync(path.dirname(ARQ_LOCAL), { recursive: true });
-  fs.writeFileSync(ARQ_LOCAL, JSON.stringify(mapa, null, 2));
+  try {
+    fs.mkdirSync(path.dirname(ARQ_LOCAL), { recursive: true });
+    fs.writeFileSync(ARQ_LOCAL, JSON.stringify(mapa, null, 2));
+  } catch (erro) {
+    const msg = erro?.message || String(erro);
+    if (erro?.code === "EROFS" || msg.toLowerCase().includes("read-only")) {
+      console.warn("paginas escreverLocal: filesystem read-only, ignorando.");
+      return;
+    }
+    throw erro;
+  }
+}
+
+function removerChaveLocal(slug) {
+  const s = normalizarSlug(slug);
+  if (!s) return;
+  const mapa = lerLocal();
+  if (!mapa[s]) return;
+  delete mapa[s];
+  escreverLocal(mapa);
 }
 
 function registroPadrao(slug, patch = {}) {
@@ -224,6 +242,7 @@ async function salvarMeta(slug, patch) {
         console.error("paginas salvarMeta update:", error.message);
         throw Object.assign(new Error("Falha ao salvar página."), { status: 500 });
       }
+      return final;
     } else {
       const { error } = await sb.from("representantes").insert({
         slug: s,
@@ -519,6 +538,72 @@ async function moverAssetsSlug(antigo, novo) {
   return movidos;
 }
 
+async function removerAssetsSlug(slug) {
+  if (!supabaseConfigured()) return;
+  const sb = getSupabase();
+  const bucket = assetsBucket();
+  let arquivos = [];
+  try {
+    arquivos = await listarArquivosStorage(slug);
+  } catch (erro) {
+    if (erroStorageIgnoravel(erro.message)) return;
+    console.error("removerAssetsSlug:", erro.message || erro);
+    throw erro;
+  }
+  if (!arquivos.length) return;
+  const { error } = await sb.storage.from(bucket).remove(arquivos);
+  if (error) {
+    console.error("removerAssetsSlug remove:", error.message);
+    throw Object.assign(new Error("Falha ao remover arquivos da página."), { status: 500 });
+  }
+}
+
+async function excluirPagina(slugBruto) {
+  const slug = normalizarSlug(slugBruto);
+  if (!slug) {
+    throw Object.assign(new Error("Slug inválido."), { status: 400 });
+  }
+  if (!supabaseConfigured()) {
+    throw Object.assign(new Error("Supabase não configurado."), { status: 503 });
+  }
+
+  const sb = getSupabase();
+  const { data: row, error: errRow } = await sb
+    .from("representantes")
+    .select("slug, ativo")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (errRow) {
+    console.error("excluirPagina select:", errRow.message);
+    throw Object.assign(new Error("Falha ao buscar página."), { status: 500 });
+  }
+  if (!row) {
+    throw Object.assign(new Error("Página não encontrada."), { status: 404 });
+  }
+  if (row.ativo !== false) {
+    throw Object.assign(new Error("Só é possível excluir páginas inativas. Desative a página antes."), {
+      status: 400
+    });
+  }
+
+  await removerAssetsSlug(slug);
+
+  const { error: errMsg } = await sb.from("mensagens").delete().eq("slug", slug);
+  if (errMsg) {
+    console.error("excluirPagina mensagens:", errMsg.message);
+    throw Object.assign(new Error("Falha ao remover mensagens da página."), { status: 500 });
+  }
+
+  const { error: errDel } = await sb.from("representantes").delete().eq("slug", slug);
+  if (errDel) {
+    console.error("excluirPagina delete:", errDel.message);
+    throw Object.assign(new Error("Falha ao excluir página."), { status: 500 });
+  }
+
+  removerChaveLocal(slug);
+  return { slug, excluida: true };
+}
+
 async function renomearSlug(antigoBruto, novoBruto) {
   const antigo = normalizarSlug(antigoBruto);
   const val = slugValido(novoBruto);
@@ -636,5 +721,6 @@ module.exports = {
   diasDesde,
   resumirPaginas,
   precisaDesativarPorCarencia,
-  renomearSlug
+  renomearSlug,
+  excluirPagina
 };

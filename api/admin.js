@@ -32,7 +32,8 @@ const {
   normalizarSlug,
   resumirPaginas,
   situacaoDe,
-  renomearSlug
+  renomearSlug,
+  excluirPagina
 } = require("./_lib/paginas");
 const { slugValido } = require("./_lib/slugs");
 const { listarUsuariosAuth, buscarUsuarioPorEmail, atualizarSenhaUsuario } = require("./_lib/auth");
@@ -740,6 +741,18 @@ module.exports = async function handler(req, res) {
           diasCarencia: sit.diasCarencia
         }
       });
+    }
+
+    if (req.method === "POST" && acao === "pagina-excluir") {
+      const body = await lerJsonBody(req);
+      const slug = normalizarSlug(body.slug);
+      if (!slug) return json(res, 400, { erro: "Slug inválido." });
+      try {
+        const resultado = await excluirPagina(slug);
+        return json(res, 200, { ok: true, ...resultado });
+      } catch (erro) {
+        return json(res, erro.status || 500, { erro: erro.message || "Falha ao excluir página." });
+      }
     }
 
     if (req.method === "POST" && acao === "pagina-automatico") {
