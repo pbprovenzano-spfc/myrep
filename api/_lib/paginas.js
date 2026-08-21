@@ -6,6 +6,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getSupabase, supabaseConfigured } = require("./supabase");
+const { slugValido } = require("./slugs");
 
 const DIAS_CARENCIA = 3;
 const ARQ_LOCAL = path.join(__dirname, "..", "..", "data", "paginas.json");
@@ -417,6 +418,141 @@ function resumirPaginas(paginas) {
   return out;
 }
 
+function assetsBucket() {
+  return process.env.SUPABASE_STORAGE_BUCKET || "assets-clientes";
+}
+
+async function listarArquivosStorage(prefixo) {
+  const sb = getSupabase();
+  const bucket = assetsBucket();
+  const saida = [];
+
+  async function walk(caminho) {
+    const { data, error } = await sb.storage.from(bucket).list(caminho, { limit: 1000 });
+    if (error) {
+      throw Object.assign(new Error(`Falha ao listar arquivos: ${error.message}`), { status: 500 });
+    }
+    for (const item of data || []) {
+      const rel = caminho ? `${caminho}/${item.name}` : item.name;
+      if (item.id == null) {
+        await walk(rel);
+      } else {
+        saida.push(rel);
+      }
+    }
+  }
+
+  await walk(prefixo);
+  return saida;
+}
+
+async function moverAssetsSlug(antigo, novo) {
+  if (!supabaseConfigured()) return;
+  const sb = getSupabase();
+  const bucket = assetsBucket();
+  let arquivos = [];
+  try {
+    arquivos = await listarArquivosStorage(antigo);
+  } catch (erro) {
+    console.error("moverAssetsSlug:", erro.message || erro);
+    throw erro;
+  }
+  if (!arquivos.length) return;
+
+  for (const caminho of arquivos) {
+    const rel = caminho.startsWith(`${antigo}/`) ? caminho.slice(antigo.length + 1) : caminho;
+    const destino = `${novo}/${rel}`;
+    const { error } = await sb.storage.from(bucket).move(caminho, destino);
+    if (error) {
+      console.error("moverAssetsSlug move:", error.message);
+      throw Object.assign(new Error("Falha ao mover arquivos da página."), { status: 500 });
+    }
+  }
+}
+
+async function renomearSlug(antigoBruto, novoBruto) {
+  const antigo = normalizarSlug(antigoBruto);
+  const val = slugValido(novoBruto);
+  if (!antigo) {
+    throw Object.assign(new Error("Slug atual inválido."), { status: 400 });
+  }
+  if (!val.ok) {
+    throw Object.assign(new Error(val.motivo || "Novo slug inválido."), { status: 400 });
+  }
+  const novo = val.slug;
+  if (antigo === novo) {
+    throw Object.assign(new Error("O novo endereço é igual ao atual."), { status: 400 });
+  }
+  if (!supabaseConfigured()) {
+    throw Object.assign(new Error("Supabase não configurado."), { status: 503 });
+  }
+
+  const sb = getSupabase();
+  const { data: ocupado } = await sb.from("representantes").select("slug").eq("slug", novo).maybeSingle();
+  if (ocupado) {
+    throw Object.assign(new Error("Este endereço já está em uso."), { status: 409 });
+  }
+
+  const { data: row, error: errRow } = await sb
+    .from("representantes")
+    .select(
+      "id, slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, user_id, updated_at"
+    )
+    .eq("slug", antigo)
+    .maybeSingle();
+  if (errRow) {
+    console.error("renomearSlug select:", errRow.message);
+    throw Object.assign(new Error("Falha ao buscar página."), { status: 500 });
+  }
+  if (!row) {
+    throw Object.assign(new Error("Página não encontrada."), { status: 404 });
+  }
+
+  await moverAssetsSlug(antigo, novo);
+
+  const dados = row.dados && typeof row.dados === "object" ? { ...row.dados } : {};
+  dados.slug = novo;
+
+  const { data: atualizado, error: errUp } = await sb
+    .from("representantes")
+    .update({
+      slug: novo,
+      dados,
+      updated_at: new Date().toISOString()
+    })
+    .eq("slug", antigo)
+    .select()
+    .single();
+  if (errUp) {
+    console.error("renomearSlug update:", errUp.message);
+    throw Object.assign(new Error("Falha ao atualizar slug no banco."), { status: 500 });
+  }
+
+  const { error: errMsg } = await sb.from("mensagens").update({ slug: novo }).eq("slug", antigo);
+  if (errMsg) console.error("renomearSlug mensagens:", errMsg.message);
+
+  const mapa = lerLocal();
+  if (mapa[antigo]) {
+    mapa[novo] = {
+      ...mapa[antigo],
+      slug: novo,
+      updated_at: new Date().toISOString()
+    };
+    delete mapa[antigo];
+    escreverLocal(mapa);
+  }
+
+  const meta = aplicarRegraCarencia(metaDeRow(novo, atualizado));
+  const situacao = situacaoDe(meta);
+  return {
+    ...meta,
+    situacao: situacao.codigo,
+    situacaoLabel: situacao.label,
+    diasInadimplente: situacao.diasInadimplente,
+    diasCarencia: DIAS_CARENCIA
+  };
+}
+
 module.exports = {
   DIAS_CARENCIA,
   normalizarEmail,
@@ -431,5 +567,6 @@ module.exports = {
   situacaoDe,
   diasDesde,
   resumirPaginas,
-  precisaDesativarPorCarencia
+  precisaDesativarPorCarencia,
+  renomearSlug
 };

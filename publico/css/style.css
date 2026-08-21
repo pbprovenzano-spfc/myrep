@@ -2582,7 +2582,9 @@ a { color: inherit; }
 }
 
 .assinantes-acoes {
-  white-space: nowrap;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
 .assinantes-link {
@@ -2669,6 +2671,56 @@ a { color: inherit; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.admin-dialog {
+  width: min(92vw, 420px);
+  max-width: 420px;
+  padding: 0;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: var(--fundo);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+}
+
+.admin-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.admin-dialog__form {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.admin-dialog__titulo {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.admin-dialog__sub {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+.admin-dialog__aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--sinal-escuro);
+  background: color-mix(in srgb, var(--sinal) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sinal) 35%, var(--borda));
+}
+
+.admin-dialog__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .admin-sit {

@@ -321,6 +321,43 @@
   </section>
 </main>
 
+<dialog id="dialog-senha" class="admin-dialog">
+  <form id="form-senha" class="admin-dialog__form" novalidate>
+    <h2 class="admin-dialog__titulo">Alterar senha</h2>
+    <p class="admin-dialog__sub" id="dialog-senha-email"></p>
+    <label class="campo">
+      <span class="campo__rotulo">Nova senha</span>
+      <input name="senha" type="password" minlength="6" required autocomplete="new-password">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Confirmar senha</span>
+      <input name="senha2" type="password" minlength="6" required autocomplete="new-password">
+    </label>
+    <p class="briefing-status" id="dialog-senha-status" role="status"></p>
+    <div class="admin-dialog__acoes">
+      <button type="button" class="btn btn--fantasma-ink" id="dialog-senha-cancelar">Cancelar</button>
+      <button type="submit" class="btn btn--primario">Salvar senha</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dialog-slug" class="admin-dialog">
+  <form id="form-slug-admin" class="admin-dialog__form" novalidate>
+    <h2 class="admin-dialog__titulo">Alterar URL da página</h2>
+    <p class="admin-dialog__sub" id="dialog-slug-atual"></p>
+    <p class="admin-dialog__aviso">A URL antiga deixará de funcionar (404). Links e cartões antigos precisarão ser atualizados.</p>
+    <label class="campo">
+      <span class="campo__rotulo">Novo endereço</span>
+      <input name="novoSlug" type="text" required pattern="[a-z0-9-]+" placeholder="novo-endereco" autocapitalize="off" spellcheck="false">
+    </label>
+    <p class="briefing-status" id="dialog-slug-status" role="status"></p>
+    <div class="admin-dialog__acoes">
+      <button type="button" class="btn btn--fantasma-ink" id="dialog-slug-cancelar">Cancelar</button>
+      <button type="submit" class="btn btn--primario">Alterar URL</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="/js/admin.js" defer></script>
 </body>
 </html>

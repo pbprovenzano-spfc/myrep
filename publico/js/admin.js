@@ -26,12 +26,24 @@
   const inboxVazio = document.getElementById("inbox-vazio");
   const badgeNaoLidas = document.getElementById("badge-nao-lidas");
   const btnSyncPaginas = document.getElementById("btn-sync-paginas");
+  const dialogSenha = document.getElementById("dialog-senha");
+  const formSenha = document.getElementById("form-senha");
+  const dialogSenhaEmail = document.getElementById("dialog-senha-email");
+  const dialogSenhaStatus = document.getElementById("dialog-senha-status");
+  const dialogSenhaCancelar = document.getElementById("dialog-senha-cancelar");
+  const dialogSlug = document.getElementById("dialog-slug");
+  const formSlugAdmin = document.getElementById("form-slug-admin");
+  const dialogSlugAtual = document.getElementById("dialog-slug-atual");
+  const dialogSlugStatus = document.getElementById("dialog-slug-status");
+  const dialogSlugCancelar = document.getElementById("dialog-slug-cancelar");
 
   let tokenMemoria = sessionStorage.getItem("myrep_admin_token") || "";
   let mensagemAtivaId = null;
   let mensagensCache = [];
   let paginasCache = [];
   let filtroPaginas = "";
+  let senhaContexto = { userId: "", email: "" };
+  let slugContexto = { slug: "", userId: "" };
 
   function setStatus(el, msg, tipo) {
     if (!el) return;
@@ -659,6 +671,7 @@
                 ? `<button type="button" class="btn btn--fantasma-ink" data-pagina-automatico="${esc(slug)}">Voltar ao automático</button>`
                 : ""
             }
+            <button type="button" class="btn btn--fantasma-ink" data-alterar-slug="${esc(slug)}">Alterar URL</button>
           </td>
         </tr>`;
       })
@@ -694,6 +707,12 @@
           <td>${pagHtml}</td>
           <td>${esc(criado)}</td>
           <td class="assinantes-acoes">
+            <button type="button" class="btn-link" data-alterar-senha="${esc(u.id)}" data-email="${esc(u.email)}">Alterar senha</button>
+            ${
+              pag
+                ? `<button type="button" class="btn-link" data-alterar-slug="${esc(pag.slug)}" data-user-id="${esc(u.id)}">Alterar URL</button>`
+                : ""
+            }
             ${
               !ass || ass.status !== "ativa"
                 ? `<button type="button" class="btn-link" data-liberar-assinatura="${esc(u.id)}" data-plano="mensal">Marcar adimplente</button>
@@ -842,7 +861,103 @@
     }
   });
 
+  function abrirDialogSenha(userId, email) {
+    if (!dialogSenha || !formSenha) return;
+    senhaContexto = { userId: userId || "", email: email || "" };
+    if (dialogSenhaEmail) {
+      dialogSenhaEmail.textContent = email ? `Usuário: ${email}` : "";
+    }
+    setStatus(dialogSenhaStatus, "", "");
+    formSenha.reset();
+    dialogSenha.showModal();
+  }
+
+  function abrirDialogSlug(slug, userId = "") {
+    if (!dialogSlug || !formSlugAdmin) return;
+    slugContexto = { slug: slug || "", userId: userId || "" };
+    if (dialogSlugAtual) {
+      dialogSlugAtual.textContent = slug ? `URL atual: /${slug}/` : "";
+    }
+    setStatus(dialogSlugStatus, "", "");
+    formSlugAdmin.reset();
+    dialogSlug.showModal();
+  }
+
+  dialogSenhaCancelar?.addEventListener("click", () => dialogSenha?.close());
+  dialogSlugCancelar?.addEventListener("click", () => dialogSlug?.close());
+
+  formSenha?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(formSenha);
+    const senha = String(fd.get("senha") || "");
+    const senha2 = String(fd.get("senha2") || "");
+    if (senha.length < 6) {
+      setStatus(dialogSenhaStatus, "A senha precisa ter ao menos 6 caracteres.", "erro");
+      return;
+    }
+    if (senha !== senha2) {
+      setStatus(dialogSenhaStatus, "As senhas não coincidem.", "erro");
+      return;
+    }
+    setStatus(dialogSenhaStatus, "Salvando…", "info");
+    try {
+      await api("usuario-senha", {
+        method: "POST",
+        body: { userId: senhaContexto.userId, senha }
+      });
+      dialogSenha?.close();
+      setStatus(painelStatus, `Senha alterada para ${senhaContexto.email || "usuário"}.`, "ok");
+      await carregarUsuarios(false);
+    } catch (erro) {
+      setStatus(dialogSenhaStatus, erro.message, "erro");
+    }
+  });
+
+  formSlugAdmin?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(formSlugAdmin);
+    const novoSlug = String(fd.get("novoSlug") || "")
+      .trim()
+      .toLowerCase();
+    if (!novoSlug) {
+      setStatus(dialogSlugStatus, "Informe o novo endereço.", "erro");
+      return;
+    }
+    if (
+      !confirm(
+        `Alterar URL de /${slugContexto.slug}/ para /${novoSlug}/?\n\nA URL antiga deixará de funcionar (404).`
+      )
+    ) {
+      return;
+    }
+    setStatus(dialogSlugStatus, "Alterando…", "info");
+    try {
+      const body = { slug: slugContexto.slug, novoSlug };
+      if (slugContexto.userId) body.userId = slugContexto.userId;
+      const data = await api("pagina-slug", { method: "POST", body });
+      dialogSlug?.close();
+      setStatus(
+        painelStatus,
+        `URL alterada: /${data.slugAntigo || slugContexto.slug}/ → /${data.slugNovo || novoSlug}/`,
+        "ok"
+      );
+      await Promise.all([carregarPaginas(false), carregarUsuarios(false), carregarResumo()]);
+    } catch (erro) {
+      setStatus(dialogSlugStatus, erro.message, "erro");
+    }
+  });
+
   tbodyUsuarios?.addEventListener("click", async (ev) => {
+    const btnSenha = ev.target.closest("[data-alterar-senha]");
+    if (btnSenha) {
+      abrirDialogSenha(btnSenha.getAttribute("data-alterar-senha"), btnSenha.getAttribute("data-email"));
+      return;
+    }
+    const btnSlug = ev.target.closest("[data-alterar-slug]");
+    if (btnSlug) {
+      abrirDialogSlug(btnSlug.getAttribute("data-alterar-slug"), btnSlug.getAttribute("data-user-id") || "");
+      return;
+    }
     const btn = ev.target.closest("[data-liberar-assinatura]");
     if (!btn) return;
     const plano = btn.getAttribute("data-plano") || "mensal";
@@ -1052,6 +1167,11 @@
       } catch (erro) {
         setStatus(painelStatus, erro.message, "erro");
       }
+      return;
+    }
+
+    if (t.dataset.alterarSlug) {
+      abrirDialogSlug(t.dataset.alterarSlug, "");
     }
   });
 

@@ -166,6 +166,30 @@ async function listarUsuariosAuth({ page = 1, perPage = 50 } = {}) {
   };
 }
 
+async function atualizarSenhaUsuario(userId, senha) {
+  const uid = String(userId || "").trim();
+  const s = String(senha || "");
+  if (!uid) {
+    throw Object.assign(new Error("Informe userId."), { status: 400 });
+  }
+  if (s.length < 6) {
+    throw Object.assign(new Error("A senha precisa ter ao menos 6 caracteres."), { status: 400 });
+  }
+  if (!supabaseConfigured()) {
+    throw Object.assign(new Error("Supabase Auth não configurado."), { status: 503 });
+  }
+  const sb = getSupabase();
+  const { data, error } = await sb.auth.admin.updateUserById(uid, {
+    password: s,
+    email_confirm: true
+  });
+  if (error) {
+    console.error("atualizarSenhaUsuario:", error.message);
+    throw Object.assign(new Error("Falha ao alterar senha."), { status: 500 });
+  }
+  return data?.user || null;
+}
+
 module.exports = {
   anonConfigured,
   getSupabaseAnon,
@@ -173,5 +197,6 @@ module.exports = {
   exigirUsuario,
   buscarUsuarioPorEmail,
   listarUsuariosAuth,
+  atualizarSenhaUsuario,
   cookieValor
 };

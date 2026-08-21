@@ -31,9 +31,11 @@ const {
   normalizarEmail,
   normalizarSlug,
   resumirPaginas,
-  situacaoDe
+  situacaoDe,
+  renomearSlug
 } = require("./_lib/paginas");
-const { listarUsuariosAuth, buscarUsuarioPorEmail } = require("./_lib/auth");
+const { slugValido } = require("./_lib/slugs");
+const { listarUsuariosAuth, buscarUsuarioPorEmail, atualizarSenhaUsuario } = require("./_lib/auth");
 const {
   listarAssinaturasLocais,
   upsertAssinatura,
@@ -670,6 +672,43 @@ module.exports = async function handler(req, res) {
       }
       const ass = await upsertAssinatura(userId, patch);
       return json(res, 200, { ok: true, assinatura: ass });
+    }
+
+    if (req.method === "POST" && acao === "usuario-senha") {
+      const body = await lerJsonBody(req);
+      const userId = String(body.userId || "").trim();
+      const senha = String(body.senha || "");
+      try {
+        await atualizarSenhaUsuario(userId, senha);
+        return json(res, 200, { ok: true });
+      } catch (erro) {
+        return json(res, erro.status || 500, { erro: erro.message || "Falha ao alterar senha." });
+      }
+    }
+
+    if (req.method === "POST" && acao === "pagina-slug") {
+      const body = await lerJsonBody(req);
+      let slug = normalizarSlug(body.slug);
+      const userId = String(body.userId || "").trim();
+      const val = slugValido(body.novoSlug || body.slugNovo || "");
+      if (!val.ok) {
+        return json(res, 400, { erro: val.motivo || "Novo slug inválido." });
+      }
+      if (!slug && userId) {
+        const pag = await obterPaginaPorUserId(userId);
+        if (!pag) return json(res, 404, { erro: "Usuário não possui página vinculada." });
+        slug = pag.slug;
+      }
+      if (!slug) return json(res, 400, { erro: "Informe slug ou userId." });
+      if (slug === val.slug) {
+        return json(res, 400, { erro: "O novo endereço é igual ao atual." });
+      }
+      try {
+        const pagina = await renomearSlug(slug, val.slug);
+        return json(res, 200, { ok: true, pagina, slugAntigo: slug, slugNovo: val.slug });
+      } catch (erro) {
+        return json(res, erro.status || 500, { erro: erro.message || "Falha ao alterar URL." });
+      }
     }
 
     if (req.method === "POST" && acao === "pagina-email") {
