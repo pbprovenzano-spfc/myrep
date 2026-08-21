@@ -8,23 +8,23 @@ const PLANOS = {
   mensal: {
     id: "mensal",
     nome: "Mensal",
-    valor: 19.9,
+    valor: 17.9,
     tipo: "recorrente",
-    descricao: "R$ 19,90 por mês",
-    labelPreco: "R$ 19,90",
+    descricao: "R$ 17,90 por mês",
+    labelPreco: "R$ 17,90",
     labelCiclo: "/mês"
   },
   anual: {
     id: "anual",
     nome: "Anual",
-    valor: 202.8,
+    valor: 130.8,
     tipo: "avulso",
-    descricao: "R$ 202,80 no ano (12× de R$ 16,90)",
-    labelPreco: "R$ 202,80",
+    descricao: "R$ 130,80 no ano (12× de R$ 10,90)",
+    labelPreco: "R$ 130,80",
     labelCiclo: "no ano",
     parcelas: 12,
-    valorParcela: 16.9,
-    total: 202.8
+    valorParcela: 10.9,
+    total: 130.8
   },
   vitalicio: {
     id: "vitalicio",
