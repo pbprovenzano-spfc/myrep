@@ -1,5 +1,10 @@
 const { lerJsonBody, json, PLANOS, valoresIguais, asaasFetch } = require("../_lib/pagamento");
-const { registrarPagamentoEvento, registrarAcesso } = require("../_lib/acessos");
+const {
+  registrarPagamentoEvento,
+  registrarAcesso,
+  jaEnviouEmailPagamento,
+  EVENTO_EMAIL_PAGAMENTO
+} = require("../_lib/acessos");
 const {
   marcarAdimplentePorEmail,
   marcarInadimplentePorEmail
@@ -121,6 +126,53 @@ module.exports = async function handler(req, res) {
             });
           } catch (erroConta) {
             console.error("Webhook conta:", erroConta.message || erroConta);
+          }
+
+          if (process.env.RESEND_API_KEY && pagamento.id) {
+            try {
+              const jaEnviou = await jaEnviouEmailPagamento(pagamento.id);
+              if (!jaEnviou) {
+                const { Resend } = require("resend");
+                const resend = new Resend(process.env.RESEND_API_KEY);
+                const de = process.env.BRIEFING_FROM_EMAIL || "My Rep <onboarding@resend.dev>";
+                const suporte =
+                  process.env.SUPPORT_EMAIL ||
+                  process.env.BRIEFING_TO_EMAIL ||
+                  "myrep.sup@gmail.com";
+                const valorTexto = plano.descricao || `R$ ${pagamento.value ?? "—"}`;
+                const { error: erroEnvio } = await resend.emails.send({
+                  from: de,
+                  to: [email],
+                  subject: `Pagamento confirmado — plano ${plano.nome} | My Rep`,
+                  text: [
+                    "Olá,",
+                    "",
+                    `Seu pagamento do plano ${plano.nome} (${valorTexto}) foi confirmado.`,
+                    "",
+                    "Acesse o painel para montar e publicar sua página:",
+                    "https://myrep.com.br/painel/",
+                    "",
+                    "Se ainda não estiver logado:",
+                    "https://myrep.com.br/entrar/?next=/painel/",
+                    "",
+                    `Dúvidas? Escreva para ${suporte}.`,
+                    "",
+                    "— Equipe My Rep"
+                  ].join("\n")
+                });
+                if (erroEnvio) {
+                  console.error("Webhook e-mail cliente:", erroEnvio.message || erroEnvio);
+                } else {
+                  await registrarPagamentoEvento({
+                    event: EVENTO_EMAIL_PAGAMENTO,
+                    paymentId: pagamento.id,
+                    payload: { email, plano: plano.id }
+                  });
+                }
+              }
+            } catch (erroEmailCliente) {
+              console.error("Webhook e-mail cliente:", erroEmailCliente.message || erroEmailCliente);
+            }
           }
         }
       } catch (erroCliente) {

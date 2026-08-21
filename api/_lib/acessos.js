@@ -67,9 +67,29 @@ async function registrarPagamentoEvento({ event, paymentId, payload }) {
   return true;
 }
 
+const EVENTO_EMAIL_PAGAMENTO = "EMAIL_PAGAMENTO_ENVIADO";
+
+async function jaEnviouEmailPagamento(paymentId) {
+  if (!paymentId || !supabaseConfigured()) return false;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("pagamentos_eventos")
+    .select("id")
+    .eq("payment_id", String(paymentId))
+    .eq("event", EVENTO_EMAIL_PAGAMENTO)
+    .limit(1);
+  if (error) {
+    console.error("jaEnviouEmailPagamento:", error.message);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
 module.exports = {
   hashToken,
   registrarAcesso,
   listarAcessos,
-  registrarPagamentoEvento
+  registrarPagamentoEvento,
+  jaEnviouEmailPagamento,
+  EVENTO_EMAIL_PAGAMENTO
 };
