@@ -158,6 +158,46 @@
     return `55${d}${n}`;
   }
 
+  function extrairInstagramDeContatos(contatos) {
+    const lista = Array.isArray(contatos) ? contatos : [];
+    const item = lista.find((c) => String(c.canal || "").toLowerCase() === "instagram");
+    return item?.valor || "";
+  }
+
+  function normalizarInstagram(valor) {
+    const bruto = String(valor || "").trim();
+    if (!bruto) return null;
+
+    let handle = bruto;
+    if (/^https?:\/\//i.test(bruto)) {
+      const match = bruto.match(/instagram\.com\/([^/?#]+)/i);
+      if (!match) return null;
+      handle = match[1];
+    } else if (/instagram\.com\//i.test(bruto)) {
+      const match = bruto.match(/instagram\.com\/([^/?#]+)/i);
+      if (!match) return null;
+      handle = match[1];
+    }
+
+    handle = handle.replace(/^@/, "").trim();
+    if (!handle) return null;
+
+    return {
+      canal: "Instagram",
+      valor: `@${handle}`,
+      link: `https://instagram.com/${handle}`
+    };
+  }
+
+  function mesclarContatosInstagram(contatosBase, valorInstagram) {
+    const base = (Array.isArray(contatosBase) ? contatosBase : []).filter(
+      (c) => String(c.canal || "").toLowerCase() !== "instagram"
+    );
+    const ig = normalizarInstagram(valorInstagram);
+    if (ig) base.push(ig);
+    return base;
+  }
+
   function ufsSelecionadas() {
     return [...document.querySelectorAll("#ufs-grid input[type=checkbox]:checked")].map((el) => el.value);
   }
@@ -360,6 +400,7 @@
     const zap = parseWhatsapp(paginaDados.whatsapp);
     document.getElementById("campo-whatsapp-ddd").value = zap.ddd;
     document.getElementById("campo-whatsapp-num").value = zap.num;
+    document.getElementById("campo-instagram").value = extrairInstagramDeContatos(paginaDados.contatos);
 
     const destaque = paginaDados.destaque === "empresa" ? "empresa" : "pessoa";
     document.querySelectorAll('input[name="destaque"]').forEach((el) => {
@@ -394,6 +435,10 @@
   function payloadTexto() {
     const estados = ufsSelecionadas();
     const cidades = cidadesPorUf();
+    const contatos = mesclarContatosInstagram(
+      paginaDados?.contatos,
+      document.getElementById("campo-instagram")?.value || ""
+    );
     return {
       acao: "atualizar",
       empresa: document.getElementById("campo-empresa")?.value?.trim() || "",
@@ -407,7 +452,8 @@
       paleta: document.querySelector('input[name="paleta"]:checked')?.value || "ambar",
       fotoTipo: document.querySelector('input[name="fotoTipo"]:checked')?.value || "pessoa",
       estados,
-      cidades: estados.length <= 1 && estados[0] ? cidades[estados[0]] || [] : cidades
+      cidades: estados.length <= 1 && estados[0] ? cidades[estados[0]] || [] : cidades,
+      contatos
     };
   }
 
@@ -438,7 +484,7 @@
       foto: fotoLocalUrl || dados.foto || "",
       marcas: dados.marcas || [],
       catalogos: dados.catalogos || [],
-      contatos: dados.contatos || []
+      contatos: texto.contatos || dados.contatos || []
     };
   }
 
@@ -1124,7 +1170,7 @@
     }, 400);
   });
 
-  ["campo-empresa", "campo-nome", "campo-cargo", "campo-bio", "campo-mensagem-zap", "campo-whatsapp-ddd", "campo-whatsapp-num"].forEach(
+  ["campo-empresa", "campo-nome", "campo-cargo", "campo-bio", "campo-mensagem-zap", "campo-whatsapp-ddd", "campo-whatsapp-num", "campo-instagram"].forEach(
     (id) => document.getElementById(id)?.addEventListener("input", agendarSave)
   );
 

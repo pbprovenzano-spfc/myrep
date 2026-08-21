@@ -7,6 +7,7 @@
     { "source": "/assinantes", "destination": "/assinantes/" },
     { "source": "/termos", "destination": "/termos/" },
     { "source": "/cadastro", "destination": "/cadastro/" },
+    { "source": "/cadastro/confirme", "destination": "/cadastro/confirme/" },
     { "source": "/entrar", "destination": "/entrar/" },
     { "source": "/recuperar-senha", "destination": "/recuperar-senha/" },
     { "source": "/painel", "destination": "/painel/" },

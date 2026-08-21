@@ -3205,6 +3205,31 @@ a { color: inherit; }
   font-weight: 700;
 }
 
+.auth-form--info {
+  padding: 20px;
+  border-radius: var(--raio, 12px);
+  background: var(--superficie, #f4f7fb);
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.auth-confirme-email {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.auth-confirme-nota {
+  margin: 0 0 8px;
+  color: var(--mutado);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.auth-confirme-nota:last-child {
+  margin-bottom: 0;
+}
+
 .painel-topo {
   align-items: center;
 }

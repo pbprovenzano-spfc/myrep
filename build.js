@@ -116,6 +116,12 @@ async function build() {
     console.log(`  ✓ /${pasta}/`);
   }
 
+  const tplConfirme = fs.readFileSync(path.join(DIR_TEMPLATE, "cadastro-confirme.html"), "utf8");
+  const pastaConfirme = path.join(DIST, "cadastro", "confirme");
+  fs.mkdirSync(pastaConfirme, { recursive: true });
+  fs.writeFileSync(path.join(pastaConfirme, "index.html"), tplConfirme);
+  console.log("  ✓ /cadastro/confirme/");
+
   const tplTermos = fs.readFileSync(path.join(DIR_TEMPLATE, "termos.html"), "utf8");
   const pastaTermos = path.join(DIST, "termos");
   fs.mkdirSync(pastaTermos, { recursive: true });

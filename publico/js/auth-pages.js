@@ -139,14 +139,7 @@
           return;
         }
 
-        setStatus(
-          status,
-          codigoVitalicio
-            ? "Conta criada. Confirme o e-mail que enviamos — o plano vitalício será ativado ao entrar."
-            : "Conta criada. Confirme o e-mail que enviamos e depois entre na sua conta.",
-          "ok"
-        );
-        formCadastro.reset();
+        location.replace(`/cadastro/confirme/?email=${encodeURIComponent(email)}`);
       } catch (erro) {
         setStatus(status, erro.message || "Não foi possível criar a conta.", "erro");
       } finally {

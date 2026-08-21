@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirme seu e-mail — My Rep</title>
+<meta name="description" content="Confirme seu e-mail para iniciar sua conta My Rep.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+</head>
+<body class="pagina-auth">
+
+<header class="briefing-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Cadastro</p>
+</header>
+
+<main class="auth-shell">
+  <header class="auth-intro">
+    <h1 class="auth-intro__titulo">Confirme seu e-mail</h1>
+    <p class="auth-intro__texto">Enviamos um link de confirmação. Abra o e-mail e clique no link para iniciar sua conta.</p>
+  </header>
+
+  <div class="auth-form auth-form--info">
+    <p class="auth-confirme-email" id="confirme-email" hidden></p>
+    <p class="auth-confirme-nota">Não achou? Confira a caixa de spam ou lixo eletrônico.</p>
+    <p class="auth-confirme-nota">Depois de confirmar, use <a href="/entrar/">Entrar</a> para acessar o painel.</p>
+  </div>
+
+  <p class="auth-rodape"><a href="/entrar/" class="btn btn--primario">Ir para entrar</a></p>
+</main>
+
+<script>
+(function () {
+  const email = new URLSearchParams(location.search).get("email") || "";
+  const el = document.getElementById("confirme-email");
+  if (!el || !email.includes("@")) return;
+  el.hidden = false;
+  el.textContent = "Enviamos para: " + email;
+})();
+</script>
+</body>
+</html>
