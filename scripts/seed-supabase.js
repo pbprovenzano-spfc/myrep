@@ -78,6 +78,15 @@ async function main() {
   const jsons = fs.readdirSync(DIR_CLIENTES).filter((f) => f.endsWith(".json"));
   console.log(`\n▸ Seed Supabase — ${jsons.length} representante(s)\n`);
 
+  const { count: totalRepresentantes, error: errCount } = await sb
+    .from("representantes")
+    .select("*", { count: "exact", head: true });
+  if (errCount) {
+    console.error("Falha ao contar representantes:", errCount.message);
+    process.exit(1);
+  }
+  const bancoVazio = !totalRepresentantes;
+
   for (const arquivo of jsons) {
     const caminho = path.join(DIR_CLIENTES, arquivo);
     let dados;
@@ -108,16 +117,50 @@ async function main() {
       }
     }
 
-    const { error } = await sb.from("representantes").upsert(
-      {
+    const { data: existente, error: errSel } = await sb
+      .from("representantes")
+      .select("slug")
+      .eq("slug", normalizado.slug)
+      .maybeSingle();
+
+    if (errSel) {
+      console.error(`  ✕ ${dados.slug}:`, errSel.message);
+      continue;
+    }
+
+    if (!existente) {
+      if (!bancoVazio) {
+        console.log(
+          `  ⊘ ${dados.slug}: não existe no banco (pulando — slug pode ter sido renomeado ou removido)`
+        );
+        continue;
+      }
+
+      const { error } = await sb.from("representantes").insert({
         slug: normalizado.slug,
         dados: normalizado,
         publicado: true,
         publicado_em: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      },
-      { onConflict: "slug" }
-    );
+      });
+
+      if (error) {
+        console.error(`  ✕ ${dados.slug}:`, error.message);
+        continue;
+      }
+      console.log(`  ✓ ${dados.slug} (inserido)`);
+      continue;
+    }
+
+    const { error } = await sb
+      .from("representantes")
+      .update({
+        dados: normalizado,
+        publicado: true,
+        publicado_em: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("slug", normalizado.slug);
 
     if (error) {
       console.error(`  ✕ ${dados.slug}:`, error.message);

@@ -306,16 +306,27 @@ function precisaDesativarPorCarencia(reg) {
   return dias != null && dias >= DIAS_CARENCIA;
 }
 
-async function listarPaginas() {
-  const porSlug = new Map();
-
-  for (const c of listarSlugsLocais()) {
-    porSlug.set(c.slug, {
-      slug: c.slug,
-      nome: c.nome,
-      publicado: true
+function aplicarMetaLocal(porSlug, local) {
+  for (const [slug, meta] of Object.entries(local)) {
+    const s = normalizarSlug(slug);
+    if (!porSlug.has(s)) continue;
+    const base = porSlug.get(s);
+    porSlug.set(s, {
+      ...base,
+      email_cobranca: base.email_cobranca || meta.email_cobranca || null,
+      ativo: meta.ativo !== undefined ? meta.ativo !== false : base.ativo !== false,
+      inadimplente_desde: base.inadimplente_desde || meta.inadimplente_desde || null,
+      controle_manual: meta.controle_manual === true || base.controle_manual === true,
+      user_id: base.user_id || meta.user_id || null,
+      nome: base.nome || meta.nome || s,
+      updated_at: meta.updated_at || base.updated_at
     });
   }
+}
+
+async function listarPaginas() {
+  const porSlug = new Map();
+  const local = lerLocal();
 
   if (supabaseConfigured()) {
     const sb = getSupabase();
@@ -328,10 +339,9 @@ async function listarPaginas() {
     if (error) console.error("paginas listar:", error.message);
     for (const row of data || []) {
       const slug = normalizarSlug(row.slug);
-      const base = porSlug.get(slug) || { slug, nome: slug, publicado: true };
       porSlug.set(slug, {
-        ...base,
-        nome: row.dados?.nome || row.dados?.empresa || base.nome,
+        slug,
+        nome: row.dados?.nome || row.dados?.empresa || slug,
         publicado: row.publicado !== false,
         email_cobranca: row.email_cobranca || null,
         ativo: row.ativo !== false,
@@ -341,24 +351,29 @@ async function listarPaginas() {
         updated_at: row.updated_at
       });
     }
-  }
-
-  const local = lerLocal();
-  for (const [slug, meta] of Object.entries(local)) {
-    const s = normalizarSlug(slug);
-    const base = porSlug.get(s) || { slug: s, nome: meta.nome || s, publicado: true };
-    porSlug.set(s, {
-      ...base,
-      email_cobranca: base.email_cobranca || meta.email_cobranca || null,
-      ativo: meta.ativo !== undefined ? meta.ativo !== false : base.ativo !== false,
-      inadimplente_desde:
-        base.inadimplente_desde || meta.inadimplente_desde || null,
-      controle_manual:
-        meta.controle_manual === true || base.controle_manual === true,
-      user_id: base.user_id || meta.user_id || null,
-      nome: base.nome || meta.nome || s,
-      updated_at: meta.updated_at || base.updated_at
-    });
+    aplicarMetaLocal(porSlug, local);
+  } else {
+    for (const c of listarSlugsLocais()) {
+      porSlug.set(c.slug, {
+        slug: c.slug,
+        nome: c.nome,
+        publicado: true
+      });
+    }
+    for (const [slug, meta] of Object.entries(local)) {
+      const s = normalizarSlug(slug);
+      const base = porSlug.get(s) || { slug: s, nome: meta.nome || s, publicado: true };
+      porSlug.set(s, {
+        ...base,
+        email_cobranca: base.email_cobranca || meta.email_cobranca || null,
+        ativo: meta.ativo !== undefined ? meta.ativo !== false : base.ativo !== false,
+        inadimplente_desde: base.inadimplente_desde || meta.inadimplente_desde || null,
+        controle_manual: meta.controle_manual === true || base.controle_manual === true,
+        user_id: base.user_id || meta.user_id || null,
+        nome: base.nome || meta.nome || s,
+        updated_at: meta.updated_at || base.updated_at
+      });
+    }
   }
 
   const saida = [];
@@ -446,28 +461,62 @@ async function listarArquivosStorage(prefixo) {
   return saida;
 }
 
+function erroStorageIgnoravel(msg) {
+  const m = String(msg || "").toLowerCase();
+  return (
+    m.includes("not found") ||
+    m.includes("does not exist") ||
+    m.includes("no such") ||
+    m.includes("already exists") ||
+    m.includes("duplicate") ||
+    m.includes("resource already exists")
+  );
+}
+
+async function reverterAssetsSlug(movidos) {
+  if (!movidos.length || !supabaseConfigured()) return;
+  const sb = getSupabase();
+  const bucket = assetsBucket();
+  for (const { de, para } of [...movidos].reverse()) {
+    const { error } = await sb.storage.from(bucket).move(para, de);
+    if (error) console.error("reverterAssetsSlug:", error.message);
+  }
+}
+
 async function moverAssetsSlug(antigo, novo) {
-  if (!supabaseConfigured()) return;
+  if (!supabaseConfigured()) return [];
   const sb = getSupabase();
   const bucket = assetsBucket();
   let arquivos = [];
   try {
     arquivos = await listarArquivosStorage(antigo);
   } catch (erro) {
+    if (erroStorageIgnoravel(erro.message)) {
+      return [];
+    }
     console.error("moverAssetsSlug:", erro.message || erro);
     throw erro;
   }
-  if (!arquivos.length) return;
+  if (!arquivos.length) return [];
 
+  const movidos = [];
   for (const caminho of arquivos) {
     const rel = caminho.startsWith(`${antigo}/`) ? caminho.slice(antigo.length + 1) : caminho;
     const destino = `${novo}/${rel}`;
     const { error } = await sb.storage.from(bucket).move(caminho, destino);
     if (error) {
+      if (erroStorageIgnoravel(error.message)) {
+        await sb.storage.from(bucket).remove([caminho]);
+        movidos.push({ de: caminho, para: destino });
+        continue;
+      }
       console.error("moverAssetsSlug move:", error.message);
+      await reverterAssetsSlug(movidos);
       throw Object.assign(new Error("Falha ao mover arquivos da página."), { status: 500 });
     }
+    movidos.push({ de: caminho, para: destino });
   }
+  return movidos;
 }
 
 async function renomearSlug(antigoBruto, novoBruto) {
@@ -488,27 +537,45 @@ async function renomearSlug(antigoBruto, novoBruto) {
   }
 
   const sb = getSupabase();
-  const { data: ocupado } = await sb.from("representantes").select("slug").eq("slug", novo).maybeSingle();
-  if (ocupado) {
-    throw Object.assign(new Error("Este endereço já está em uso."), { status: 409 });
+  const sel =
+    "id, slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, user_id, updated_at";
+
+  const { data: rowNovo, error: errNovo } = await sb
+    .from("representantes")
+    .select(sel)
+    .eq("slug", novo)
+    .maybeSingle();
+  if (errNovo) {
+    console.error("renomearSlug select novo:", errNovo.message);
+    throw Object.assign(new Error("Falha ao buscar página."), { status: 500 });
   }
 
-  const { data: row, error: errRow } = await sb
-    .from("representantes")
-    .select(
-      "id, slug, dados, publicado, email_cobranca, ativo, inadimplente_desde, controle_manual, user_id, updated_at"
-    )
-    .eq("slug", antigo)
-    .maybeSingle();
+  const { data: row, error: errRow } = await sb.from("representantes").select(sel).eq("slug", antigo).maybeSingle();
   if (errRow) {
     console.error("renomearSlug select:", errRow.message);
     throw Object.assign(new Error("Falha ao buscar página."), { status: 500 });
   }
+
   if (!row) {
+    if (rowNovo) {
+      const meta = aplicarRegraCarencia(metaDeRow(novo, rowNovo));
+      const situacao = situacaoDe(meta);
+      return {
+        ...meta,
+        situacao: situacao.codigo,
+        situacaoLabel: situacao.label,
+        diasInadimplente: situacao.diasInadimplente,
+        diasCarencia: DIAS_CARENCIA
+      };
+    }
     throw Object.assign(new Error("Página não encontrada."), { status: 404 });
   }
 
-  await moverAssetsSlug(antigo, novo);
+  if (rowNovo && rowNovo.id !== row.id) {
+    throw Object.assign(new Error("Este endereço já está em uso."), { status: 409 });
+  }
+
+  const movidos = await moverAssetsSlug(antigo, novo);
 
   const dados = row.dados && typeof row.dados === "object" ? { ...row.dados } : {};
   dados.slug = novo;
@@ -525,6 +592,7 @@ async function renomearSlug(antigoBruto, novoBruto) {
     .single();
   if (errUp) {
     console.error("renomearSlug update:", errUp.message);
+    await reverterAssetsSlug(movidos);
     throw Object.assign(new Error("Falha ao atualizar slug no banco."), { status: 500 });
   }
 

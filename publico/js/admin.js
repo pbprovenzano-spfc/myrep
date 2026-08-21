@@ -925,7 +925,7 @@
     }
     if (
       !confirm(
-        `Alterar URL de /${slugContexto.slug}/ para /${novoSlug}/?\n\nA URL antiga deixará de funcionar (404).`
+        `Alterar URL de /${slugContexto.slug}/ para /${novoSlug}/?\n\nA URL antiga deixará de funcionar (404) e ficará disponível para outro usuário reservar.`
       )
     ) {
       return;
@@ -1047,17 +1047,26 @@
       const data = await api("sincronizar-paginas", { method: "POST", body: {} });
       renderPaginas(data.paginas || []);
       await carregarResumo();
-      const falhas = (data.resultados || []).filter((r) => !r.ok).length;
+      const falhas = (data.resultados || []).filter((r) => !r.ok);
       const manuais = (data.resultados || []).filter((r) => r.controle_manual).length;
-      setStatus(
-        painelStatus,
-        falhas
-          ? `Sync concluída com ${falhas} falha(s).`
-          : `Adimplência atualizada · ${(data.paginas || []).length} página(s)${
-              manuais ? ` · ${manuais} em controle manual (ativo preservado)` : ""
-            }.`,
-        falhas ? "erro" : "ok"
-      );
+      if (falhas.length) {
+        const detalhes = falhas
+          .map((r) => `/${r.slug || "?"}: ${r.erro || "Falha na sync"}`)
+          .join(" · ");
+        setStatus(
+          painelStatus,
+          `Sync concluída com ${falhas.length} falha(s): ${detalhes}`,
+          "erro"
+        );
+      } else {
+        setStatus(
+          painelStatus,
+          `Adimplência atualizada · ${(data.paginas || []).length} página(s)${
+            manuais ? ` · ${manuais} em controle manual (ativo preservado)` : ""
+          }.`,
+          "ok"
+        );
+      }
     } catch (erro) {
       setStatus(painelStatus, erro.message, "erro");
     }
