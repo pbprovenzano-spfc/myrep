@@ -9,6 +9,7 @@
 
   const MSG_LINK_EXPIRADO =
     "Este link expirou ou já foi usado. Entre na conta ou peça um novo e-mail.";
+  const TERMOS_VERSAO = "2026-08-31";
 
   function hashAuthParams() {
     const raw = location.hash.replace(/^#/, "");
@@ -101,10 +102,14 @@
       const senha2 = String(fd.get("senha2") || "");
       const nome = String(fd.get("nome") || "").trim();
       const codigoVitalicio = String(fd.get("codigo_vitalicio") || "").trim();
+      const aceiteTermos = fd.get("aceite_termos") === "on";
 
       if (!email.includes("@")) return setStatus(status, "Informe um e-mail válido.", "erro");
       if (senha.length < 6) return setStatus(status, "A senha precisa ter ao menos 6 caracteres.", "erro");
       if (senha !== senha2) return setStatus(status, "As senhas não coincidem.", "erro");
+      if (!aceiteTermos) {
+        return setStatus(status, "Você precisa aceitar os Termos de uso e a Política de privacidade.", "erro");
+      }
 
       btn.disabled = true;
       setStatus(status, "Criando conta…", "info");
@@ -123,11 +128,17 @@
         }
 
         const sb = await esperarSupabase();
+        const metadata = {
+          termos_aceitos_em: new Date().toISOString(),
+          termos_versao: TERMOS_VERSAO
+        };
+        if (nome) metadata.nome = nome;
+
         const { data, error } = await sb.auth.signUp({
           email,
           password: senha,
           options: {
-            data: nome ? { nome } : {},
+            data: metadata,
             emailRedirectTo: `${location.origin}/painel/`
           }
         });
