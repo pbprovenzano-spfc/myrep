@@ -374,10 +374,10 @@
       const div = document.createElement("div");
       div.className = "cidades-uf";
       div.setAttribute("data-cidades-uf", uf);
-      div.innerHTML = `<label class="campo">
+      div.innerHTML = `<div class="campo">
         <span class="campo__rotulo">${esc(uf)} — cidades</span>
         <div class="cidades-combobox__carregando">Carregando municípios…</div>
-      </label>`;
+      </div>`;
       wrap.appendChild(div);
 
       const campo = div.querySelector(".campo");
@@ -1420,6 +1420,7 @@
   document.getElementById("cidades-por-uf-editor")?.addEventListener("click", (ev) => {
     const trigger = ev.target.closest(".cidades-combobox__trigger");
     if (trigger) {
+      ev.stopPropagation();
       const combobox = trigger.closest(".cidades-combobox");
       if (combobox?.classList.contains("cidades-combobox--aberto")) fecharComboboxAberto();
       else if (combobox) abrirCombobox(combobox);

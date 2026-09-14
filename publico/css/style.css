@@ -2039,13 +2039,17 @@ a.marca-chip:focus-visible {
   z-index: 20;
   inset-inline: 0;
   top: 100%;
-  display: grid;
+  display: none;
   gap: 0;
   border: 1px solid color-mix(in srgb, var(--sinal) 55%, var(--borda));
   border-top: 0;
   border-radius: 0 0 10px 10px;
   background: var(--branco);
   box-shadow: 0 12px 28px rgba(10, 22, 32, 0.12);
+}
+
+.cidades-combobox--aberto .cidades-combobox__painel {
+  display: grid;
 }
 
 .cidades-combobox__busca {
