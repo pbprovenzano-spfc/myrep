@@ -58,4 +58,13 @@ function slugValido(slug) {
   return { ok: true, slug: s, motivo: null };
 }
 
-module.exports = { RESERVADOS, normalizarSlug, slugValido };
+function slugMarcaValido(slug) {
+  const s = normalizarSlug(slug);
+  if (!s || s.length < 2) return { ok: false, slug: s, motivo: "Use pelo menos 2 caracteres." };
+  if (!/^[a-z0-9-]+$/.test(s)) {
+    return { ok: false, slug: s, motivo: "Use só letras minúsculas, números e hífen." };
+  }
+  return { ok: true, slug: s, motivo: null };
+}
+
+module.exports = { RESERVADOS, normalizarSlug, slugValido, slugMarcaValido };

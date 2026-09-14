@@ -20,6 +20,8 @@
     { "source": "/api/painel/pagina", "destination": "/api/painel?acao=pagina" },
     { "source": "/api/painel/slug", "destination": "/api/painel?acao=slug" },
     { "source": "/api/painel/suporte", "destination": "/api/painel?acao=suporte" },
+    { "source": "/:slug/:marca", "destination": "/api/pagina?slug=:slug&marca=:marca" },
+    { "source": "/:slug/:marca/", "destination": "/api/pagina?slug=:slug&marca=:marca" },
     { "source": "/:slug", "destination": "/api/pagina?slug=:slug" },
     { "source": "/:slug/", "destination": "/api/pagina?slug=:slug" }
   ]

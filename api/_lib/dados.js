@@ -3,25 +3,88 @@
    ========================================================= */
 
 const crypto = require("crypto");
+const { normalizarSlug } = require("./slugs");
 
 function novoId(prefixo) {
   return `${prefixo}_${crypto.randomBytes(4).toString("hex")}`;
 }
 
+function slugMarcaFromNome(nome) {
+  const base = normalizarSlug(nome);
+  if (base.length >= 2) return base;
+  const compacto = String(nome || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  if (compacto.length >= 2) return compacto.slice(0, 80);
+  return "marca";
+}
+
+function normalizarSite(site) {
+  const bruto = String(site || "").trim().slice(0, 500);
+  if (!bruto) return null;
+  if (/^https?:\/\//i.test(bruto)) return bruto;
+  return `https://${bruto}`;
+}
+
+function normalizarContatoMarca(contato) {
+  if (!contato || typeof contato !== "object") return null;
+  const canal = String(contato.canal || "").trim().slice(0, 80);
+  const valor = String(contato.valor || "").trim().slice(0, 160);
+  let link = String(contato.link || "").trim().slice(0, 500);
+  if (!canal || !valor) return null;
+  if (!link) {
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) link = `mailto:${valor}`;
+    else if (/^https?:\/\//i.test(valor)) link = valor;
+    else link = "#";
+  }
+  return { canal, valor, link };
+}
+
+function atribuirSlugsMarcas(marcas) {
+  const usados = new Set();
+  return marcas.map((marca) => {
+    let base = slugMarcaFromNome(marca.nome);
+    if (!base || base.length < 2) base = "marca";
+    let slug = base;
+    let n = 2;
+    while (usados.has(slug)) {
+      slug = `${base}-${n}`.slice(0, 80);
+      n += 1;
+    }
+    usados.add(slug);
+    return { ...marca, slug };
+  });
+}
+
 function normalizarMarcas(marcas) {
   if (!Array.isArray(marcas)) return [];
-  return marcas
+  const lista = marcas
     .map((m) => {
       if (!m || typeof m !== "object") return null;
       const nome = String(m.nome || "").trim().slice(0, 120);
       if (!nome) return null;
-      return {
+      const out = {
         id: m.id || novoId("m"),
         nome,
         ...(m.logo ? { logo: String(m.logo).slice(0, 120) } : {})
       };
+      const descricao = String(m.descricao || "").trim().slice(0, 600);
+      if (descricao) out.descricao = descricao;
+      const site = normalizarSite(m.site);
+      if (site) out.site = site;
+      const contato = normalizarContatoMarca(m.contato);
+      if (contato) out.contato = contato;
+      return out;
     })
     .filter(Boolean);
+  return atribuirSlugsMarcas(lista);
+}
+
+function resolverMarcaPorSlug(marcas, marcaSlug) {
+  const alvo = normalizarSlug(marcaSlug || "");
+  if (!alvo) return null;
+  return (Array.isArray(marcas) ? marcas : []).find((m) => m.slug === alvo) || null;
 }
 
 function normalizarCatalogos(catalogos, marcas) {
@@ -154,11 +217,16 @@ function agruparCatalogos(catalogos, marcas) {
 
 module.exports = {
   novoId,
+  slugMarcaFromNome,
+  normalizarSite,
+  normalizarContatoMarca,
+  atribuirSlugsMarcas,
   normalizarMarcas,
   normalizarCatalogos,
   normalizarContatos,
   normalizarCidadesInput,
   normalizarDados,
   reordenarPorIds,
-  agruparCatalogos
+  agruparCatalogos,
+  resolverMarcaPorSlug
 };

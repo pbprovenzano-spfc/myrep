@@ -19,13 +19,13 @@
 <link rel="icon" href="/img/favicon.png" type="image/png">
 {{PALETA_CSS}}
 </head>
-<body class="pagina-rep">
+<body class="{{BODY_CLASS}}">
 
 <main class="shell shell--estreito cartao">
 
   <div class="cartao__perfil">
     <header class="capa">
-      <img class="{{FOTO_CLASSE}}" src="{{FOTO}}" alt="{{ALT_FOTO}}" width="96" height="96">
+      {{FOTO_CAPA}}
       {{ANTES_NOME}}
       <h1 class="capa__nome">{{NOME}}</h1>
       {{DEPOIS_NOME}}

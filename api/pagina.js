@@ -5,8 +5,8 @@
 const { RESERVADOS, normalizarSlug } = require("./_lib/slugs");
 const { getSupabase, supabaseConfigured } = require("./_lib/supabase");
 const { paginaAtiva } = require("./_lib/paginas");
-const { gerarPagina, gerar404, lerTemplatePagina, setAssetsModo } = require("./_lib/render/pagina");
-const { normalizarDados } = require("./_lib/dados");
+const { gerarPagina, gerarPaginaMarca, gerar404, lerTemplatePagina, setAssetsModo } = require("./_lib/render/pagina");
+const { normalizarDados, resolverMarcaPorSlug } = require("./_lib/dados");
 
 let _tplCache = null;
 
@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
 
   const url = new URL(req.url, "http://localhost");
   const slug = normalizarSlug(url.searchParams.get("slug") || "");
+  const marcaSlug = normalizarSlug(url.searchParams.get("marca") || "");
 
   if (!slug || RESERVADOS.has(slug)) {
     return enviarHtml(res, 404, gerar404());
@@ -71,7 +72,14 @@ module.exports = async function handler(req, res) {
 
     setAssetsModo("storage");
     const tpl = lerTemplate();
-    const htmlOut = gerarPagina(dados, tpl);
+    let htmlOut;
+    if (marcaSlug) {
+      const marca = resolverMarcaPorSlug(dados.marcas, marcaSlug);
+      if (!marca) return enviarHtml(res, 404, gerar404());
+      htmlOut = gerarPaginaMarca(dados, marca, tpl);
+    } else {
+      htmlOut = gerarPagina(dados, tpl);
+    }
 
     if (req.method === "HEAD") {
       res.statusCode = 200;

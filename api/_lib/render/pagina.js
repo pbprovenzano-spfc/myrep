@@ -133,6 +133,11 @@ function normalizarCidades(cidades, estados) {
   return porUf;
 }
 
+function urlMarca(c, marca) {
+  if (!marca?.slug || !c.slug) return "#";
+  return `/${c.slug}/${marca.slug}/`;
+}
+
 function logoCatalogo(c, cat) {
   if (cat.marcaId && temItens(c.marcas)) {
     const marca = c.marcas.find((m) => m.id === cat.marcaId);
@@ -149,11 +154,13 @@ function logoCatalogo(c, cat) {
 function blocoMarcas(c) {
   if (!temItens(c.marcas)) return "";
   const itens = c.marcas
-    .map((m) =>
-      m.logo
-        ? `        <li class="marca-chip"><img src="${caminhoAsset(c.slug, m.logo)}" alt="${esc(m.nome)}" loading="lazy"></li>`
-        : `        <li class="marca-chip"><span class="marca-chip__nome">${esc(m.nome)}</span></li>`
-    )
+    .map((m) => {
+      const href = esc(urlMarca(c, m));
+      const conteudo = m.logo
+        ? `<img src="${caminhoAsset(c.slug, m.logo)}" alt="${esc(m.nome)}" loading="lazy">`
+        : `<span class="marca-chip__nome">${esc(m.nome)}</span>`;
+      return `        <li><a class="marca-chip" href="${href}">${conteudo}</a></li>`;
+    })
     .join("\n");
 
   return `  <section class="bloco bloco--marcas">
@@ -202,9 +209,12 @@ function cabecaGrupoCatalogo(c, marca, titulo) {
     ? `<img class="catalogo-grupo__logo" src="${caminhoAsset(c.slug, marca.logo)}" alt="" loading="lazy">`
     : "";
   const nome = esc(titulo || marca?.nome || "Outros");
+  const linkMarca =
+    marca?.slug && !titulo
+      ? `<a class="catalogo-grupo__link-marca" href="${esc(urlMarca(c, marca))}">${logo}<span class="catalogo-grupo__nome">${nome}</span></a>`
+      : `${logo}<span class="catalogo-grupo__nome">${nome}</span>`;
   return `      <summary class="catalogo-grupo__cabeca">
-        ${logo}
-        <span class="catalogo-grupo__nome">${nome}</span>
+        ${linkMarca}
         <span class="catalogo-grupo__seta" aria-hidden="true"></span>
       </summary>`;
 }
@@ -294,6 +304,45 @@ ${itens}
   </section>`;
 }
 
+function blocoCatalogosMarca(c, catalogos) {
+  if (!temItens(catalogos)) return "";
+  const itens = catalogos.map((cat) => itemCatalogoHtml(c, cat)).join("\n");
+  return `  <section class="bloco bloco--links">
+    <h2 class="rotulo">Catálogos</h2>
+    <ul class="links">
+${itens}
+    </ul>
+  </section>`;
+}
+
+function blocoContatoMarca(c, marca) {
+  const itens = [];
+  if (temTexto(marca.site)) {
+    itens.push(`        <li>
+          <a class="link-btn" href="${esc(marca.site)}" target="_blank" rel="noopener">
+            <span class="link-btn__texto">Site</span>
+            <span class="link-btn__meta">${esc(marca.site.replace(/^https?:\/\//i, ""))}</span>
+          </a>
+        </li>`);
+  }
+  if (marca.contato && temTexto(marca.contato.canal) && temTexto(marca.contato.valor)) {
+    const externo = /^https?:/.test(marca.contato.link || "") ? ' target="_blank" rel="noopener"' : "";
+    itens.push(`        <li>
+          <a class="link-btn" href="${esc(marca.contato.link || "#")}"${externo}>
+            <span class="link-btn__texto">${esc(marca.contato.canal)}</span>
+            <span class="link-btn__meta">${esc(marca.contato.valor)}</span>
+          </a>
+        </li>`);
+  }
+  if (!itens.length) return "";
+  return `  <section class="bloco bloco--links">
+    <h2 class="rotulo">Contato da marca</h2>
+    <ul class="links">
+${itens.join("\n")}
+    </ul>
+  </section>`;
+}
+
 function botaoZap(c) {
   const numero = String(c.whatsapp || "").replace(/\D/g, "");
   if (!numero) return "";
@@ -304,6 +353,11 @@ function botaoZap(c) {
       </span>
       <span class="link-btn__texto">Falar no WhatsApp</span>
     </a>`;
+}
+
+function nomeRepresentante(c) {
+  const destaqueEmpresa = c.destaque === "empresa" && temTexto(c.empresa);
+  return destaqueEmpresa ? c.empresa : c.nome || c.empresa || "Representante";
 }
 
 function gerarPagina(c, template) {
@@ -325,11 +379,16 @@ function gerarPagina(c, template) {
   const cargo = temTexto(c.cargo) ? `<p class="capa__cargo">${esc(c.cargo)}</p>` : "";
   const fotoClasse = c.fotoTipo === "logo" ? "capa__foto capa__foto--logo" : "capa__foto";
   const altFoto = destaqueEmpresa ? `Logo ou foto de ${c.empresa}` : `Foto de ${c.nome}`;
+  const fotoCapa = c.foto
+    ? `<img class="${fotoClasse}" src="${caminhoAsset(c.slug, c.foto)}" alt="${esc(altFoto)}" width="96" height="96">`
+    : "";
 
   return template
+    .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep")
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
     .replace(/\{\{DESCRICAO\}\}/g, esc(c.cargo || c.bio || ""))
     .replace(/\{\{FOTO\}\}/g, caminhoAsset(c.slug, c.foto))
+    .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
     .replace(/\{\{FOTO_CLASSE\}\}/g, fotoClasse)
     .replace(/\{\{ANTES_NOME\}\}/g, antesNome)
     .replace(/\{\{NOME\}\}/g, esc(tituloPrincipal))
@@ -340,6 +399,37 @@ function gerarPagina(c, template) {
     .replace(/\{\{ZAP\}\}/g, botaoZap(c))
     .replace(/\{\{PALETA_CSS\}\}/g, cssPaleta(paleta))
     .replace(/\{\{BLOCOS\}\}/g, blocos);
+}
+
+function gerarPaginaMarca(c, marca, template) {
+  const paleta = resolverPaleta(c);
+  const repNome = nomeRepresentante(c);
+  const catalogos = (Array.isArray(c.catalogos) ? c.catalogos : []).filter((cat) => cat.marcaId === marca.id);
+  const blocos = [blocoCatalogosMarca(c, catalogos), blocoContatoMarca(c, marca)].filter(Boolean).join("\n\n");
+
+  const fotoCapa = marca.logo
+    ? `<img class="capa__foto capa__foto--logo" src="${caminhoAsset(c.slug, marca.logo)}" alt="${esc(marca.nome)}" width="96" height="96">`
+    : `<div class="capa__foto capa__foto--inicial" aria-hidden="true">${esc(marca.nome.slice(0, 1))}</div>`;
+  const voltar = `<p class="capa__voltar"><a href="/${esc(c.slug)}/">← Representada por ${esc(repNome)}</a></p>`;
+  const descricao = temTexto(marca.descricao) ? `<p class="capa__bio">${esc(marca.descricao)}</p>` : "";
+  const titulo = `${marca.nome} — ${repNome}`;
+
+  return template
+    .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep pagina-marca")
+    .replace(/\{\{TITULO\}\}/g, esc(titulo))
+    .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || ""))
+    .replace(/\{\{FOTO\}\}/g, marca.logo ? caminhoAsset(c.slug, marca.logo) : "")
+    .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
+    .replace(/\{\{FOTO_CLASSE\}\}/g, marca.logo ? "capa__foto capa__foto--logo" : "capa__foto capa__foto--inicial")
+    .replace(/\{\{ANTES_NOME\}\}/g, voltar)
+    .replace(/\{\{NOME\}\}/g, esc(marca.nome))
+    .replace(/\{\{DEPOIS_NOME\}\}/g, "")
+    .replace(/\{\{ALT_FOTO\}\}/g, esc(`Logo de ${marca.nome}`))
+    .replace(/\{\{CARGO\}\}/g, "")
+    .replace(/\{\{BIO\}\}/g, descricao)
+    .replace(/\{\{ZAP\}\}/g, botaoZap(c))
+    .replace(/\{\{PALETA_CSS\}\}/g, cssPaleta(paleta))
+    .replace(/\{\{BLOCOS\}\}/g, blocos || `<p class="segmentos">Nenhum catálogo desta marca ainda.</p>`);
 }
 
 function gerar404() {
@@ -397,7 +487,9 @@ module.exports = {
   blocoCatalogos,
   blocoContatos,
   botaoZap,
+  urlMarca,
   gerarPagina,
+  gerarPaginaMarca,
   gerar404,
   lerTemplatePagina
 };

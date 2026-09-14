@@ -942,6 +942,21 @@ a { color: inherit; }
   min-width: 0;
 }
 
+.catalogo-grupo__link-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.catalogo-grupo__link-marca:hover .catalogo-grupo__nome,
+.catalogo-grupo__link-marca:focus-visible .catalogo-grupo__nome {
+  color: var(--sinal-escuro);
+}
+
 .catalogo-grupo__seta {
   flex: 0 0 auto;
   width: 10px;
@@ -993,6 +1008,19 @@ a { color: inherit; }
   align-items: center;
   justify-content: center;
   background: var(--papel);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao),
+    transform var(--transicao);
+}
+
+a.marca-chip:hover,
+a.marca-chip:focus-visible {
+  border-color: color-mix(in srgb, var(--sinal) 55%, var(--borda));
+  box-shadow: 0 8px 20px rgba(10, 22, 32, 0.08);
+  transform: translateY(-1px);
 }
 
 .marca-chip:has(img) {
@@ -1011,6 +1039,74 @@ a { color: inherit; }
   font-weight: 700;
   font-size: 15px;
   letter-spacing: -.01em;
+}
+
+.capa__voltar {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.capa__voltar a {
+  color: var(--mutado);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.capa__voltar a:hover,
+.capa__voltar a:focus-visible {
+  color: var(--sinal-escuro);
+  text-decoration: underline;
+}
+
+.capa__foto--inicial {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sinal) 16%, var(--papel));
+  color: var(--ink);
+  font-family: var(--fonte-display);
+  font-size: 36px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pagina-marca .capa__nome {
+  margin-top: 4px;
+}
+
+.painel-lista__texto-marca {
+  display: grid;
+  gap: 4px;
+}
+
+.painel-lista__url {
+  font-size: 12px;
+  color: var(--mutado);
+  word-break: break-all;
+}
+
+.painel-lista__url a {
+  color: var(--sinal-escuro);
+}
+
+.painel-lista__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.painel-form-inline--edit {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borda);
+}
+
+.painel-form-inline__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .ufs {

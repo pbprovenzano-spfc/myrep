@@ -460,29 +460,99 @@
     if (val) sel.value = val;
   }
 
+  function slugMarcaFromNome(nome) {
+    const base = String(nome || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80);
+    if (base.length >= 2) return base;
+    const compacto = String(nome || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+    if (compacto.length >= 2) return compacto.slice(0, 80);
+    return "marca";
+  }
+
+  function marcasComSlugs(marcas) {
+    const usados = new Set();
+    return (marcas || []).map((marca) => {
+      let base = slugMarcaFromNome(marca.nome);
+      if (!base || base.length < 2) base = "marca";
+      let slug = base;
+      let n = 2;
+      while (usados.has(slug)) {
+        slug = `${base}-${n}`.slice(0, 80);
+        n += 1;
+      }
+      usados.add(slug);
+      return { ...marca, slug };
+    });
+  }
+
+  function urlMarcaPreview(marca, slugRep) {
+    if (!slugRep || !marca) return "";
+    const slug = marca.slug || slugMarcaFromNome(marca.nome);
+    return slug ? `/${slugRep}/${slug}/` : "";
+  }
+
   function renderMarcas(marcas) {
     const lista = document.getElementById("lista-marcas");
     if (!lista) return;
-    const itens = marcas || [];
+    const slugRep = perfil?.pagina?.slug || "";
+    const itens = marcasComSlugs(marcas || []);
     lista.innerHTML = itens.length
       ? itens
           .map(
-            (m, i) =>
-              `<li>
+            (m, i) => {
+              const url = urlMarcaPreview(m, slugRep);
+              return `<li>
               <span class="painel-lista__corpo">
                 ${botoesOrdem(
                   { up: `data-marca-up="${esc(m.id)}"`, down: `data-marca-down="${esc(m.id)}"` },
                   i === 0,
                   i === itens.length - 1
                 )}
-                <span>${esc(m.nome)}</span>
+                <span class="painel-lista__texto-marca">
+                  <strong>${esc(m.nome)}</strong>
+                  ${url ? `<span class="painel-lista__url"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></span>` : ""}
+                </span>
               </span>
-              <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}">Remover</button>
-            </li>`
+              <span class="painel-lista__acoes">
+                <button type="button" class="btn-link" data-edit-marca="${esc(m.id)}">Editar</button>
+                <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}">Remover</button>
+              </span>
+            </li>`;
+            }
           )
           .join("")
       : "<li class='painel-lista__vazio'>Nenhuma marca ainda.</li>";
-    atualizarSelectMarcas(marcas);
+    atualizarSelectMarcas(itens);
+  }
+
+  function abrirEdicaoMarca(marca) {
+    const form = document.getElementById("form-marca-edit");
+    if (!form || !marca) return;
+    form.hidden = false;
+    form.querySelector("#marca-edit-id").value = marca.id;
+    form.nome.value = marca.nome || "";
+    form.descricao.value = marca.descricao || "";
+    form.site.value = marca.site ? marca.site.replace(/^https?:\/\//i, "") : "";
+    form.contatoCanal.value = marca.contato?.canal || "";
+    form.contatoValor.value = marca.contato?.valor || "";
+    limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+    form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function fecharEdicaoMarca() {
+    const form = document.getElementById("form-marca-edit");
+    if (!form) return;
+    form.hidden = true;
+    form.reset();
+    limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
   }
 
   function renderCatalogos(catalogos, marcas) {
@@ -616,7 +686,7 @@
       ...dados,
       ...texto,
       foto: fotoLocalUrl || dados.foto || "",
-      marcas: dados.marcas || [],
+      marcas: marcasComSlugs(dados.marcas || []),
       catalogos: dados.catalogos || [],
       contatos: texto.contatos || dados.contatos || []
     };
@@ -705,19 +775,24 @@
     return `<li><a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener"><span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>${meta}</a></li>`;
   }
 
-  function htmlCabecaGrupoPreview(marca, titulo) {
+  function htmlCabecaGrupoPreview(marca, titulo, slugRep) {
     const logo = marca?.logo
       ? `<img class="catalogo-grupo__logo" src="${esc(urlAsset(marca.logo))}" alt="">`
       : "";
     const nome = esc(titulo || marca?.nome || "Outros");
-    return `<summary class="catalogo-grupo__cabeca">${logo}<span class="catalogo-grupo__nome">${nome}</span><span class="catalogo-grupo__seta" aria-hidden="true"></span></summary>`;
+    const url = !titulo && marca ? urlMarcaPreview(marca, slugRep) : "";
+    const conteudo = url
+      ? `<a class="catalogo-grupo__link-marca" href="${esc(url)}">${logo}<span class="catalogo-grupo__nome">${nome}</span></a>`
+      : `${logo}<span class="catalogo-grupo__nome">${nome}</span>`;
+    return `<summary class="catalogo-grupo__cabeca">${conteudo}<span class="catalogo-grupo__seta" aria-hidden="true"></span></summary>`;
   }
 
   function htmlCatalogosPreview(c) {
     const catalogos = Array.isArray(c.catalogos) ? c.catalogos : [];
     if (!catalogos.length) return "";
 
-    const marcas = Array.isArray(c.marcas) ? c.marcas : [];
+    const marcas = marcasComSlugs(Array.isArray(c.marcas) ? c.marcas : []);
+    const slugRep = c.slug || "";
     const grupos = agruparCatalogos(catalogos, marcas);
     const temGruposMarca = grupos.some((g) => g.tipo === "marca");
 
@@ -730,7 +805,7 @@
       .map((grupo) => {
         const titulo = grupo.tipo === "outros" ? "Outros" : null;
         const itens = grupo.catalogos.map((cat) => htmlItemCatalogoPreview(cat, marcas)).join("");
-        return `<details class="catalogo-grupo">${htmlCabecaGrupoPreview(grupo.marca, titulo)}<ul class="links catalogo-grupo__links">${itens}</ul></details>`;
+        return `<details class="catalogo-grupo">${htmlCabecaGrupoPreview(grupo.marca, titulo, slugRep)}<ul class="links catalogo-grupo__links">${itens}</ul></details>`;
       })
       .join("");
 
@@ -739,14 +814,17 @@
 
   function htmlBlocosPreview(c) {
     const partes = [];
-    const marcas = Array.isArray(c.marcas) ? c.marcas : [];
+    const marcas = marcasComSlugs(Array.isArray(c.marcas) ? c.marcas : []);
+    const slugRep = c.slug || "";
     if (marcas.length) {
       const itens = marcas
-        .map((m) =>
-          m.logo
-            ? `<li class="marca-chip"><img src="${esc(urlAsset(m.logo))}" alt="${esc(m.nome)}"></li>`
-            : `<li class="marca-chip"><span class="marca-chip__nome">${esc(m.nome)}</span></li>`
-        )
+        .map((m) => {
+          const href = esc(urlMarcaPreview(m, slugRep) || "#");
+          const conteudo = m.logo
+            ? `<img src="${esc(urlAsset(m.logo))}" alt="${esc(m.nome)}">`
+            : `<span class="marca-chip__nome">${esc(m.nome)}</span>`;
+          return `<li><a class="marca-chip" href="${href}">${conteudo}</a></li>`;
+        })
         .join("");
       partes.push(`<section class="bloco bloco--marcas"><h2 class="rotulo">Marcas</h2><ul class="marcas">${itens}</ul></section>`);
     }
@@ -1456,7 +1534,14 @@
     try {
       let arquivo = "";
       if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
-      const body = { acao: "marca_add", nome };
+      const body = {
+        acao: "marca_add",
+        nome,
+        descricao: form.descricao?.value?.trim() || "",
+        site: form.site?.value?.trim() || "",
+        contatoCanal: form.contatoCanal?.value?.trim() || "",
+        contatoValor: form.contatoValor?.value?.trim() || ""
+      };
       if (arquivo) body.arquivo = arquivo;
       const data = await apiPagina("POST", body);
       aplicarPagina(data.pagina);
@@ -1506,11 +1591,56 @@
     }
   });
 
+  document.getElementById("form-marca-edit")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const status = document.getElementById("editor-status");
+    const form = ev.currentTarget;
+    const nome = form.nome?.value?.trim() || "";
+    const file = form.arquivo?.files?.[0];
+    if (file && file.size > MAX_IMAGEM) {
+      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
+      return;
+    }
+    setStatus(status, "Salvando marca…", "info");
+    try {
+      let arquivo = "";
+      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
+      const body = {
+        acao: "marca_editar",
+        id: form.querySelector("#marca-edit-id")?.value || "",
+        nome,
+        descricao: form.descricao?.value?.trim() || "",
+        site: form.site?.value?.trim() || "",
+        contatoCanal: form.contatoCanal?.value?.trim() || "",
+        contatoValor: form.contatoValor?.value?.trim() || ""
+      };
+      if (arquivo) body.arquivo = arquivo;
+      const data = await apiPagina("POST", body);
+      aplicarPagina(data.pagina);
+      fecharEdicaoMarca();
+      setStatus(status, "Marca atualizada.", "ok");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+    }
+  });
+
+  document.getElementById("btn-marca-edit-cancelar")?.addEventListener("click", () => {
+    fecharEdicaoMarca();
+  });
+
   document.getElementById("lista-marcas")?.addEventListener("click", async (ev) => {
     const btnUp = ev.target.closest("[data-marca-up]");
     const btnDown = ev.target.closest("[data-marca-down]");
+    const btnEdit = ev.target.closest("[data-edit-marca]");
     const btn = ev.target.closest("[data-rm-marca]");
     const status = document.getElementById("editor-status");
+
+    if (btnEdit) {
+      const id = btnEdit.getAttribute("data-edit-marca");
+      const marca = (paginaDados.marcas || []).find((m) => m.id === id);
+      if (marca) abrirEdicaoMarca(marca);
+      return;
+    }
 
     if (btnUp || btnDown) {
       const id = (btnUp || btnDown).getAttribute(btnUp ? "data-marca-up" : "data-marca-down");

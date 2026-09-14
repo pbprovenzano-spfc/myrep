@@ -85,14 +85,21 @@ const ROTAS_RESERVADAS = new Set([
 ]);
 
 function slugDaUrl(urlPath) {
+  return slugEMarcaDaUrl(urlPath).slug;
+}
+
+function slugEMarcaDaUrl(urlPath) {
   const partes = String(urlPath || "/")
     .split("?")[0]
     .split("/")
     .filter(Boolean);
-  if (!partes.length) return "";
-  if (ROTAS_RESERVADAS.has(partes[0])) return "";
-  if (partes[0].includes(".")) return "";
-  return partes[0];
+  if (!partes.length) return { slug: "", marca: "" };
+  if (ROTAS_RESERVADAS.has(partes[0])) return { slug: "", marca: "" };
+  if (partes[0].includes(".")) return { slug: "", marca: "" };
+  return {
+    slug: partes[0],
+    marca: partes.length >= 2 ? partes[1] : ""
+  };
 }
 
 function servir404(res) {
@@ -126,7 +133,7 @@ async function servir(req, res) {
     return;
   }
 
-  const slugCliente = slugDaUrl(url);
+  const { slug: slugCliente, marca: marcaCliente } = slugEMarcaDaUrl(url);
   if (slugCliente) {
     const ativa = await paginaClienteAtiva(slugCliente);
     if (!ativa) {
@@ -144,9 +151,11 @@ async function servir(req, res) {
 
   if (!fs.existsSync(caminho) || fs.statSync(caminho).isDirectory()) {
     if (slugCliente) {
+      let apiUrl = `/api/pagina?slug=${encodeURIComponent(slugCliente)}`;
+      if (marcaCliente) apiUrl += `&marca=${encodeURIComponent(marcaCliente)}`;
       const fakeReq = {
         method: req.method,
-        url: `/api/pagina?slug=${encodeURIComponent(slugCliente)}`,
+        url: apiUrl,
         headers: req.headers
       };
       return invocarApi(require("./api/pagina"), fakeReq, res);

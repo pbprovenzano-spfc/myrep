@@ -7,7 +7,14 @@ const { exigirUsuario } = require("../auth");
 const { obterPaginaPorUserId } = require("../assinaturas");
 const { getSupabase, supabaseConfigured } = require("../supabase");
 const { situacaoDe } = require("../paginas");
-const { normalizarDados, novoId, normalizarCidadesInput, reordenarPorIds } = require("../dados");
+const {
+  normalizarDados,
+  novoId,
+  normalizarCidadesInput,
+  reordenarPorIds,
+  normalizarSite,
+  normalizarContatoMarca
+} = require("../dados");
 const {
   MAX_ANEXO,
   lerCorpo,
@@ -205,11 +212,22 @@ module.exports = async function handler(req, res) {
       const idx = idAlvo
         ? marcas.findIndex((m) => m.id === idAlvo)
         : marcas.findIndex((m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase());
+      const existente = idx >= 0 ? marcas[idx] : null;
       const entrada = {
-        id: idx >= 0 ? marcas[idx].id : novoId("m"),
+        id: existente?.id || novoId("m"),
         nome: nomeMarca,
-        ...(logo ? { logo } : idx >= 0 && marcas[idx].logo ? { logo: marcas[idx].logo } : {})
+        ...(logo ? { logo } : existente?.logo ? { logo: existente.logo } : {})
       };
+      const descricao = String(campos.descricao || "").trim().slice(0, 600);
+      if (descricao) entrada.descricao = descricao;
+      const site = normalizarSite(campos.site);
+      if (site) entrada.site = site;
+      const contatoCanal = String(campos.contatoCanal || "").trim().slice(0, 80);
+      const contatoValor = String(campos.contatoValor || "").trim().slice(0, 160);
+      if (contatoCanal && contatoValor) {
+        const contato = normalizarContatoMarca({ canal: contatoCanal, valor: contatoValor });
+        if (contato) entrada.contato = contato;
+      }
       if (idx >= 0) marcas[idx] = entrada;
       else marcas.push(entrada);
     } else if (acao === "marca_remover") {

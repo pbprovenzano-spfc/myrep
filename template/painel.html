@@ -166,6 +166,22 @@
             <span class="campo__rotulo">Nome da marca</span>
             <input name="nome" type="text" maxlength="120" required>
           </label>
+          <label class="campo">
+            <span class="campo__rotulo">Apresentação da marca (opcional)</span>
+            <textarea name="descricao" rows="3" maxlength="600" placeholder="Texto sobre esta representada na sua página dedicada"></textarea>
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Site da marca (opcional)</span>
+            <input name="site" type="text" maxlength="500" placeholder="https://www.exemplo.com.br">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Contato da marca — canal (opcional)</span>
+            <input name="contatoCanal" type="text" maxlength="80" placeholder="Ex.: Telefone, E-mail">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Contato da marca — valor (opcional)</span>
+            <input name="contatoValor" type="text" maxlength="160" placeholder="Ex.: (71) 99999-9999">
+          </label>
           <div class="campo campo-arquivo" data-tipo="imagem">
             <span class="campo__rotulo">Logo</span>
             <div class="campo-arquivo__zona" tabindex="0">
@@ -187,6 +203,54 @@
             </div>
           </div>
           <button class="btn btn--primario" type="submit">Adicionar marca</button>
+        </form>
+        <form class="painel-form-inline painel-form-inline--edit" id="form-marca-edit" hidden>
+          <input type="hidden" name="id" id="marca-edit-id">
+          <p class="campo__rotulo">Editar marca</p>
+          <label class="campo">
+            <span class="campo__rotulo">Nome da marca</span>
+            <input name="nome" type="text" maxlength="120" required>
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Apresentação da marca (opcional)</span>
+            <textarea name="descricao" rows="3" maxlength="600"></textarea>
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Site da marca (opcional)</span>
+            <input name="site" type="text" maxlength="500">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Contato da marca — canal (opcional)</span>
+            <input name="contatoCanal" type="text" maxlength="80">
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">Contato da marca — valor (opcional)</span>
+            <input name="contatoValor" type="text" maxlength="160">
+          </label>
+          <div class="campo campo-arquivo" data-tipo="imagem">
+            <span class="campo__rotulo">Trocar logo (opcional)</span>
+            <div class="campo-arquivo__zona" tabindex="0">
+              <input name="arquivo" type="file" accept="image/*" class="campo-arquivo__input">
+              <div class="campo-arquivo__vazio">
+                <span class="campo-arquivo__icone" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                </span>
+                <p class="campo-arquivo__titulo">Clique ou solte o novo logo</p>
+                <p class="campo-arquivo__dica">JPG, PNG ou WEBP · até 8 MB</p>
+              </div>
+              <div class="campo-arquivo__preenchido" hidden>
+                <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+                <div class="campo-arquivo__info">
+                  <p class="campo-arquivo__nome"></p>
+                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="painel-form-inline__acoes">
+            <button class="btn btn--primario" type="submit">Salvar marca</button>
+            <button class="btn btn--secundario" type="button" id="btn-marca-edit-cancelar">Cancelar</button>
+          </div>
         </form>
       </fieldset>
 
