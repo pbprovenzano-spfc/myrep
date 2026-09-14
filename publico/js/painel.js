@@ -283,10 +283,18 @@
 
   function filtrarListaCombobox(combobox, termo) {
     const norm = normalizarCidade(termo);
+    let visiveis = 0;
     combobox.querySelectorAll(".cidades-combobox__item").forEach((item) => {
       const nome = item.querySelector("input")?.value || "";
-      item.hidden = Boolean(norm && !normalizarCidade(nome).includes(norm));
+      const ocultar = Boolean(norm && !normalizarCidade(nome).includes(norm));
+      item.hidden = ocultar;
+      if (!ocultar) visiveis += 1;
     });
+    const aviso = combobox.querySelector(".cidades-combobox__vazio--filtro");
+    if (aviso) {
+      if (norm && visiveis === 0) aviso.removeAttribute("hidden");
+      else aviso.setAttribute("hidden", "");
+    }
   }
 
   function mesclarCidadesDisponiveis(disponiveis, selecionadas) {
@@ -315,7 +323,11 @@
       </button>
       <div class="cidades-combobox__painel" hidden>
         <input type="search" class="cidades-combobox__busca" placeholder="Buscar município…" autocomplete="off" aria-label="Buscar município em ${esc(uf)}">
-        <div class="cidades-combobox__lista" role="listbox">${itens || '<p class="cidades-combobox__vazio">Nenhum município encontrado.</p>'}</div>
+        <div class="cidades-combobox__lista" role="listbox">${
+          itens
+            ? `${itens}<p class="cidades-combobox__vazio cidades-combobox__vazio--filtro" hidden>Nenhum município encontrado.</p>`
+            : '<p class="cidades-combobox__vazio">Nenhum município encontrado.</p>'
+        }</div>
       </div>
     </div>`;
   }

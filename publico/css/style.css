@@ -2143,6 +2143,10 @@ a.marca-chip:focus-visible {
   user-select: none;
 }
 
+.cidades-combobox__item[hidden] {
+  display: none;
+}
+
 .cidades-combobox__item:hover {
   background: color-mix(in srgb, var(--sinal) 8%, var(--branco));
 }
