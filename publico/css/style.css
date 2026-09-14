@@ -1097,6 +1097,64 @@ a.marca-chip:focus-visible {
   gap: 8px 12px;
 }
 
+.painel-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  color: var(--sinal-escuro);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.painel-voltar:hover,
+.painel-voltar:focus-visible {
+  text-decoration: underline;
+}
+
+.painel-marca-nav {
+  margin-bottom: 4px;
+}
+
+.painel-marca-titulo {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.painel-card--marca {
+  min-width: 0;
+}
+
+.painel-form-marca {
+  display: grid;
+  gap: 0;
+}
+
+.painel-marca-erro {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 16px;
+}
+
+.painel-lista--leitura li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borda);
+}
+
+.painel-lista--leitura li:last-child {
+  border-bottom: 0;
+}
+
+.btn--compacto {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .painel-form-inline--edit {
   margin-top: 16px;
   padding-top: 16px;
@@ -3678,7 +3736,8 @@ a.marca-chip:focus-visible {
   gap: 12px;
 }
 
-.painel-editor-layout[hidden] {
+.painel-editor-layout[hidden],
+#secao-pagina-marca[hidden] {
   display: none !important;
 }
 

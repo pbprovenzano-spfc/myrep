@@ -11,6 +11,7 @@
     { "source": "/entrar", "destination": "/entrar/" },
     { "source": "/recuperar-senha", "destination": "/recuperar-senha/" },
     { "source": "/painel", "destination": "/painel/" },
+    { "source": "/painel/marca", "destination": "/painel/marca/" },
     { "source": "/pagamento/ok", "destination": "/pagamento/ok/" },
     { "source": "/api/assinantes", "destination": "/api/admin" },
     { "source": "/api/auth/perfil", "destination": "/api/auth?acao=perfil" },

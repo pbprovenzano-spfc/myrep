@@ -28,7 +28,7 @@
   <p class="briefing-status" id="painel-carregando" role="status">Carregando…</p>
 
   <div id="painel-conteudo" hidden>
-    <header class="painel-intro">
+    <header class="painel-intro" id="painel-intro">
       <div>
         <h1 class="painel-intro__titulo">Olá<span id="painel-nome-saudacao"></span></h1>
         <p class="painel-intro__email" id="painel-email"></p>
@@ -160,27 +160,12 @@
 
       <fieldset class="briefing-secao">
         <legend>Marcas representadas</legend>
-        <ul class="painel-lista" id="lista-marcas"></ul>
+        <p class="campo__ajuda" id="marcas-ajuda">Cada marca aparece na sua página. Quem clicar no logo abre uma página só dela — você monta essa página separadamente.</p>
+        <ul class="painel-lista" id="lista-marcas" aria-describedby="marcas-ajuda"></ul>
         <form class="painel-form-inline" id="form-marca-add">
           <label class="campo">
             <span class="campo__rotulo">Nome da marca</span>
-            <input name="nome" type="text" maxlength="120" required>
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Apresentação da marca (opcional)</span>
-            <textarea name="descricao" rows="3" maxlength="600" placeholder="Texto sobre esta representada na sua página dedicada"></textarea>
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Site da marca (opcional)</span>
-            <input name="site" type="text" maxlength="500" placeholder="https://www.exemplo.com.br">
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Contato da marca — canal (opcional)</span>
-            <input name="contatoCanal" type="text" maxlength="80" placeholder="Ex.: Telefone, E-mail">
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Contato da marca — valor (opcional)</span>
-            <input name="contatoValor" type="text" maxlength="160" placeholder="Ex.: (71) 99999-9999">
+            <input name="nome" type="text" maxlength="120" required placeholder="Ex.: 3M">
           </label>
           <div class="campo campo-arquivo" data-tipo="imagem">
             <span class="campo__rotulo">Logo</span>
@@ -203,54 +188,6 @@
             </div>
           </div>
           <button class="btn btn--primario" type="submit">Adicionar marca</button>
-        </form>
-        <form class="painel-form-inline painel-form-inline--edit" id="form-marca-edit" hidden>
-          <input type="hidden" name="id" id="marca-edit-id">
-          <p class="campo__rotulo">Editar marca</p>
-          <label class="campo">
-            <span class="campo__rotulo">Nome da marca</span>
-            <input name="nome" type="text" maxlength="120" required>
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Apresentação da marca (opcional)</span>
-            <textarea name="descricao" rows="3" maxlength="600"></textarea>
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Site da marca (opcional)</span>
-            <input name="site" type="text" maxlength="500">
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Contato da marca — canal (opcional)</span>
-            <input name="contatoCanal" type="text" maxlength="80">
-          </label>
-          <label class="campo">
-            <span class="campo__rotulo">Contato da marca — valor (opcional)</span>
-            <input name="contatoValor" type="text" maxlength="160">
-          </label>
-          <div class="campo campo-arquivo" data-tipo="imagem">
-            <span class="campo__rotulo">Trocar logo (opcional)</span>
-            <div class="campo-arquivo__zona" tabindex="0">
-              <input name="arquivo" type="file" accept="image/*" class="campo-arquivo__input">
-              <div class="campo-arquivo__vazio">
-                <span class="campo-arquivo__icone" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-                </span>
-                <p class="campo-arquivo__titulo">Clique ou solte o novo logo</p>
-                <p class="campo-arquivo__dica">JPG, PNG ou WEBP · até 8 MB</p>
-              </div>
-              <div class="campo-arquivo__preenchido" hidden>
-                <img class="campo-arquivo__thumb" alt="" width="56" height="56">
-                <div class="campo-arquivo__info">
-                  <p class="campo-arquivo__nome"></p>
-                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="painel-form-inline__acoes">
-            <button class="btn btn--primario" type="submit">Salvar marca</button>
-            <button class="btn btn--secundario" type="button" id="btn-marca-edit-cancelar">Cancelar</button>
-          </div>
         </form>
       </fieldset>
 
@@ -332,6 +269,97 @@
         </div>
         <div class="painel-preview__viewport">
           <div class="painel-preview__pagina" id="painel-preview-pagina"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="painel-editor-layout" id="secao-pagina-marca" hidden>
+      <section class="painel-card painel-card--marca">
+        <nav class="painel-marca-nav" aria-label="Navegação">
+          <a href="/painel/" class="painel-voltar" id="link-voltar-marca">← Voltar ao painel</a>
+        </nav>
+        <h1 class="painel-marca-titulo" id="marca-pagina-titulo" tabindex="-1">Página da marca</h1>
+        <p class="painel-card__texto" id="marca-pagina-contexto"></p>
+
+        <div class="painel-marca-erro" id="marca-pagina-erro" hidden>
+          <p class="painel-card__texto">Marca não encontrada ou endereço inválido.</p>
+          <a href="/painel/" class="btn btn--primario">Voltar ao painel</a>
+        </div>
+
+        <form id="form-marca-pagina" class="painel-form-marca" hidden novalidate>
+          <input type="hidden" name="id" id="marca-pagina-id">
+
+          <fieldset class="briefing-secao">
+            <legend>Identidade</legend>
+            <p class="campo__ajuda" id="marca-identidade-ajuda">Nome e logo aparecem na sua página principal e nesta página da marca.</p>
+            <label class="campo">
+              <span class="campo__rotulo">Nome da marca</span>
+              <input name="nome" id="marca-pagina-nome" type="text" maxlength="120" required aria-describedby="marca-identidade-ajuda">
+            </label>
+            <div class="campo campo-arquivo" data-tipo="imagem">
+              <span class="campo__rotulo">Logo</span>
+              <div class="campo-arquivo__zona" tabindex="0">
+                <input name="arquivo" type="file" accept="image/*" class="campo-arquivo__input" id="marca-pagina-logo">
+                <div class="campo-arquivo__vazio">
+                  <span class="campo-arquivo__icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                  </span>
+                  <p class="campo-arquivo__titulo">Clique ou solte o logo da marca</p>
+                  <p class="campo-arquivo__dica">JPG, PNG ou WEBP · até 8 MB</p>
+                </div>
+                <div class="campo-arquivo__preenchido" hidden>
+                  <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+                  <div class="campo-arquivo__info">
+                    <p class="campo-arquivo__nome"></p>
+                    <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="briefing-secao">
+            <legend>Apresentação</legend>
+            <label class="campo">
+              <span class="campo__rotulo">Texto de apresentação</span>
+              <textarea name="descricao" id="marca-pagina-descricao" rows="4" maxlength="600" aria-describedby="marca-descricao-ajuda"></textarea>
+              <span class="campo__ajuda" id="marca-descricao-ajuda">Texto que aparece abaixo do logo nesta página.</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="briefing-secao">
+            <legend>Links extras</legend>
+            <label class="campo">
+              <span class="campo__rotulo">Site da marca (opcional)</span>
+              <input name="site" id="marca-pagina-site" type="text" maxlength="500" placeholder="www.exemplo.com.br" inputmode="url">
+            </label>
+            <label class="campo">
+              <span class="campo__rotulo">Telefone ou e-mail extra (opcional)</span>
+              <input name="contatoExtra" id="marca-pagina-contato" type="text" maxlength="160" placeholder="Ex.: (71) 99999-9999 ou contato@marca.com.br" aria-describedby="marca-contato-ajuda">
+              <span class="campo__ajuda" id="marca-contato-ajuda">Aparece como botão de contato nesta página da marca.</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="briefing-secao">
+            <legend>Catálogos desta marca</legend>
+            <ul class="painel-lista painel-lista--leitura" id="marca-pagina-catalogos"></ul>
+            <p class="campo__ajuda">Para incluir um PDF, volte ao <a href="/painel/">editor da página</a> e vincule o catálogo a esta marca.</p>
+          </fieldset>
+
+          <button class="btn btn--primario" type="submit">Salvar alterações</button>
+        </form>
+        <p class="briefing-status" id="marca-pagina-status" role="status"></p>
+      </section>
+
+      <aside class="painel-preview" aria-label="Pré-visualização da página da marca">
+        <div class="painel-preview__barra">
+          <div>
+            <h2 class="painel-preview__titulo" id="marca-preview-titulo">Como fica a página da marca</h2>
+            <p class="painel-preview__dica">Prévia no celular, enquanto você edita.</p>
+          </div>
+        </div>
+        <div class="painel-preview__viewport">
+          <div class="painel-preview__pagina painel-preview__pagina--marca" id="marca-preview-pagina"></div>
         </div>
       </aside>
     </div>
