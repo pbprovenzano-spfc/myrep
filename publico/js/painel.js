@@ -73,14 +73,20 @@
   const ZAP_SVG =
     '<span class="link-btn__icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.15.16-.29.18-.53.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.68-1.18.2-.58.2-1.08.15-1.18-.06-.11-.23-.17-.48-.29Z"/></svg></span>';
 
+  const modoMarca = /^\/painel\/marca\/?$/i.test(location.pathname);
+
   let perfil = null;
   let paginaDados = null;
   let saveTimer = null;
   let slugTimer = null;
+  let marcaSaveTimer = null;
   let fotoLocalUrl = null;
+  let marcaLogoLocalUrl = null;
   let assetVersao = 0;
   let previewBlocosTimer = null;
   let previewRaf = 0;
+  let marcaAtualId = null;
+  let marcaAtual = null;
 
   function esc(s) {
     return String(s ?? "")
@@ -499,6 +505,28 @@
     return slug ? `/${slugRep}/${slug}/` : "";
   }
 
+  function idMarcaDaUrl() {
+    if (!modoMarca) return "";
+    return new URLSearchParams(location.search).get("id") || "";
+  }
+
+  function contatoDeValor(valor) {
+    const v = String(valor || "").trim();
+    if (!v) return null;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { canal: "E-mail", valor: v };
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 8) return { canal: "Telefone", valor: v };
+    return { canal: "Contato", valor: v };
+  }
+
+  function valorContatoMarca(marca) {
+    return marca?.contato?.valor || "";
+  }
+
+  function marcaPorId(id) {
+    return (paginaDados?.marcas || []).find((m) => m.id === id) || null;
+  }
+
   function renderMarcas(marcas) {
     const lista = document.getElementById("lista-marcas");
     if (!lista) return;
@@ -509,6 +537,7 @@
           .map(
             (m, i) => {
               const url = urlMarcaPreview(m, slugRep);
+              const hrefPagina = `/painel/marca/?id=${encodeURIComponent(m.id)}`;
               return `<li>
               <span class="painel-lista__corpo">
                 ${botoesOrdem(
@@ -522,8 +551,8 @@
                 </span>
               </span>
               <span class="painel-lista__acoes">
-                <button type="button" class="btn-link" data-edit-marca="${esc(m.id)}">Editar</button>
-                <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}">Remover</button>
+                <a class="btn btn--fantasma-ink btn--compacto" href="${esc(hrefPagina)}">Montar página da ${esc(m.nome)}</a>
+                <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}" aria-label="Remover ${esc(m.nome)}">Remover</button>
               </span>
             </li>`;
             }
@@ -533,26 +562,286 @@
     atualizarSelectMarcas(itens);
   }
 
-  function abrirEdicaoMarca(marca) {
-    const form = document.getElementById("form-marca-edit");
-    if (!form || !marca) return;
-    form.hidden = false;
-    form.querySelector("#marca-edit-id").value = marca.id;
-    form.nome.value = marca.nome || "";
-    form.descricao.value = marca.descricao || "";
-    form.site.value = marca.site ? marca.site.replace(/^https?:\/\//i, "") : "";
-    form.contatoCanal.value = marca.contato?.canal || "";
-    form.contatoValor.value = marca.contato?.valor || "";
-    limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
-    form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  function renderCatalogosMarca(marcaId) {
+    const lista = document.getElementById("marca-pagina-catalogos");
+    if (!lista) return;
+    const cats = (paginaDados?.catalogos || []).filter((c) => c.marcaId === marcaId);
+    lista.innerHTML = cats.length
+      ? cats.map((c) => `<li><span>${esc(c.titulo || c.arquivo)}</span></li>`).join("")
+      : "<li class='painel-lista__vazio'>Nenhum catálogo vinculado a esta marca.</li>";
   }
 
-  function fecharEdicaoMarca() {
-    const form = document.getElementById("form-marca-edit");
-    if (!form) return;
-    form.hidden = true;
-    form.reset();
-    limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+  function sincronizarLogoMarcaCampo(marca) {
+    const input = document.getElementById("marca-pagina-logo");
+    if (!input || !marca?.logo) return;
+    const zona = input.closest(".campo-arquivo__zona");
+    if (!zona) return;
+    const vazio = zona.querySelector(".campo-arquivo__vazio");
+    const preenchido = zona.querySelector(".campo-arquivo__preenchido");
+    const thumb = zona.querySelector(".campo-arquivo__thumb");
+    const nome = zona.querySelector(".campo-arquivo__nome");
+    if (!vazio || !preenchido) return;
+    const src = urlAsset(marca.logo);
+    if (src && thumb) {
+      thumb.src = src;
+      thumb.alt = `Logo de ${marca.nome || "marca"}`;
+    }
+    if (nome) nome.textContent = marca.logo;
+    vazio.hidden = true;
+    preenchido.hidden = false;
+  }
+
+  function estadoMarcaPreview() {
+    const form = document.getElementById("form-marca-pagina");
+    const dados = paginaDados || {};
+    const nome = form?.nome?.value?.trim() || marcaAtual?.nome || "";
+    const descricao = form?.descricao?.value?.trim() || "";
+    const siteBruto = form?.site?.value?.trim() || "";
+    const site = siteBruto ? (siteBruto.match(/^https?:\/\//i) ? siteBruto : `https://${siteBruto}`) : "";
+    const contatoExtra = contatoDeValor(form?.contatoExtra?.value || "");
+    const logo = marcaLogoLocalUrl || marcaAtual?.logo || "";
+    const slug = slugMarcaFromNome(nome);
+    const marca = {
+      ...(marcaAtual || {}),
+      id: marcaAtualId,
+      nome,
+      descricao,
+      logo,
+      slug,
+      ...(site ? { site } : {}),
+      ...(contatoExtra ? { contato: contatoExtra } : {})
+    };
+    return {
+      slug: perfil?.pagina?.slug || "",
+      paleta: dados.paleta || "ambar",
+      whatsapp: dados.whatsapp || "",
+      mensagemWhatsapp: dados.mensagemWhatsapp || "",
+      nome: dados.nome || "",
+      empresa: dados.empresa || "",
+      destaque: dados.destaque || "pessoa",
+      marca,
+      catalogos: (dados.catalogos || []).filter((c) => c.marcaId === marcaAtualId)
+    };
+  }
+
+  function nomeRepresentantePreview(c) {
+    const destaqueEmpresa = c.destaque === "empresa" && temTexto(c.empresa);
+    return destaqueEmpresa ? c.empresa : c.nome || c.empresa || "Representante";
+  }
+
+  function htmlPerfilMarcaPreview(estado) {
+    const marca = estado.marca;
+    const repNome = nomeRepresentantePreview(estado);
+    const slugRep = estado.slug || "";
+    const voltar = slugRep
+      ? `<p class="capa__voltar"><a href="/${esc(slugRep)}/">← Representada por ${esc(repNome)}</a></p>`
+      : "";
+    const logoSrc = marca.logo ? urlAsset(marca.logo) : "";
+    const foto = logoSrc
+      ? `<img class="capa__foto capa__foto--logo" src="${esc(logoSrc)}" alt="${esc(marca.nome)}" width="96" height="96">`
+      : `<div class="capa__foto capa__foto--inicial" aria-hidden="true">${esc((marca.nome || "M").slice(0, 1))}</div>`;
+    const descricao = temTexto(marca.descricao) ? `<p class="capa__bio">${esc(marca.descricao)}</p>` : "";
+    const numero = String(estado.whatsapp || "").replace(/\D/g, "");
+    let zap = "";
+    if (numero) {
+      const msg = temTexto(estado.mensagemWhatsapp) ? "?text=" + encodeURIComponent(estado.mensagemWhatsapp) : "";
+      zap = `<a class="link-btn link-btn--destaque" href="https://wa.me/${numero}${msg}" target="_blank" rel="noopener">
+      ${ZAP_SVG}
+      <span class="link-btn__texto">Falar no WhatsApp</span>
+    </a>`;
+    }
+    return `<div class="cartao__perfil">
+    <header class="capa pagina-marca">
+      ${voltar}
+      ${foto}
+      <h1 class="capa__nome">${esc(marca.nome || "Marca")}</h1>
+      ${descricao}
+    </header>
+    <div class="acoes">${zap}</div>
+  </div>`;
+  }
+
+  function htmlBlocosMarcaPreview(estado) {
+    const partes = [];
+    const catalogos = estado.catalogos || [];
+    if (catalogos.length) {
+      const itens = catalogos
+        .map((cat) => htmlItemCatalogoPreview(cat, [estado.marca]))
+        .join("");
+      partes.push(`<section class="bloco bloco--links"><h2 class="rotulo">Catálogos</h2><ul class="links">${itens}</ul></section>`);
+    } else {
+      partes.push(`<p class="segmentos">Nenhum catálogo desta marca ainda.</p>`);
+    }
+    const itensContato = [];
+    if (temTexto(estado.marca.site)) {
+      itensContato.push(`<li><a class="link-btn" href="${esc(estado.marca.site)}" target="_blank" rel="noopener"><span class="link-btn__texto">Site</span><span class="link-btn__meta">${esc(estado.marca.site.replace(/^https?:\/\//i, ""))}</span></a></li>`);
+    }
+    if (estado.marca.contato && temTexto(estado.marca.contato.canal) && temTexto(estado.marca.contato.valor)) {
+      const link = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(estado.marca.contato.valor)
+        ? `mailto:${estado.marca.contato.valor}`
+        : "#";
+      const externo = /^https?:/.test(link) ? ' target="_blank" rel="noopener"' : "";
+      itensContato.push(`<li><a class="link-btn" href="${esc(link)}"${externo}><span class="link-btn__texto">${esc(estado.marca.contato.canal)}</span><span class="link-btn__meta">${esc(estado.marca.contato.valor)}</span></a></li>`);
+    }
+    if (itensContato.length) {
+      partes.push(`<section class="bloco bloco--links"><h2 class="rotulo">Contato da marca</h2><ul class="links">${itensContato.join("")}</ul></section>`);
+    }
+    return partes.join("\n");
+  }
+
+  function atualizarPreviewMarca() {
+    const root = document.getElementById("marca-preview-pagina");
+    if (!root || !marcaAtual) return;
+    const estado = estadoMarcaPreview();
+    aplicarPaletaPreview(estado.paleta || "ambar", document.getElementById("secao-pagina-marca"));
+    root.innerHTML = `<div class="cartao shell--estreito pagina-marca">
+      ${htmlPerfilMarcaPreview(estado)}
+      <div class="cartao__blocos">${htmlBlocosMarcaPreview(estado)}</div>
+      <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo.png" alt="My Rep" width="28" height="28"></span></p></footer>
+    </div>`;
+  }
+
+  function agendarPreviewMarca() {
+    clearTimeout(previewBlocosTimer);
+    previewBlocosTimer = setTimeout(() => atualizarPreviewMarca(), 220);
+  }
+
+  function atualizarCabecalhoMarca(marca) {
+    document.title = `Página da ${marca.nome} — Painel`;
+    const titulo = document.getElementById("marca-pagina-titulo");
+    if (titulo) titulo.textContent = `Página da ${marca.nome}`;
+    const previewTitulo = document.getElementById("marca-preview-titulo");
+    if (previewTitulo) previewTitulo.textContent = `Como fica a página da ${marca.nome}`;
+    const slugRep = perfil?.pagina?.slug || "";
+    const slugMarca = marca.slug || slugMarcaFromNome(marca.nome);
+    const urlPublica = slugRep && slugMarca ? `/${slugRep}/${slugMarca}/` : "";
+    const contexto = document.getElementById("marca-pagina-contexto");
+    if (contexto) {
+      contexto.textContent = urlPublica
+        ? `Quem clicar no logo da ${marca.nome} abre este endereço: ${urlPublica}. Aqui você define o que aparece nessa página.`
+        : `Aqui você define o que aparece na página dedicada da ${marca.nome}.`;
+    }
+  }
+
+  function preencherEditorMarca(marca, opts = {}) {
+    marcaAtual = marca;
+    marcaAtualId = marca.id;
+    atualizarCabecalhoMarca(marca);
+
+    const titulo = document.getElementById("marca-pagina-titulo");
+    if (opts.focar && titulo) titulo.focus();
+    const form = document.getElementById("form-marca-pagina");
+    const erro = document.getElementById("marca-pagina-erro");
+    if (form) {
+      form.hidden = false;
+      form.querySelector("#marca-pagina-id").value = marca.id;
+      form.nome.value = marca.nome || "";
+      form.descricao.value = marca.descricao || "";
+      form.site.value = marca.site ? marca.site.replace(/^https?:\/\//i, "") : "";
+      form.contatoExtra.value = valorContatoMarca(marca);
+      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+      sincronizarLogoMarcaCampo(marca);
+    }
+    if (erro) erro.hidden = true;
+
+    renderCatalogosMarca(marca.id);
+    atualizarPreviewMarca();
+  }
+
+  function mostrarErroMarca() {
+    document.title = "Marca não encontrada — Painel";
+    document.getElementById("marca-pagina-erro")?.removeAttribute("hidden");
+    document.getElementById("form-marca-pagina")?.setAttribute("hidden", "");
+    document.getElementById("marca-pagina-contexto").textContent = "";
+    const titulo = document.getElementById("marca-pagina-titulo");
+    if (titulo) {
+      titulo.textContent = "Marca não encontrada";
+      titulo.focus();
+    }
+  }
+
+  function iniciarModoMarca() {
+    if (!modoMarca) return;
+    marcaAtualId = idMarcaDaUrl();
+    document.getElementById("painel-intro")?.setAttribute("hidden", "");
+    document.getElementById("secao-assinatura")?.setAttribute("hidden", "");
+    document.getElementById("secao-url")?.setAttribute("hidden", "");
+    document.getElementById("secao-pagina")?.setAttribute("hidden", "");
+    document.getElementById("secao-editor")?.setAttribute("hidden", "");
+    document.getElementById("secao-suporte")?.setAttribute("hidden", "");
+    document.getElementById("secao-pagina-marca")?.removeAttribute("hidden");
+
+    if (!marcaAtualId) {
+      mostrarErroMarca();
+      return;
+    }
+    const marca = marcaPorId(marcaAtualId);
+    if (!marca) {
+      mostrarErroMarca();
+      return;
+    }
+    preencherEditorMarca(marcasComSlugs([marca])[0], { focar: true });
+  }
+
+  async function salvarMarcaPagina(opts = {}) {
+    const status = document.getElementById("marca-pagina-status");
+    const form = document.getElementById("form-marca-pagina");
+    if (!form || !marcaAtualId) return;
+    const nome = form.nome?.value?.trim() || "";
+    if (!nome) {
+      setStatus(status, "Informe o nome da marca.", "erro");
+      return;
+    }
+    setStatus(status, "Salvando…", "info");
+    try {
+      const file = form.arquivo?.files?.[0];
+      if (file && file.size > MAX_IMAGEM) {
+        setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
+        return;
+      }
+      let arquivo = "";
+      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
+      const contato = contatoDeValor(form.contatoExtra?.value || "");
+      const body = {
+        acao: "marca_editar",
+        id: marcaAtualId,
+        nome,
+        descricao: form.descricao?.value?.trim() || "",
+        site: form.site?.value?.trim() || ""
+      };
+      if (contato) {
+        body.contatoCanal = contato.canal;
+        body.contatoValor = contato.valor;
+      } else {
+        body.contatoCanal = "";
+        body.contatoValor = "";
+      }
+      if (arquivo) body.arquivo = arquivo;
+      const data = await apiPagina("POST", body);
+      aplicarPagina(data.pagina, { silencioso: true });
+      if (marcaLogoLocalUrl) {
+        URL.revokeObjectURL(marcaLogoLocalUrl);
+        marcaLogoLocalUrl = null;
+      }
+      const atualizada = marcaPorId(marcaAtualId);
+      if (atualizada) {
+        marcaAtual = marcasComSlugs([atualizada])[0];
+        atualizarCabecalhoMarca(marcaAtual);
+        renderCatalogosMarca(marcaAtualId);
+        if (arquivo) sincronizarLogoMarcaCampo(marcaAtual);
+        atualizarPreviewMarca();
+      }
+      if (!opts.silencioso) setStatus(status, "Alterações salvas.", "ok");
+      else setStatus(status, "Salvo.", "ok");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+    }
+  }
+
+  function agendarSaveMarca() {
+    agendarPreviewMarca();
+    clearTimeout(marcaSaveTimer);
+    marcaSaveTimer = setTimeout(() => salvarMarcaPagina({ silencioso: true }), 800);
   }
 
   function renderCatalogos(catalogos, marcas) {
@@ -710,11 +999,14 @@
     return porUf;
   }
 
-  function aplicarPaletaPreview(id) {
+  function aplicarPaletaPreview(id, escopo) {
     const vars = PALETAS_PREVIEW[id] || PALETAS_PREVIEW.ambar;
-    const nos = [document.querySelector(".painel-preview__viewport"), document.getElementById("painel-preview-pagina")];
+    const raiz = escopo || document;
+    const nos = [
+      raiz.querySelector?.(".painel-preview__viewport") || (escopo ? null : document.querySelector(".painel-preview__viewport")),
+      raiz.querySelector?.(".painel-preview__pagina") || (escopo ? null : document.getElementById("painel-preview-pagina"))
+    ].filter(Boolean);
     for (const el of nos) {
-      if (!el) continue;
       for (const [chave, valor] of Object.entries(vars)) el.style.setProperty(chave, valor);
     }
   }
@@ -914,7 +1206,7 @@
     });
   }
 
-  function aplicarPagina(pagina) {
+  function aplicarPagina(pagina, opts) {
     if (!pagina) return;
     if (perfil) perfil.pagina = pagina;
     if (pagina.dados) paginaDados = pagina.dados;
@@ -931,7 +1223,17 @@
     if (pagina.marcas) renderMarcas(pagina.marcas);
     if (pagina.catalogos) renderCatalogos(pagina.catalogos, pagina.marcas || paginaDados.marcas);
     sincronizarFotoSalvaCampo();
-    atualizarPreview();
+    if (modoMarca && marcaAtualId) {
+      const marca = marcaPorId(marcaAtualId);
+      if (marca) {
+        marcaAtual = marcasComSlugs([marca])[0];
+        renderCatalogosMarca(marcaAtualId);
+        if (!opts?.preservarFormulario) sincronizarLogoMarcaCampo(marcaAtual);
+        atualizarPreviewMarca();
+      }
+    } else {
+      atualizarPreview();
+    }
   }
 
   async function apiPagina(method, body, formData) {
@@ -1175,6 +1477,8 @@
   }
 
   function renderVisibilidade() {
+    if (modoMarca) return;
+
     const ass = perfil?.assinatura;
     const pag = perfil?.pagina;
     const libera = assinaturaLibera(ass);
@@ -1190,6 +1494,7 @@
     document.getElementById("secao-pagina").hidden = !pag?.slug;
     document.getElementById("secao-editor").hidden = !libera || !pag?.slug;
     document.getElementById("secao-suporte").hidden = !libera;
+    document.getElementById("secao-pagina-marca")?.setAttribute("hidden", "");
 
     if (pag?.slug) {
       const href = urlAbsoluta(pag.url || `/${pag.slug}/`);
@@ -1206,7 +1511,7 @@
     }
   }
 
-  function renderPerfil(data) {
+  async function renderPerfil(data) {
     perfil = data;
     const user = data.user || {};
     const assinatura = data.assinatura;
@@ -1244,8 +1549,10 @@
     if (data.pagina?.dados) {
       preencherEditor(data.pagina.dados);
     } else if (data.pagina) {
-      carregarPaginaCompleta();
+      await carregarPaginaCompleta();
     }
+
+    if (modoMarca) iniciarModoMarca();
   }
 
   async function carregarPaginaCompleta() {
@@ -1297,11 +1604,11 @@
       await esperarAuth();
       const sessao = await window.MyRepAuth.sessaoAtual();
       if (!sessao) {
-        location.replace(`/entrar/?next=${encodeURIComponent("/painel/" + location.search)}`);
+        location.replace(`/entrar/?next=${encodeURIComponent(location.pathname + location.search)}`);
         return;
       }
       const data = await window.MyRepAuth.apiPerfil();
-      renderPerfil(data);
+      await renderPerfil(data);
       carregando.hidden = true;
       conteudo.hidden = false;
       btnSair.hidden = false;
@@ -1536,11 +1843,7 @@
       if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
       const body = {
         acao: "marca_add",
-        nome,
-        descricao: form.descricao?.value?.trim() || "",
-        site: form.site?.value?.trim() || "",
-        contatoCanal: form.contatoCanal?.value?.trim() || "",
-        contatoValor: form.contatoValor?.value?.trim() || ""
+        nome
       };
       if (arquivo) body.arquivo = arquivo;
       const data = await apiPagina("POST", body);
@@ -1591,56 +1894,34 @@
     }
   });
 
-  document.getElementById("form-marca-edit")?.addEventListener("submit", async (ev) => {
+  document.getElementById("form-marca-pagina")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const status = document.getElementById("editor-status");
-    const form = ev.currentTarget;
-    const nome = form.nome?.value?.trim() || "";
-    const file = form.arquivo?.files?.[0];
-    if (file && file.size > MAX_IMAGEM) {
+    await salvarMarcaPagina();
+  });
+
+  ["marca-pagina-nome", "marca-pagina-descricao", "marca-pagina-site", "marca-pagina-contato"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", agendarSaveMarca);
+  });
+
+  document.getElementById("marca-pagina-logo")?.addEventListener("change", async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const status = document.getElementById("marca-pagina-status");
+    if (file.size > MAX_IMAGEM) {
       setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
       return;
     }
-    setStatus(status, "Salvando marca…", "info");
-    try {
-      let arquivo = "";
-      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
-      const body = {
-        acao: "marca_editar",
-        id: form.querySelector("#marca-edit-id")?.value || "",
-        nome,
-        descricao: form.descricao?.value?.trim() || "",
-        site: form.site?.value?.trim() || "",
-        contatoCanal: form.contatoCanal?.value?.trim() || "",
-        contatoValor: form.contatoValor?.value?.trim() || ""
-      };
-      if (arquivo) body.arquivo = arquivo;
-      const data = await apiPagina("POST", body);
-      aplicarPagina(data.pagina);
-      fecharEdicaoMarca();
-      setStatus(status, "Marca atualizada.", "ok");
-    } catch (erro) {
-      setStatus(status, erro.message, "erro");
-    }
-  });
-
-  document.getElementById("btn-marca-edit-cancelar")?.addEventListener("click", () => {
-    fecharEdicaoMarca();
+    if (marcaLogoLocalUrl) URL.revokeObjectURL(marcaLogoLocalUrl);
+    marcaLogoLocalUrl = URL.createObjectURL(file);
+    atualizarPreviewMarca();
+    await salvarMarcaPagina();
   });
 
   document.getElementById("lista-marcas")?.addEventListener("click", async (ev) => {
     const btnUp = ev.target.closest("[data-marca-up]");
     const btnDown = ev.target.closest("[data-marca-down]");
-    const btnEdit = ev.target.closest("[data-edit-marca]");
     const btn = ev.target.closest("[data-rm-marca]");
     const status = document.getElementById("editor-status");
-
-    if (btnEdit) {
-      const id = btnEdit.getAttribute("data-edit-marca");
-      const marca = (paginaDados.marcas || []).find((m) => m.id === id);
-      if (marca) abrirEdicaoMarca(marca);
-      return;
-    }
 
     if (btnUp || btnDown) {
       const id = (btnUp || btnDown).getAttribute(btnUp ? "data-marca-up" : "data-marca-down");
