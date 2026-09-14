@@ -202,17 +202,116 @@
     return [...document.querySelectorAll("#ufs-grid input[type=checkbox]:checked")].map((el) => el.value);
   }
 
+  const cacheCidades = new Map();
+  let municipiosIndice = null;
+  let comboboxAberto = null;
+
+  function normalizarCidade(s) {
+    if (window.MyRepMapa?.normalizar) return window.MyRepMapa.normalizar(s);
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  async function carregarMunicipiosIndice() {
+    if (municipiosIndice) return municipiosIndice;
+    try {
+      const resp = await fetch("/geo/municipios.json");
+      if (!resp.ok) throw new Error("indisponível");
+      municipiosIndice = await resp.json();
+    } catch {
+      municipiosIndice = {};
+    }
+    return municipiosIndice;
+  }
+
   function cidadesPorUf() {
     const out = {};
     document.querySelectorAll("[data-cidades-uf]").forEach((wrap) => {
       const uf = wrap.getAttribute("data-cidades-uf");
-      const val = wrap.querySelector("textarea")?.value || "";
-      out[uf] = val
-        .split(/[\n,;]+/)
-        .map((s) => s.trim())
+      out[uf] = [...wrap.querySelectorAll('input[type="checkbox"][data-cidade-nome]:checked')]
+        .map((el) => el.value)
         .filter(Boolean);
     });
     return out;
+  }
+
+  function formatarResumoCidades(selecionadas) {
+    if (!selecionadas.length) return "Estado inteiro";
+    if (selecionadas.length === 1) return selecionadas[0];
+    if (selecionadas.length === 2) return `${selecionadas[0]}, ${selecionadas[1]}`;
+    return `${selecionadas[0]}, ${selecionadas[1]} +${selecionadas.length - 2}`;
+  }
+
+  function fecharComboboxAberto() {
+    if (!comboboxAberto) return;
+    comboboxAberto.classList.remove("cidades-combobox--aberto");
+    comboboxAberto.querySelector(".cidades-combobox__painel")?.setAttribute("hidden", "");
+    comboboxAberto.querySelector(".cidades-combobox__trigger")?.setAttribute("aria-expanded", "false");
+    comboboxAberto = null;
+  }
+
+  function abrirCombobox(combobox) {
+    if (comboboxAberto && comboboxAberto !== combobox) fecharComboboxAberto();
+    combobox.classList.add("cidades-combobox--aberto");
+    combobox.querySelector(".cidades-combobox__painel")?.removeAttribute("hidden");
+    combobox.querySelector(".cidades-combobox__trigger")?.setAttribute("aria-expanded", "true");
+    comboboxAberto = combobox;
+    const busca = combobox.querySelector(".cidades-combobox__busca");
+    if (busca) {
+      busca.value = "";
+      filtrarListaCombobox(combobox, "");
+      busca.focus();
+    }
+  }
+
+  function atualizarResumoCombobox(combobox) {
+    const selecionadas = [...combobox.querySelectorAll('input[type="checkbox"][data-cidade-nome]:checked')].map(
+      (el) => el.value
+    );
+    const resumo = combobox.querySelector(".cidades-combobox__resumo");
+    if (resumo) resumo.textContent = formatarResumoCidades(selecionadas);
+  }
+
+  function filtrarListaCombobox(combobox, termo) {
+    const norm = normalizarCidade(termo);
+    combobox.querySelectorAll(".cidades-combobox__item").forEach((item) => {
+      const nome = item.querySelector("input")?.value || "";
+      item.hidden = Boolean(norm && !normalizarCidade(nome).includes(norm));
+    });
+  }
+
+  function mesclarCidadesDisponiveis(disponiveis, selecionadas) {
+    const dispNorm = new Set(disponiveis.map(normalizarCidade));
+    const extras = selecionadas.filter((nome) => !dispNorm.has(normalizarCidade(nome)));
+    return [...extras, ...disponiveis];
+  }
+
+  function montarComboboxCidades(uf, selecionadas, disponiveis) {
+    const lista = mesclarCidadesDisponiveis(disponiveis, selecionadas);
+    const selNorm = new Set(selecionadas.map(normalizarCidade));
+    const resumo = formatarResumoCidades(selecionadas);
+    const idBase = `cidades-${uf.toLowerCase()}`;
+
+    const itens = lista
+      .map((nome) => {
+        const id = `${idBase}-${normalizarCidade(nome).replace(/\W+/g, "-")}`;
+        const checked = selNorm.has(normalizarCidade(nome)) ? " checked" : "";
+        return `<label class="cidades-combobox__item"><input type="checkbox" data-cidade-nome value="${esc(nome)}" id="${esc(id)}"${checked}> ${esc(nome)}</label>`;
+      })
+      .join("");
+
+    return `<div class="cidades-combobox" data-cidades-combobox>
+      <button type="button" class="cidades-combobox__trigger" aria-expanded="false" aria-haspopup="listbox">
+        <span class="cidades-combobox__resumo">${esc(resumo)}</span>
+      </button>
+      <div class="cidades-combobox__painel" hidden>
+        <input type="search" class="cidades-combobox__busca" placeholder="Buscar município…" autocomplete="off" aria-label="Buscar município em ${esc(uf)}">
+        <div class="cidades-combobox__lista" role="listbox">${itens || '<p class="cidades-combobox__vazio">Nenhum município encontrado.</p>'}</div>
+      </div>
+    </div>`;
   }
 
   function renderUfsGrid(estados = []) {
@@ -227,13 +326,40 @@
   }
 
   async function buscarCidadesUf(uf) {
-    if (!window.MyRepMapa?.fetchGeo) return [];
+    if (cacheCidades.has(uf)) return cacheCidades.get(uf);
+
+    if (window.MyRepMapa?.fetchGeo) {
+      try {
+        const geo = await window.MyRepMapa.fetchGeo(`uf-${uf}.json`);
+        const lista = Object.values(geo.areas || {})
+          .map((a) => a.nome)
+          .sort((a, b) => a.localeCompare(b, "pt-BR"));
+        if (lista.length) {
+          cacheCidades.set(uf, lista);
+          return lista;
+        }
+      } catch {
+        /* tenta próxima fonte */
+      }
+    }
+
+    const indice = await carregarMunicipiosIndice();
+    if (Array.isArray(indice[uf]) && indice[uf].length) {
+      cacheCidades.set(uf, indice[uf]);
+      return indice[uf];
+    }
+
     try {
-      const geo = await window.MyRepMapa.fetchGeo(`uf-${uf}.json`);
-      return Object.values(geo.areas || {})
-        .map((a) => a.nome)
-        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+      const resp = await fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+      );
+      if (!resp.ok) throw new Error("IBGE indisponível");
+      const data = await resp.json();
+      const lista = data.map((m) => m.nome).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      cacheCidades.set(uf, lista);
+      return lista;
     } catch {
+      cacheCidades.set(uf, []);
       return [];
     }
   }
@@ -241,15 +367,23 @@
   async function renderCidadesEditor(estados, cidadesObj) {
     const wrap = document.getElementById("cidades-por-uf-editor");
     if (!wrap) return;
+    fecharComboboxAberto();
     wrap.innerHTML = "";
     for (const uf of estados) {
+      const selecionadas = Array.isArray(cidadesObj?.[uf]) ? cidadesObj[uf] : [];
       const div = document.createElement("div");
       div.className = "cidades-uf";
       div.setAttribute("data-cidades-uf", uf);
-      const lista = Array.isArray(cidadesObj?.[uf]) ? cidadesObj[uf] : [];
-      div.innerHTML = `<label class="campo"><span class="campo__rotulo">${uf} — cidades (uma por linha)</span>
-        <textarea rows="3" placeholder="Salvador&#10;Feira de Santana">${esc(lista.join("\n"))}</textarea></label>`;
+      div.innerHTML = `<label class="campo">
+        <span class="campo__rotulo">${esc(uf)} — cidades</span>
+        <div class="cidades-combobox__carregando">Carregando municípios…</div>
+      </label>`;
       wrap.appendChild(div);
+
+      const campo = div.querySelector(".campo");
+      const disponiveis = await buscarCidadesUf(uf);
+      campo.querySelector(".cidades-combobox__carregando")?.remove();
+      campo.insertAdjacentHTML("beforeend", montarComboboxCidades(uf, selecionadas, disponiveis));
     }
   }
 
@@ -1205,9 +1339,44 @@
     agendarSave();
   });
 
-  document.getElementById("cidades-por-uf-editor")?.addEventListener("input", () => {
+  document.getElementById("cidades-por-uf-editor")?.addEventListener("click", (ev) => {
+    const trigger = ev.target.closest(".cidades-combobox__trigger");
+    if (trigger) {
+      const combobox = trigger.closest(".cidades-combobox");
+      if (combobox?.classList.contains("cidades-combobox--aberto")) fecharComboboxAberto();
+      else if (combobox) abrirCombobox(combobox);
+      return;
+    }
+    if (!ev.target.closest(".cidades-combobox")) fecharComboboxAberto();
+  });
+
+  document.getElementById("cidades-por-uf-editor")?.addEventListener("input", (ev) => {
+    const combobox = ev.target.closest(".cidades-combobox");
+    if (ev.target.matches(".cidades-combobox__busca") && combobox) {
+      filtrarListaCombobox(combobox, ev.target.value);
+      return;
+    }
+    if (ev.target.matches('input[type="checkbox"][data-cidade-nome]') && combobox) {
+      atualizarResumoCombobox(combobox);
+      agendarPreview("blocos");
+      agendarSave();
+    }
+  });
+
+  document.getElementById("cidades-por-uf-editor")?.addEventListener("change", (ev) => {
+    if (!ev.target.matches('input[type="checkbox"][data-cidade-nome]')) return;
+    const combobox = ev.target.closest(".cidades-combobox");
+    if (combobox) atualizarResumoCombobox(combobox);
     agendarPreview("blocos");
     agendarSave();
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") fecharComboboxAberto();
+  });
+
+  document.addEventListener("click", (ev) => {
+    if (comboboxAberto && !ev.target.closest(".cidades-combobox")) fecharComboboxAberto();
   });
 
   document.getElementById("input-foto")?.addEventListener("change", async (ev) => {

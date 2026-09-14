@@ -171,6 +171,32 @@ async function gerarBrasil() {
   console.log(`  ✓ brasil-uf.json (${Object.keys(areas).length} UFs, ${Math.round(fs.statSync(destino).size / 1024)} KB)`);
 }
 
+async function baixarMunicipiosUf(uf) {
+  const municipios = await baixar(
+    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+  );
+  return municipios
+    .map((m) => m.nome)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+async function gerarMunicipios() {
+  console.log("  Baixando nomes de municípios (todas as UFs)…");
+  const porUf = {};
+  let total = 0;
+
+  for (const uf of TODAS_UFS) {
+    porUf[uf] = await baixarMunicipiosUf(uf);
+    total += porUf[uf].length;
+  }
+
+  const destino = path.join(DIR_GEO, "municipios.json");
+  fs.writeFileSync(destino, JSON.stringify(porUf));
+  console.log(
+    `  ✓ municipios.json (${TODAS_UFS.length} UFs, ${total} municípios, ${Math.round(fs.statSync(destino).size / 1024)} KB)`
+  );
+}
+
 async function gerarUf(uf) {
   console.log(`  Baixando malha municipal de ${uf}…`);
   const [geojson, municipios] = await Promise.all([
@@ -205,6 +231,7 @@ async function main() {
   fs.mkdirSync(DIR_GEO, { recursive: true });
 
   await gerarBrasil();
+  await gerarMunicipios();
 
   const ufs = ufsMunicipais();
   console.log(`  Gerando malhas municipais (${ufs.length} UFs)…`);

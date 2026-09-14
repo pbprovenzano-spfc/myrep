@@ -1883,6 +1883,125 @@ a { color: inherit; }
   margin: 0;
 }
 
+.cidades-combobox {
+  position: relative;
+}
+
+.cidades-combobox__carregando {
+  font-size: 13px;
+  color: var(--mutado);
+  padding: 12px 0;
+}
+
+.cidades-combobox__trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--branco);
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 40px 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--mutado) 50%),
+    linear-gradient(135deg, var(--mutado) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  transition: border-color var(--transicao);
+}
+
+.cidades-combobox__trigger:hover {
+  border-color: color-mix(in srgb, var(--sinal) 45%, var(--borda));
+}
+
+.cidades-combobox__trigger:focus-visible {
+  outline: 3px solid var(--sinal);
+  outline-offset: 2px;
+}
+
+.cidades-combobox--aberto .cidades-combobox__trigger {
+  border-color: color-mix(in srgb, var(--sinal) 55%, var(--borda));
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.cidades-combobox__resumo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cidades-combobox__painel {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0;
+  top: 100%;
+  display: grid;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--sinal) 55%, var(--borda));
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: var(--branco);
+  box-shadow: 0 12px 28px rgba(10, 22, 32, 0.12);
+}
+
+.cidades-combobox__busca {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--borda);
+  border-radius: 0;
+  background: var(--branco);
+  color: var(--ink);
+  font: inherit;
+  padding: 10px 14px;
+}
+
+.cidades-combobox__busca:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--sinal);
+}
+
+.cidades-combobox__lista {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.cidades-combobox__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--texto);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cidades-combobox__item:hover {
+  background: color-mix(in srgb, var(--sinal) 8%, var(--branco));
+}
+
+.cidades-combobox__item input[type="checkbox"] {
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--sinal);
+}
+
+.cidades-combobox__vazio {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--mutado);
+}
+
 .paletas {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
