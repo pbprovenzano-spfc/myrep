@@ -30,6 +30,7 @@
    - `SUPABASE_ANON_KEY` é injetada no HTML pelo `build.js` (browser).
    - `SUPABASE_SERVICE_ROLE_KEY` fica só no servidor.
 6. Migração dos representantes demo: `npm run seed:supabase` (sobe JSONs de `clientes/` + assets para Storage).
+7. Conta local para conferir o `/painel/`: `npm run seed:usuario-teste`.
 
 ## Fluxo self-service
 

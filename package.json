@@ -8,6 +8,7 @@
     "dev": "node dev.js",
     "geo": "node scripts/geo.js",
     "seed:supabase": "node scripts/seed-supabase.js",
+    "seed:usuario-teste": "node scripts/seed-usuario-teste.js",
     "configure:auth-urls": "node scripts/configure-auth-urls.js",
     "migrate:codigos-vitalicios": "node scripts/apply-codigos-vitalicios-migration.js"
   },

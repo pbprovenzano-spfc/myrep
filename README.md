@@ -65,8 +65,14 @@ vercel.json
 
 ## Painel do cliente (`/painel/`)
 
-Requer login. Seções: assinatura, sua página (com botão compartilhar),
-catálogos/logos, escolha de URL e suporte.
+Requer login. Fluxo: assinatura → reserva de URL → editor com prévia ao
+vivo → publicar e compartilhar → suporte.
+
+O painel inclui uma trilha de primeiros passos, ajuda contextual em cada
+campo (“O que é isso?”) e um **manual de uso** recolhível no fim da página.
+As alterações de texto, estados e cores salvam sozinhas; foto, logo e PDF
+entram ao enviar o arquivo. A página só fica visível para outras pessoas
+depois de **Publicar**. A URL escolhida é definitiva.
 
 ## Painel admin (`/admin/`)
 

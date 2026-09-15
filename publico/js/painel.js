@@ -102,6 +102,201 @@
     el.dataset.tipo = tipo || "";
   }
 
+  function prefersReducedMotion() {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  }
+
+  function alvoVisivel(id) {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    return !el.closest("[hidden]");
+  }
+
+  function setAjudaAberta(botao, aberto) {
+    const id = botao.getAttribute("aria-controls");
+    const painel = id ? document.getElementById(id) : null;
+    botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+    if (painel) painel.hidden = !aberto;
+  }
+
+  function initAjudas() {
+    if (document.documentElement.dataset.ajudasInit) return;
+    document.documentElement.dataset.ajudasInit = "1";
+    document.addEventListener("click", (ev) => {
+      const botao = ev.target.closest("[data-ajuda-toggle]");
+      if (!botao) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const aberto = botao.getAttribute("aria-expanded") === "true";
+      setAjudaAberta(botao, !aberto);
+    });
+  }
+
+  function abrirManual(ev) {
+    if (ev) ev.preventDefault();
+    const secao = document.getElementById("secao-manual");
+    if (!secao || secao.hidden) return;
+    const primeiro = secao.querySelector("details");
+    if (primeiro) primeiro.open = true;
+    secao.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start"
+    });
+    document.getElementById("manual-titulo")?.focus();
+  }
+
+  function dadosEssenciaisPreenchidos() {
+    const nome =
+      document.getElementById("campo-nome")?.value?.trim() || paginaDados?.nome || "";
+    const zap = montarWhatsapp() || paginaDados?.whatsapp || "";
+    return !!(nome && zap);
+  }
+
+  const PASSOS_TRILHA = [
+    {
+      id: "assinar",
+      titulo: "Assinar um plano",
+      texto: "Escolha mensal ou anual para liberar o editor.",
+      alvo: "secao-assinatura"
+    },
+    {
+      id: "url",
+      titulo: "Escolher o endereço",
+      texto: "Reserve o link definitivo da sua página.",
+      alvo: "secao-url"
+    },
+    {
+      id: "dados",
+      titulo: "Preencher seus dados",
+      texto: "Nome, foto e WhatsApp — o essencial para o cliente te achar.",
+      alvo: "secao-identidade"
+    },
+    {
+      id: "marcas",
+      titulo: "Adicionar marcas",
+      texto: "Coloque as empresas que você representa.",
+      alvo: "secao-marcas"
+    },
+    {
+      id: "atuacao",
+      titulo: "Marcar onde você atende",
+      texto: "Estados e cidades aparecem no mapa da página.",
+      alvo: "secao-atuacao"
+    },
+    {
+      id: "publicar",
+      titulo: "Publicar e compartilhar",
+      texto: "Deixe a página no ar e envie o link.",
+      alvo: "secao-pagina"
+    }
+  ];
+
+  function trilhaConcluido(id) {
+    switch (id) {
+      case "assinar":
+        return assinaturaLibera(perfil?.assinatura);
+      case "url":
+        return !!perfil?.pagina?.slug;
+      case "dados":
+        return dadosEssenciaisPreenchidos();
+      case "marcas":
+        return (paginaDados?.marcas || []).length > 0;
+      case "atuacao":
+        return (paginaDados?.estados || []).length > 0 || ufsSelecionadas().length > 0;
+      case "publicar":
+        return !!perfil?.pagina?.publicado;
+      default:
+        return false;
+    }
+  }
+
+  function renderTrilha() {
+    const lista = document.getElementById("trilha-lista");
+    const agoraEl = document.getElementById("trilha-agora");
+    if (!lista || modoMarca) return;
+
+    const estados = PASSOS_TRILHA.map((passo) => ({
+      ...passo,
+      feito: trilhaConcluido(passo.id)
+    }));
+    const atual = estados.find((passo) => !passo.feito) || null;
+
+    lista.innerHTML = estados
+      .map((passo, i) => {
+        const fase = passo.feito ? "feito" : atual && atual.id === passo.id ? "agora" : "depois";
+        const estadoTexto = fase === "feito" ? "Feito" : fase === "agora" ? "Agora" : "Depois";
+        const numero = fase === "feito" ? "✓" : String(i + 1);
+        const mostrarLink = fase !== "depois" && alvoVisivel(passo.alvo);
+        const current = fase === "agora" ? ' aria-current="step"' : "";
+        return `<li class="painel-trilha__passo painel-trilha__passo--${fase}"${current} tabindex="-1">
+          <span class="painel-trilha__indice" aria-hidden="true">${numero}</span>
+          <div class="painel-trilha__corpo">
+            <h3>${esc(passo.titulo)}</h3>
+            <p>${esc(fase === "feito" ? "Concluído." : passo.texto)}</p>
+          </div>
+          <div class="painel-trilha__lado">
+            <span class="painel-trilha__estado">${estadoTexto}</span>
+            ${
+              mostrarLink
+                ? `<a href="#${passo.alvo}">${fase === "feito" ? "Ver" : "Ir para este passo"}</a>`
+                : ""
+            }
+          </div>
+        </li>`;
+      })
+      .join("");
+
+    if (agoraEl) {
+      agoraEl.textContent = atual
+        ? `Seu próximo passo: ${atual.titulo}. ${atual.texto}`
+        : "Tudo pronto. Sua página está no ar — compartilhe o link com seus clientes.";
+    }
+  }
+
+  function focarProximoPassoTrilha() {
+    renderTrilha();
+    const atual = document.querySelector('.painel-trilha__passo[aria-current="step"]');
+    const link = atual?.querySelector("a");
+    const alvo = link || atual || document.getElementById("trilha-agora");
+    atual?.scrollIntoView({
+      block: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth"
+    });
+    alvo?.focus?.();
+  }
+
+  function textoResumoPreview(c) {
+    const nome =
+      (c.destaque === "empresa" ? c.empresa : c.nome) || c.nome || c.empresa || "Sem nome ainda";
+    const partes = [nome];
+    if (c.whatsapp) partes.push("botão de WhatsApp");
+    const nMarcas = (c.marcas || []).length;
+    if (nMarcas) partes.push(`${nMarcas} ${nMarcas === 1 ? "marca" : "marcas"}`);
+    const nEstados = (c.estados || []).length;
+    if (nEstados) partes.push(`mapa com ${nEstados} ${nEstados === 1 ? "estado" : "estados"}`);
+    const nCats = (c.catalogos || []).length;
+    if (nCats) partes.push(`${nCats} ${nCats === 1 ? "catálogo" : "catálogos"}`);
+    return `Prévia da página: ${partes.join(" · ")}.`;
+  }
+
+  function atualizarResumoPreview() {
+    const el = document.getElementById("painel-preview-resumo");
+    if (!el) return;
+    el.textContent = textoResumoPreview(estadoPreview());
+  }
+
+  function atualizarResumoPreviewMarca(estado) {
+    const el = document.getElementById("marca-preview-resumo");
+    if (!el || !estado?.marca) return;
+    const partes = [estado.marca.nome || "Marca"];
+    if (estado.marca.descricao) partes.push("texto de apresentação");
+    if (estado.marca.site) partes.push("site");
+    if (estado.marca.contato?.valor) partes.push("contato extra");
+    const nCats = (estado.catalogos || []).length;
+    if (nCats) partes.push(`${nCats} ${nCats === 1 ? "catálogo" : "catálogos"}`);
+    el.textContent = `Prévia da página da marca: ${partes.join(" · ")}.`;
+  }
+
   async function authHeaders(jsonBody) {
     const h = { Authorization: `Bearer ${await window.MyRepAuth.accessToken()}` };
     if (jsonBody) h["Content-Type"] = "application/json";
@@ -570,7 +765,7 @@
             }
           )
           .join("")
-      : "<li class='painel-lista__vazio'>Nenhuma marca ainda.</li>";
+      : "<li class='painel-lista__vazio'>Nenhuma marca ainda. Adicione a primeira abaixo — cada logo vira um atalho na sua página.</li>";
     atualizarSelectMarcas(itens);
   }
 
@@ -711,6 +906,7 @@
       <div class="cartao__blocos">${htmlBlocosMarcaPreview(estado)}</div>
       <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo.png" alt="My Rep" width="28" height="28"></span></p></footer>
     </div>`;
+    atualizarResumoPreviewMarca(estado);
   }
 
   function agendarPreviewMarca() {
@@ -781,6 +977,9 @@
     document.getElementById("secao-pagina")?.setAttribute("hidden", "");
     document.getElementById("secao-editor")?.setAttribute("hidden", "");
     document.getElementById("secao-suporte")?.setAttribute("hidden", "");
+    document.getElementById("secao-trilha")?.setAttribute("hidden", "");
+    document.getElementById("secao-manual")?.setAttribute("hidden", "");
+    document.getElementById("link-manual-topo")?.setAttribute("hidden", "");
     document.getElementById("secao-pagina-marca")?.removeAttribute("hidden");
 
     if (!marcaAtualId) {
@@ -861,7 +1060,8 @@
     if (!lista) return;
     const cats = catalogos || [];
     if (!cats.length) {
-      lista.innerHTML = "<li class='painel-lista__vazio'>Nenhum catálogo ainda.</li>";
+      lista.innerHTML =
+        "<li class='painel-lista__vazio'>Nenhum catálogo ainda. Envie um PDF abaixo para o cliente baixar na sua página.</li>";
       return;
     }
 
@@ -935,6 +1135,7 @@
     renderCatalogos(paginaDados.catalogos, paginaDados.marcas);
     sincronizarFotoSalvaCampo();
     atualizarPreview();
+    renderTrilha();
   }
 
   function payloadTexto() {
@@ -1191,6 +1392,7 @@
         const wrap = document.createElement("div");
         wrap.innerHTML = htmlPerfilPreview(c);
         perfilEl.replaceWith(wrap.firstElementChild);
+        atualizarResumoPreview();
         return;
       }
     }
@@ -1203,6 +1405,7 @@
     </div>`;
 
     montarMapaPreview(root);
+    atualizarResumoPreview();
   }
 
   function agendarPreview(tipo) {
@@ -1246,6 +1449,7 @@
     } else {
       atualizarPreview();
     }
+    renderTrilha();
   }
 
   async function apiPagina(method, body, formData) {
@@ -1371,6 +1575,12 @@
       const btnTrocar = campo.querySelector(".campo-arquivo__trocar");
       if (!input || !zona || input.dataset.arquivoInit) return;
       input.dataset.arquivoInit = "1";
+      input.tabIndex = -1;
+      zona.setAttribute("role", "button");
+      if (!zona.getAttribute("aria-label") && !zona.getAttribute("aria-labelledby")) {
+        const rotulo = campo.querySelector(".campo__rotulo");
+        zona.setAttribute("aria-label", rotulo?.textContent?.trim() || "Enviar arquivo");
+      }
 
       input.addEventListener("change", () => {
         const file = input.files?.[0];
@@ -1467,6 +1677,7 @@
 
   function agendarSave() {
     agendarPreview();
+    renderTrilha();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(salvarTexto, 800);
   }
@@ -1489,7 +1700,16 @@
   }
 
   function renderVisibilidade() {
-    if (modoMarca) return;
+    if (modoMarca) {
+      document.getElementById("secao-trilha")?.setAttribute("hidden", "");
+      document.getElementById("secao-manual")?.setAttribute("hidden", "");
+      document.getElementById("link-manual-topo")?.setAttribute("hidden", "");
+      return;
+    }
+
+    document.getElementById("secao-trilha")?.removeAttribute("hidden");
+    document.getElementById("secao-manual")?.removeAttribute("hidden");
+    document.getElementById("link-manual-topo")?.removeAttribute("hidden");
 
     const ass = perfil?.assinatura;
     const pag = perfil?.pagina;
@@ -1521,6 +1741,8 @@
         ? "Despublicar"
         : "Publicar página";
     }
+
+    renderTrilha();
   }
 
   async function renderPerfil(data) {
@@ -1674,6 +1896,7 @@
       renderVisibilidade();
       preencherEditor(data.pagina.dados);
       setStatus(status, data.aviso, "ok");
+      focarProximoPassoTrilha();
     } catch (erro) {
       setStatus(status, erro.message, "erro");
     }
@@ -1977,6 +2200,7 @@
       perfil.pagina = data.pagina;
       renderVisibilidade();
       setStatus(status, data.aviso, "ok");
+      focarProximoPassoTrilha();
     } catch (erro) {
       setStatus(status, erro.message, "erro");
     }
@@ -2053,6 +2277,10 @@
     location.href = "/";
   });
 
+  initAjudas();
+  document.querySelectorAll("[data-abrir-manual]").forEach((el) => {
+    el.addEventListener("click", abrirManual);
+  });
   initCamposArquivo();
   carregar();
 })();
