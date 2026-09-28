@@ -1996,6 +1996,61 @@ a.marca-chip:focus-visible {
   display: none;
 }
 
+.campo-arquivo__zona.is-enviando {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--sinal) 45%, var(--borda));
+  background: color-mix(in srgb, var(--sinal) 6%, var(--branco));
+  cursor: wait;
+  min-height: 132px;
+  pointer-events: none;
+}
+
+.campo-arquivo__zona.is-enviando .campo-arquivo__vazio,
+.campo-arquivo__zona.is-enviando .campo-arquivo__preenchido {
+  display: none !important;
+}
+
+.campo-arquivo__carregando {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 92px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.campo-arquivo__carregando[hidden] {
+  display: none !important;
+}
+
+.campo-arquivo__zona.is-enviando .campo-arquivo__carregando {
+  display: flex;
+}
+
+.campo-arquivo__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid color-mix(in srgb, var(--sinal) 22%, var(--borda));
+  border-top-color: var(--sinal);
+  border-radius: 50%;
+  animation: campo-arquivo-spin 0.75s linear infinite;
+}
+
+.campo-arquivo__carregando-texto {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--mutado);
+}
+
+@keyframes campo-arquivo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .campo-arquivo__icone {
   display: flex;
   align-items: center;

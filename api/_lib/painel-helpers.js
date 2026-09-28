@@ -140,6 +140,20 @@ async function exigirAssinaturaAtiva(userId) {
   return assinatura;
 }
 
+const EXT_IMAGEM_PERMITIDA = new Set(["jpg", "jpeg", "png", "webp"]);
+
+function extensaoDeNome(nome) {
+  return String(nome || "")
+    .split(".")
+    .pop()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function extensaoImagemPermitida(nome) {
+  return EXT_IMAGEM_PERMITIDA.has(extensaoDeNome(nome));
+}
+
 function paginaResumo(pagina) {
   const dados = pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {};
   return {
@@ -147,6 +161,7 @@ function paginaResumo(pagina) {
     publicado: pagina.publicado !== false,
     publicadoEm: pagina.publicado_em || null,
     ativo: pagina.ativo !== false,
+    updatedAt: pagina.updated_at || null,
     nome: dados.nome || dados.empresa || pagina.slug,
     catalogos: Array.isArray(dados.catalogos) ? dados.catalogos : [],
     marcas: Array.isArray(dados.marcas) ? dados.marcas : [],
@@ -169,5 +184,7 @@ module.exports = {
   exigirAssinaturaAtiva,
   paginaResumo,
   nomeArquivoSeguro,
-  mimePorNome
+  mimePorNome,
+  extensaoImagemPermitida,
+  extensaoDeNome
 };

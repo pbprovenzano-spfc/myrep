@@ -26,8 +26,12 @@ const {
   exigirAssinaturaAtiva,
   paginaResumo,
   nomeArquivoSeguro,
-  mimePorNome
+  mimePorNome,
+  extensaoImagemPermitida,
+  extensaoDeNome
 } = require("../painel-helpers");
+
+const MAX_SAVE_RETRIES = 5;
 
 const CAMPOS_TEXTO = [
   "nome",
@@ -49,25 +53,65 @@ function montarWhatsapp(ddd, numero) {
   return `55${d}${n}`;
 }
 
-async function salvarPagina(userId, dados, patchMeta = {}) {
-  const sb = getSupabase();
-  const normalizado = normalizarDados(dados);
-  const update = {
-    dados: normalizado,
-    updated_at: new Date().toISOString(),
-    ...patchMeta
-  };
-  const { data, error } = await sb
-    .from("representantes")
-    .update(update)
-    .eq("user_id", userId)
-    .select()
-    .single();
-  if (error) {
-    console.error("salvarPagina:", error.message);
-    throw Object.assign(new Error("Falha ao salvar alterações."), { status: 500 });
+function aplicarCamposTexto(dados, campos) {
+  const out = { ...dados };
+  for (const k of CAMPOS_TEXTO) {
+    if (campos[k] !== undefined) out[k] = campos[k];
   }
-  return data;
+  if (campos.estados !== undefined) {
+    out.estados = Array.isArray(campos.estados)
+      ? campos.estados.map((u) => String(u).toUpperCase())
+      : [];
+  }
+  if (campos.cidades !== undefined) {
+    out.cidades = normalizarCidadesInput(campos.cidades, out.estados || []);
+  }
+  if (campos.contatos !== undefined && Array.isArray(campos.contatos)) {
+    out.contatos = campos.contatos;
+  }
+  return out;
+}
+
+async function salvarPaginaOtimista(userId, slug, mutator, patchMeta = {}, beforeAttempt = null) {
+  const sb = getSupabase();
+  for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
+    const { data: row, error: readErr } = await sb
+      .from("representantes")
+      .select("dados, updated_at, slug")
+      .eq("user_id", userId)
+      .single();
+    if (readErr || !row) {
+      console.error("salvarPaginaOtimista read:", readErr?.message);
+      throw Object.assign(new Error("Falha ao carregar a página."), { status: 500 });
+    }
+    const expectedAt = row.updated_at;
+    const slugAtual = row.slug || slug;
+    let dados = normalizarDados({
+      ...(row.dados && typeof row.dados === "object" ? row.dados : {}),
+      slug: slugAtual
+    });
+    if (beforeAttempt) await beforeAttempt(dados, slugAtual);
+    dados = mutator(dados);
+    const normalizado = normalizarDados(dados);
+    const update = {
+      dados: normalizado,
+      updated_at: new Date().toISOString(),
+      ...patchMeta
+    };
+    const { data, error: upErr } = await sb
+      .from("representantes")
+      .update(update)
+      .eq("user_id", userId)
+      .eq("updated_at", expectedAt)
+      .select()
+      .single();
+    if (!upErr && data) return data;
+    if (upErr && upErr.code !== "PGRST116") {
+      console.error("salvarPaginaOtimista:", upErr.message);
+      throw Object.assign(new Error("Falha ao salvar alterações."), { status: 500 });
+    }
+  }
+  throw Object.assign(new Error("Não foi possível salvar agora. Tente de novo."), { status: 409 });
 }
 
 module.exports = async function handler(req, res) {
@@ -109,13 +153,9 @@ module.exports = async function handler(req, res) {
     await exigirAssinaturaAtiva(user.id);
 
     const slug = pagina.slug;
-    let dados = normalizarDados({
-      ...(pagina.dados && typeof pagina.dados === "object" ? pagina.dados : {}),
-      slug
-    });
-    let catalogos = [...dados.catalogos];
-    let marcas = [...dados.marcas];
     let patchMeta = {};
+    let mutator = null;
+    let beforeAttempt = null;
 
     const ct = req.headers["content-type"] || "";
     let acao = "";
@@ -150,9 +190,15 @@ module.exports = async function handler(req, res) {
     if (acao === "upload_url") {
       const tipo = String(campos.tipo || "catalogo").trim().toLowerCase();
       const original = String(campos.nome || campos.dica || "arquivo");
-      const extBruta = (original.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      if ((tipo === "foto" || tipo === "marca") && !extensaoImagemPermitida(original)) {
+        return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+      }
+      const extBruta = extensaoDeNome(original);
       const ext =
         extBruta || (tipo === "catalogo" ? "pdf" : tipo === "marca" || tipo === "foto" ? "jpg" : "bin");
+      if ((tipo === "foto" || tipo === "marca") && !extensaoImagemPermitida(`x.${ext}`)) {
+        return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+      }
       const dica = String(campos.dica || original.replace(/\.[^.]+$/, "") || tipo);
       let nomeArq;
       if (tipo === "foto") {
@@ -168,35 +214,28 @@ module.exports = async function handler(req, res) {
       const up = await criarUrlUpload(slug, nomeArq, { upsert: tipo === "foto" || tipo === "marca" });
       return json(res, 200, { ok: true, ...up });
     } else if (acao === "atualizar" || req.method === "PUT") {
-      for (const k of CAMPOS_TEXTO) {
-        if (campos[k] !== undefined) dados[k] = campos[k];
-      }
-      if (campos.estados !== undefined) {
-        dados.estados = Array.isArray(campos.estados)
-          ? campos.estados.map((u) => String(u).toUpperCase())
-          : [];
-      }
-      if (campos.cidades !== undefined) {
-        dados.cidades = normalizarCidadesInput(campos.cidades, dados.estados || []);
-      }
-      if (campos.contatos !== undefined && Array.isArray(campos.contatos)) {
-        dados.contatos = campos.contatos;
-      }
-      dados = normalizarDados({ ...dados, catalogos, marcas });
+      mutator = (dados) => aplicarCamposTexto(dados, campos);
     } else if (acao === "foto_set") {
       const file = arquivos[0];
       let nomeArq = nomeAssetInformado(campos.arquivo);
       if (file) {
         if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
-        const ext = (file.filename.split(".").pop() || "jpg").toLowerCase();
+        if (!extensaoImagemPermitida(file.filename)) {
+          return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+        }
+        const ext = extensaoDeNome(file.filename) || "jpg";
         nomeArq = `foto.${ext}`.slice(0, 120);
-        if (dados.foto && dados.foto !== nomeArq) await removerAsset(slug, dados.foto);
         await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
       }
       if (!nomeArq) return json(res, 400, { erro: "Envie a foto ou logo." });
-      if (dados.foto && dados.foto !== nomeArq) await removerAsset(slug, dados.foto);
-      dados.foto = nomeArq;
-      dados.fotoTipo = campos.fotoTipo === "logo" ? "logo" : "pessoa";
+      if (!extensaoImagemPermitida(nomeArq)) {
+        return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+      }
+      const fotoTipo = campos.fotoTipo === "logo" ? "logo" : "pessoa";
+      beforeAttempt = async (dados, slugAtual) => {
+        if (dados.foto && dados.foto !== nomeArq) await removerAsset(slugAtual, dados.foto);
+      };
+      mutator = (dados) => ({ ...dados, foto: nomeArq, fotoTipo });
     } else if (acao === "marca_add" || acao === "marca_editar") {
       const nomeMarca = String(campos.nome || "").trim().slice(0, 120);
       if (!nomeMarca) return json(res, 400, { erro: "Informe o nome da marca." });
@@ -204,46 +243,75 @@ module.exports = async function handler(req, res) {
       let logo = nomeAssetInformado(campos.arquivo) || null;
       if (file) {
         if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
-        const ext = (file.filename.split(".").pop() || "png").toLowerCase();
+        if (!extensaoImagemPermitida(file.filename)) {
+          return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+        }
+        const ext = extensaoDeNome(file.filename) || "png";
         logo = `marca-${nomeArquivoSeguro(nomeMarca, "marca")}.${ext}`.slice(0, 120);
         await uploadAsset(slug, logo, file.data, mimePorNome(logo));
       }
+      if (logo && !extensaoImagemPermitida(logo)) {
+        return json(res, 400, { erro: "Use JPG, PNG ou WEBP." });
+      }
       const idAlvo = campos.id || null;
-      const idx = idAlvo
-        ? marcas.findIndex((m) => m.id === idAlvo)
-        : marcas.findIndex((m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase());
-      const existente = idx >= 0 ? marcas[idx] : null;
-      const entrada = {
-        id: existente?.id || novoId("m"),
-        nome: nomeMarca,
-        ...(logo ? { logo } : existente?.logo ? { logo: existente.logo } : {})
-      };
       const descricao = String(campos.descricao || "").trim().slice(0, 600);
-      if (descricao) entrada.descricao = descricao;
       const site = normalizarSite(campos.site);
-      if (site) entrada.site = site;
       const contatoCanal = String(campos.contatoCanal || "").trim().slice(0, 80);
       const contatoValor = String(campos.contatoValor || "").trim().slice(0, 160);
+      let contatoExtra = null;
       if (contatoCanal && contatoValor) {
-        const contato = normalizarContatoMarca({ canal: contatoCanal, valor: contatoValor });
-        if (contato) entrada.contato = contato;
+        contatoExtra = normalizarContatoMarca({ canal: contatoCanal, valor: contatoValor });
       }
-      if (idx >= 0) marcas[idx] = entrada;
-      else marcas.push(entrada);
+      const limparContato = !contatoCanal && !contatoValor;
+      mutator = (dados) => {
+        const marcas = [...(dados.marcas || [])];
+        const idx = idAlvo
+          ? marcas.findIndex((m) => m.id === idAlvo)
+          : marcas.findIndex((m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase());
+        const existente = idx >= 0 ? marcas[idx] : null;
+        const entrada = {
+          id: existente?.id || novoId("m"),
+          nome: nomeMarca,
+          ...(logo ? { logo } : existente?.logo ? { logo: existente.logo } : {})
+        };
+        if (descricao) entrada.descricao = descricao;
+        if (site) entrada.site = site;
+        if (contatoExtra) entrada.contato = contatoExtra;
+        else if (limparContato && existente?.contato) delete entrada.contato;
+        if (idx >= 0) marcas[idx] = entrada;
+        else marcas.push(entrada);
+        return { ...dados, marcas };
+      };
     } else if (acao === "marca_remover") {
       const idAlvo = campos.id || campos.marcaId;
       const nomeMarca = String(campos.nome || "").trim().toLowerCase();
-      const item = idAlvo
-        ? marcas.find((m) => m.id === idAlvo)
-        : marcas.find((m) => String(m.nome || "").toLowerCase() === nomeMarca);
-      if (item?.logo) await removerAsset(slug, item.logo);
-      marcas = marcas.filter((m) => m !== item);
-      catalogos = catalogos.map((c) => (c.marcaId === item?.id ? { ...c, marcaId: undefined } : c));
+      beforeAttempt = async (dados, slugAtual) => {
+        const marcas = dados.marcas || [];
+        const item = idAlvo
+          ? marcas.find((m) => m.id === idAlvo)
+          : marcas.find((m) => String(m.nome || "").toLowerCase() === nomeMarca);
+        if (item?.logo) await removerAsset(slugAtual, item.logo);
+      };
+      mutator = (dados) => {
+        const marcas = dados.marcas || [];
+        const item = idAlvo
+          ? marcas.find((m) => m.id === idAlvo)
+          : marcas.find((m) => String(m.nome || "").toLowerCase() === nomeMarca);
+        const marcasFiltradas = marcas.filter((m) => m !== item);
+        const catalogos = (dados.catalogos || []).map((c) =>
+          c.marcaId === item?.id ? { ...c, marcaId: undefined } : c
+        );
+        return { ...dados, marcas: marcasFiltradas, catalogos };
+      };
     } else if (acao === "catalogo_add") {
       const file = arquivos[0];
       let nomeArq = nomeAssetInformado(campos.arquivo);
       if (file) {
-        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais (máx. 3,5 MB por este caminho). Envie pelo painel atualizado." });
+        if (file.data.length > MAX_ANEXO) {
+          return json(res, 413, {
+            erro: "Arquivo grande demais (máx. 3,5 MB por este caminho). Envie pelo painel atualizado."
+          });
+        }
         const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
         const base = nomeArquivoSeguro(campos.titulo || file.filename.replace(/\.[^.]+$/, ""), "catalogo");
         nomeArq = `${base}.${ext}`.slice(0, 120);
@@ -258,52 +326,97 @@ module.exports = async function handler(req, res) {
         tipo: campos.tipo || (ext === "pdf" ? "PDF" : "Arquivo")
       };
       if (campos.marcaId) cat.marcaId = campos.marcaId;
-      catalogos.push(cat);
+      mutator = (dados) => ({
+        ...dados,
+        catalogos: [...(dados.catalogos || []), cat]
+      });
     } else if (acao === "catalogo_editar") {
       const idAlvo = campos.id;
-      const idx = catalogos.findIndex((c) => c.id === idAlvo || c.arquivo === campos.arquivoNome);
-      if (idx < 0) return json(res, 404, { erro: "Catálogo não encontrado." });
-      const cat = { ...catalogos[idx] };
-      if (campos.titulo) cat.titulo = String(campos.titulo).slice(0, 120);
-      if (campos.marcaId !== undefined) {
-        if (campos.marcaId) cat.marcaId = campos.marcaId;
-        else delete cat.marcaId;
-      }
       const file = arquivos[0];
-      if (file) {
-        if (file.data.length > MAX_ANEXO) return json(res, 413, { erro: "Arquivo grande demais." });
-        if (cat.arquivo) await removerAsset(slug, cat.arquivo);
-        const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
-        const base = nomeArquivoSeguro(campos.titulo || cat.titulo || "catalogo", "catalogo");
-        const nomeArq = `${base}.${ext}`.slice(0, 120);
-        await uploadAsset(slug, nomeArq, file.data, mimePorNome(nomeArq));
-        cat.arquivo = nomeArq;
+      if (file && file.data.length > MAX_ANEXO) {
+        return json(res, 413, { erro: "Arquivo grande demais." });
       }
-      catalogos[idx] = cat;
+      let novoArquivo = null;
+      let storagePronto = !file;
+      if (file) {
+        beforeAttempt = async (dados, slugAtual) => {
+          if (storagePronto) return;
+          const cat = (dados.catalogos || []).find(
+            (c) => c.id === idAlvo || c.arquivo === campos.arquivoNome
+          );
+          if (!cat) {
+            throw Object.assign(new Error("Catálogo não encontrado."), { status: 404 });
+          }
+          if (cat.arquivo) await removerAsset(slugAtual, cat.arquivo);
+          const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
+          const base = nomeArquivoSeguro(campos.titulo || cat.titulo || "catalogo", "catalogo");
+          novoArquivo = `${base}.${ext}`.slice(0, 120);
+          await uploadAsset(slugAtual, novoArquivo, file.data, mimePorNome(novoArquivo));
+          storagePronto = true;
+        };
+      }
+      mutator = (dados) => {
+        const catalogos = [...(dados.catalogos || [])];
+        const idx = catalogos.findIndex((c) => c.id === idAlvo || c.arquivo === campos.arquivoNome);
+        if (idx < 0) {
+          throw Object.assign(new Error("Catálogo não encontrado."), { status: 404 });
+        }
+        const cat = { ...catalogos[idx] };
+        if (campos.titulo) cat.titulo = String(campos.titulo).slice(0, 120);
+        if (campos.marcaId !== undefined) {
+          if (campos.marcaId) cat.marcaId = campos.marcaId;
+          else delete cat.marcaId;
+        }
+        if (novoArquivo) cat.arquivo = novoArquivo;
+        catalogos[idx] = cat;
+        return { ...dados, catalogos };
+      };
     } else if (acao === "catalogo_remover") {
       const alvo = String(campos.id || campos.arquivoNome || campos.arquivo || "").trim();
-      const item = catalogos.find((c) => c.id === alvo || c.arquivo === alvo || c.titulo === alvo);
-      if (item?.arquivo) await removerAsset(slug, item.arquivo);
-      catalogos = catalogos.filter((c) => c !== item);
+      beforeAttempt = async (dados, slugAtual) => {
+        const item = (dados.catalogos || []).find(
+          (c) => c.id === alvo || c.arquivo === alvo || c.titulo === alvo
+        );
+        if (item?.arquivo) await removerAsset(slugAtual, item.arquivo);
+      };
+      mutator = (dados) => ({
+        ...dados,
+        catalogos: (dados.catalogos || []).filter(
+          (c) => c.id !== alvo && c.arquivo !== alvo && c.titulo !== alvo
+        )
+      });
     } else if (acao === "catalogo_reordenar") {
       const ordem = Array.isArray(campos.ordem) ? campos.ordem : JSON.parse(campos.ordem || "[]");
-      catalogos = reordenarPorIds(catalogos, ordem);
+      mutator = (dados) => ({
+        ...dados,
+        catalogos: reordenarPorIds(dados.catalogos || [], ordem)
+      });
     } else if (acao === "marca_reordenar") {
       const ordem = Array.isArray(campos.ordem) ? campos.ordem : JSON.parse(campos.ordem || "[]");
-      marcas = reordenarPorIds(marcas, ordem);
+      mutator = (dados) => ({
+        ...dados,
+        marcas: reordenarPorIds(dados.marcas || [], ordem)
+      });
     } else if (acao === "publicar") {
-      if (!dados.nome && !dados.empresa) {
-        return json(res, 400, { erro: "Preencha pelo menos o nome antes de publicar." });
-      }
+      mutator = (dados) => {
+        if (!dados.nome && !dados.empresa) {
+          throw Object.assign(new Error("Preencha pelo menos o nome antes de publicar."), { status: 400 });
+        }
+        return dados;
+      };
       patchMeta = { publicado: true, publicado_em: new Date().toISOString() };
     } else if (acao === "despublicar") {
+      mutator = (dados) => dados;
       patchMeta = { publicado: false };
     } else if (acao !== "atualizar" && req.method === "POST") {
       return json(res, 400, { erro: "Ação inválida." });
     }
 
-    dados = normalizarDados({ ...dados, catalogos, marcas });
-    const data = await salvarPagina(user.id, dados, patchMeta);
+    if (!mutator) {
+      return json(res, 400, { erro: "Ação inválida." });
+    }
+
+    const data = await salvarPaginaOtimista(user.id, slug, mutator, patchMeta, beforeAttempt);
 
     return json(res, 200, {
       ok: true,

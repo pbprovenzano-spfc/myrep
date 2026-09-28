@@ -87,6 +87,11 @@
   let previewRaf = 0;
   let marcaAtualId = null;
   let marcaAtual = null;
+  let saveTextoEmAndamento = null;
+  let ultimaMutacaoMidia = 0;
+
+  const MIME_IMAGEM_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
+  const EXT_IMAGEM_OK = /\.(jpe?g|png|webp)$/i;
 
   function esc(s) {
     return String(s ?? "")
@@ -778,24 +783,75 @@
       : "<li class='painel-lista__vazio'>Nenhum catálogo vinculado a esta marca.</li>";
   }
 
-  function sincronizarLogoMarcaCampo(marca) {
-    const input = document.getElementById("marca-pagina-logo");
-    if (!input || !marca?.logo) return;
+  function statusParaCampoArquivo(input) {
+    if (input?.closest("#form-marca-pagina")) {
+      return document.getElementById("marca-pagina-status");
+    }
+    return document.getElementById("editor-status");
+  }
+
+  function arquivoImagemPermitido(file) {
+    if (!file) return false;
+    const nome = file.name || "";
+    if (MIME_IMAGEM_OK.has(file.type)) return true;
+    return EXT_IMAGEM_OK.test(nome);
+  }
+
+  function mensagemImagemInvalida() {
+    return "Use JPG, PNG ou WEBP.";
+  }
+
+  function rejeitarImagemCampo(input, file) {
+    if (!file) return false;
+    const campo = input?.closest(".campo-arquivo");
+    if (campo?.dataset.tipo !== "imagem") return false;
+    if (arquivoImagemPermitido(file)) return false;
+    limparArquivoCampo(input);
+    setStatus(statusParaCampoArquivo(input), mensagemImagemInvalida(), "erro");
+    return true;
+  }
+
+  function garantirUiCarregamentoArquivo(zona) {
+    if (!zona || zona.querySelector(".campo-arquivo__carregando")) return;
+    const bloco = document.createElement("div");
+    bloco.className = "campo-arquivo__carregando";
+    bloco.hidden = true;
+    bloco.setAttribute("aria-live", "polite");
+    bloco.innerHTML =
+      '<span class="campo-arquivo__spinner" aria-hidden="true"></span><p class="campo-arquivo__carregando-texto">Enviando…</p>';
+    zona.appendChild(bloco);
+  }
+
+  function setCampoArquivoEnviando(input, enviando, texto) {
+    if (!input) return;
     const zona = input.closest(".campo-arquivo__zona");
     if (!zona) return;
-    const vazio = zona.querySelector(".campo-arquivo__vazio");
-    const preenchido = zona.querySelector(".campo-arquivo__preenchido");
-    const thumb = zona.querySelector(".campo-arquivo__thumb");
-    const nome = zona.querySelector(".campo-arquivo__nome");
-    if (!vazio || !preenchido) return;
-    const src = urlAsset(marca.logo);
-    if (src && thumb) {
-      thumb.src = src;
-      thumb.alt = `Logo de ${marca.nome || "marca"}`;
+    garantirUiCarregamentoArquivo(zona);
+    const msg = zona.querySelector(".campo-arquivo__carregando-texto");
+    if (msg && texto) msg.textContent = texto;
+    const bloco = zona.querySelector(".campo-arquivo__carregando");
+    if (bloco) bloco.hidden = !enviando;
+    zona.classList.toggle("is-enviando", !!enviando);
+    zona.setAttribute("aria-busy", enviando ? "true" : "false");
+    if (enviando) {
+      zona.classList.remove("is-dragover");
     }
-    if (nome) nome.textContent = marca.logo;
-    vazio.hidden = true;
-    preenchido.hidden = false;
+  }
+
+  function campoArquivoEnviando(input) {
+    return !!input?.closest(".campo-arquivo__zona")?.classList.contains("is-enviando");
+  }
+
+  async function aguardarSalvarTextoPendente() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (saveTextoEmAndamento) await saveTextoEmAndamento;
+  }
+
+  async function antesMutacaoMidia() {
+    await aguardarSalvarTextoPendente();
+    ultimaMutacaoMidia += 1;
+    return ultimaMutacaoMidia;
   }
 
   function estadoMarcaPreview() {
@@ -948,7 +1004,6 @@
       form.site.value = marca.site ? marca.site.replace(/^https?:\/\//i, "") : "";
       form.contatoExtra.value = valorContatoMarca(marca);
       limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
-      sincronizarLogoMarcaCampo(marca);
     }
     if (erro) erro.hidden = true;
 
@@ -1004,12 +1059,17 @@
       return;
     }
     setStatus(status, "Salvando…", "info");
+    const inputLogo = form.querySelector(".campo-arquivo__input");
+    const file = form.arquivo?.files?.[0];
+    if (file && rejeitarImagemCampo(inputLogo, file)) return;
+    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
     try {
-      const file = form.arquivo?.files?.[0];
       if (file && file.size > MAX_IMAGEM) {
         setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
         return;
       }
+      await aguardarSalvarTextoPendente();
+      await antesMutacaoMidia();
       let arquivo = "";
       if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
       const contato = contatoDeValor(form.contatoExtra?.value || "");
@@ -1039,13 +1099,15 @@
         marcaAtual = marcasComSlugs([atualizada])[0];
         atualizarCabecalhoMarca(marcaAtual);
         renderCatalogosMarca(marcaAtualId);
-        if (arquivo) sincronizarLogoMarcaCampo(marcaAtual);
+        if (arquivo) limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
         atualizarPreviewMarca();
       }
       if (!opts.silencioso) setStatus(status, "Alterações salvas.", "ok");
       else setStatus(status, "Salvo.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      if (file) setCampoArquivoEnviando(inputLogo, false);
     }
   }
 
@@ -1437,13 +1499,15 @@
     assetVersao = Date.now();
     if (pagina.marcas) renderMarcas(pagina.marcas);
     if (pagina.catalogos) renderCatalogos(pagina.catalogos, pagina.marcas || paginaDados.marcas);
-    sincronizarFotoSalvaCampo();
+    limparCamposArquivoEditor();
     if (modoMarca && marcaAtualId) {
       const marca = marcaPorId(marcaAtualId);
       if (marca) {
         marcaAtual = marcasComSlugs([marca])[0];
         renderCatalogosMarca(marcaAtualId);
-        if (!opts?.preservarFormulario) sincronizarLogoMarcaCampo(marcaAtual);
+        if (!opts?.preservarFormulario) {
+          limparArquivoCampo(document.getElementById("marca-pagina-logo"));
+        }
         atualizarPreviewMarca();
       }
     } else {
@@ -1479,13 +1543,19 @@
     }
   }
 
+  function limparCamposArquivoEditor() {
+    const inputFoto = document.getElementById("input-foto");
+    if (inputFoto && !campoArquivoEnviando(inputFoto)) limparArquivoCampo(inputFoto);
+  }
+
   function limparArquivoCampo(input) {
     if (!input) return;
     input.value = "";
     revogarCampoArquivoBlob();
     const zona = input.closest(".campo-arquivo__zona");
     if (!zona) return;
-    zona.classList.remove("is-preenchido", "is-dragover");
+    zona.classList.remove("is-preenchido", "is-dragover", "is-enviando");
+    zona.removeAttribute("aria-busy");
     const thumb = zona.querySelector(".campo-arquivo__thumb");
     const badge = zona.querySelector(".campo-arquivo__badge");
     const nomeEl = zona.querySelector(".campo-arquivo__nome");
@@ -1529,8 +1599,8 @@
       /\.pdf$/i.test(nome) ||
       (tipoCampo === "pdf" && !!nome);
     const isImage =
-      file?.type?.startsWith("image/") ||
-      /\.(jpe?g|png|webp|gif|svg)$/i.test(nome) ||
+      (file && arquivoImagemPermitido(file)) ||
+      /\.(jpe?g|png|webp)$/i.test(nome) ||
       (tipoCampo === "imagem" && !!previewUrl && !isPdf);
 
     zona.classList.add("is-preenchido");
@@ -1582,10 +1652,17 @@
         zona.setAttribute("aria-label", rotulo?.textContent?.trim() || "Enviar arquivo");
       }
 
+      garantirUiCarregamentoArquivo(zona);
+
       input.addEventListener("change", () => {
+        if (campoArquivoEnviando(input)) return;
         const file = input.files?.[0];
-        if (file) atualizarArquivoCampo(input, { file });
-        else limparArquivoCampo(input);
+        if (!file) {
+          limparArquivoCampo(input);
+          return;
+        }
+        if (rejeitarImagemCampo(input, file)) return;
+        atualizarArquivoCampo(input, { file });
       });
 
       btnTrocar?.addEventListener("click", (ev) => {
@@ -1612,8 +1689,10 @@
       });
 
       zona.addEventListener("drop", (ev) => {
+        if (campoArquivoEnviando(input)) return;
         const file = ev.dataTransfer?.files?.[0];
         if (!file) return;
+        if (rejeitarImagemCampo(input, file)) return;
         const dt = new DataTransfer();
         dt.items.add(file);
         input.files = dt.files;
@@ -1621,6 +1700,7 @@
       });
 
       zona.addEventListener("keydown", (ev) => {
+        if (campoArquivoEnviando(input)) return;
         if (zona.classList.contains("is-preenchido")) return;
         if (ev.key === "Enter" || ev.key === " ") {
           ev.preventDefault();
@@ -1631,18 +1711,7 @@
   }
 
   function sincronizarFotoSalvaCampo() {
-    const inputFoto = document.getElementById("input-foto");
-    if (!inputFoto) return;
-    if (paginaDados?.foto) {
-      inputFoto.value = "";
-      revogarCampoArquivoBlob();
-      atualizarArquivoCampo(inputFoto, {
-        nome: String(paginaDados.foto).split("/").pop(),
-        previewUrl: urlAsset(paginaDados.foto)
-      });
-      return;
-    }
-    if (!inputFoto.files?.[0]) limparArquivoCampo(inputFoto);
+    limparCamposArquivoEditor();
   }
 
   async function enviarArquivoStorage(file, tipo, dica) {
@@ -1684,14 +1753,24 @@
 
   async function salvarTexto() {
     const status = document.getElementById("editor-status");
-    setStatus(status, "Salvando…", "info");
+    const seqInicio = ultimaMutacaoMidia;
+    const prom = (async () => {
+      setStatus(status, "Salvando…", "info");
+      try {
+        const data = await apiPagina("PUT", payloadTexto());
+        if (ultimaMutacaoMidia > seqInicio) return;
+        if (perfil) perfil.pagina = data.pagina;
+        paginaDados = data.pagina?.dados || paginaDados;
+        setStatus(status, "Salvo.", "ok");
+      } catch (erro) {
+        if (ultimaMutacaoMidia <= seqInicio) setStatus(status, erro.message, "erro");
+      }
+    })();
+    saveTextoEmAndamento = prom;
     try {
-      const data = await apiPagina("PUT", payloadTexto());
-      if (perfil) perfil.pagina = data.pagina;
-      paginaDados = data.pagina?.dados || paginaDados;
-      setStatus(status, "Salvo.", "ok");
-    } catch (erro) {
-      setStatus(status, erro.message, "erro");
+      await prom;
+    } finally {
+      if (saveTextoEmAndamento === prom) saveTextoEmAndamento = null;
     }
   }
 
@@ -2001,18 +2080,24 @@
   });
 
   document.getElementById("input-foto")?.addEventListener("change", async (ev) => {
-    const file = ev.target.files?.[0];
+    const input = ev.target;
+    const file = input.files?.[0];
     if (!file) return;
     const status = document.getElementById("editor-status");
+    if (rejeitarImagemCampo(input, file)) return;
     if (file.size > MAX_IMAGEM) {
       setStatus(status, "Imagem grande demais (máx. 8 MB).", "erro");
+      limparArquivoCampo(input);
       return;
     }
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
     fotoLocalUrl = URL.createObjectURL(file);
     atualizarPreview({ perfil: true });
+    setCampoArquivoEnviando(input, true, "Enviando foto…");
     setStatus(status, "Enviando foto…", "info");
     try {
+      await aguardarSalvarTextoPendente();
+      await antesMutacaoMidia();
       const arquivo = await enviarArquivoStorage(file, "foto");
       const data = await apiPagina("POST", {
         acao: "foto_set",
@@ -2024,9 +2109,12 @@
         fotoLocalUrl = null;
       }
       aplicarPagina(data.pagina);
+      limparArquivoCampo(input);
       setStatus(status, "Foto atualizada.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      setCampoArquivoEnviando(input, false);
     }
   });
 
@@ -2045,8 +2133,14 @@
       setStatus(status, "PDF grande demais (máx. 100 MB).", "erro");
       return;
     }
+    const inputPdf = form.querySelector(".campo-arquivo__input");
+    const btn = form.querySelector('button[type="submit"]');
+    setCampoArquivoEnviando(inputPdf, true, "Enviando catálogo…");
+    if (btn) btn.disabled = true;
     setStatus(status, "Enviando catálogo…", "info");
     try {
+      await aguardarSalvarTextoPendente();
+      await antesMutacaoMidia();
       const arquivo = await enviarArquivoStorage(file, "catalogo", titulo || file.name);
       const data = await apiPagina("POST", {
         acao: "catalogo_add",
@@ -2056,10 +2150,13 @@
       });
       aplicarPagina(data.pagina);
       form.reset();
-      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+      limparArquivoCampo(inputPdf);
       setStatus(status, "Catálogo adicionado.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      setCampoArquivoEnviando(inputPdf, false);
+      if (btn) btn.disabled = false;
     }
   });
 
@@ -2073,10 +2170,22 @@
       setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
       return;
     }
+    const inputLogo = form.querySelector(".campo-arquivo__input");
+    const btn = form.querySelector('button[type="submit"]');
+    if (file && rejeitarImagemCampo(inputLogo, file)) return;
+    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
+    if (btn) btn.disabled = true;
     setStatus(status, "Enviando marca…", "info");
     try {
       let arquivo = "";
-      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
+      if (file) {
+        await aguardarSalvarTextoPendente();
+        await antesMutacaoMidia();
+        arquivo = await enviarArquivoStorage(file, "marca", nome);
+      } else {
+        await aguardarSalvarTextoPendente();
+        await antesMutacaoMidia();
+      }
       const body = {
         acao: "marca_add",
         nome
@@ -2085,10 +2194,13 @@
       const data = await apiPagina("POST", body);
       aplicarPagina(data.pagina);
       form.reset();
-      limparArquivoCampo(form.querySelector(".campo-arquivo__input"));
+      limparArquivoCampo(inputLogo);
       setStatus(status, "Marca adicionada.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      setCampoArquivoEnviando(inputLogo, false);
+      if (btn) btn.disabled = false;
     }
   });
 
@@ -2140,11 +2252,14 @@
   });
 
   document.getElementById("marca-pagina-logo")?.addEventListener("change", async (ev) => {
-    const file = ev.target.files?.[0];
+    const input = ev.target;
+    const file = input.files?.[0];
     if (!file) return;
     const status = document.getElementById("marca-pagina-status");
+    if (rejeitarImagemCampo(input, file)) return;
     if (file.size > MAX_IMAGEM) {
       setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
+      limparArquivoCampo(input);
       return;
     }
     if (marcaLogoLocalUrl) URL.revokeObjectURL(marcaLogoLocalUrl);
