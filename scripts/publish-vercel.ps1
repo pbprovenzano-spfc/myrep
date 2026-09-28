@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
 Write-Host "Deploy de producao..."
-npx vercel --prod --yes
+npm run deploy
 
 Write-Host @"
 

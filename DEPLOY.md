@@ -37,6 +37,16 @@ Settings → Environment Variables → Production:
 
 Redeploy após salvar. Com Supabase configurado, o build usa o banco + Storage; sem keys, usa os JSONs do repo.
 
+### Deploy a partir da máquina
+
+- **Automático:** `git push origin main` (Git conectado na Vercel).
+- **Script:** `npm run deploy` (roda build + produção). Exige uma destas opções no `.env`:
+  - `VERCEL_TOKEN` — [Account Tokens](https://vercel.com/account/tokens)
+  - `VERCEL_DEPLOY_HOOK` — URL do hook em **Settings → Git → Deploy Hooks**
+- **CLI:** `npx vercel login` (uma vez no Terminal) e depois `npm run deploy`.
+
+O agente do Cursor **não** consegue fazer `vercel login` interativo; use push no Git ou token/hook no `.env`.
+
 ## GitHub
 
 Repositório local pronto (`git init`, branch `main`, 3 commits). Falta autenticar no GitHub:
