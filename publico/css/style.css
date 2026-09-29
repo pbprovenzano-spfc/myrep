@@ -3912,6 +3912,24 @@ a.marca-chip:focus-visible {
   flex: 1 1 auto;
 }
 
+.painel-lista__nome {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.painel-lista__nome-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  color: var(--ink);
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--branco);
+}
+
 .painel-lista__grupo {
   display: block;
   padding: 10px 0 4px;

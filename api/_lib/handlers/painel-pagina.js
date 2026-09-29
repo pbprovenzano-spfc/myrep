@@ -362,7 +362,13 @@ module.exports = async function handler(req, res) {
           throw Object.assign(new Error("Catálogo não encontrado."), { status: 404 });
         }
         const cat = { ...catalogos[idx] };
-        if (campos.titulo) cat.titulo = String(campos.titulo).slice(0, 120);
+        if (campos.titulo != null && String(campos.titulo) !== "") {
+          const titulo = String(campos.titulo).trim().slice(0, 120);
+          if (!titulo) {
+            throw Object.assign(new Error("Informe o nome do catálogo."), { status: 400 });
+          }
+          cat.titulo = titulo;
+        }
         if (campos.marcaId !== undefined) {
           if (campos.marcaId) cat.marcaId = campos.marcaId;
           else delete cat.marcaId;

@@ -89,6 +89,7 @@
   let marcaAtual = null;
   let saveTextoEmAndamento = null;
   let ultimaMutacaoMidia = 0;
+  let catalogoEditandoId = null;
 
   const MIME_IMAGEM_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
   const EXT_IMAGEM_OK = /\.(jpe?g|png|webp)$/i;
@@ -1198,20 +1199,29 @@
       .map((grupo) => {
         const titulo = grupo.tipo === "outros" ? "Outros" : grupo.marca.nome;
         const itens = grupo.catalogos
-          .map(
-            (c, i) =>
-              `<li>
+          .map((c, i) => {
+            const nome = c.titulo || c.arquivo;
+            const editando = catalogoEditandoId === c.id;
+            const nomeHtml = editando
+              ? `<input class="painel-lista__nome-input" data-cat-nome-input="${esc(c.id)}" type="text" maxlength="120" value="${esc(nome)}" aria-label="Nome do catálogo">`
+              : esc(nome);
+            const acoesHtml = editando
+              ? `<button type="button" class="btn-link" data-save-catalogo="${esc(c.id)}">Salvar</button>
+              <button type="button" class="btn-link" data-cancel-catalogo="${esc(c.id)}">Cancelar</button>`
+              : `<button type="button" class="btn-link" data-edit-catalogo="${esc(c.id)}" aria-label="Editar nome de ${esc(nome)}">Editar nome</button>
+              <button type="button" class="btn-link" data-rm-catalogo="${esc(c.id)}">Remover</button>`;
+            return `<li>
               <span class="painel-lista__corpo">
                 ${botoesOrdem(
                   { up: `data-cat-up="${esc(c.id)}"`, down: `data-cat-down="${esc(c.id)}"` },
                   i === 0,
                   i === grupo.catalogos.length - 1
                 )}
-                <span>${esc(c.titulo || c.arquivo)}</span>
+                <span class="painel-lista__nome">${nomeHtml}</span>
               </span>
-              <button type="button" class="btn-link" data-rm-catalogo="${esc(c.id)}">Remover</button>
-            </li>`
-          )
+              <span class="painel-lista__acoes">${acoesHtml}</span>
+            </li>`;
+          })
           .join("");
         return `<li class="painel-lista__grupo">
           <span class="painel-lista__grupo-titulo">${esc(titulo)}</span>
@@ -2400,11 +2410,88 @@
     }
   });
 
+  function abrirEdicaoCatalogo(id) {
+    catalogoEditandoId = id;
+    renderCatalogos(paginaDados.catalogos, paginaDados.marcas);
+    const input = document.querySelector(`[data-cat-nome-input="${CSS.escape(id)}"]`);
+    input?.focus();
+    input?.select();
+  }
+
+  function cancelarEdicaoCatalogo() {
+    catalogoEditandoId = null;
+    renderCatalogos(paginaDados.catalogos, paginaDados.marcas);
+    setStatus(document.getElementById("editor-status"), "", "");
+  }
+
+  async function salvarNomeCatalogo(id) {
+    const status = document.getElementById("editor-status");
+    const input = document.querySelector(`[data-cat-nome-input="${CSS.escape(id)}"]`);
+    const titulo = input?.value?.trim() || "";
+    if (!titulo) {
+      setStatus(status, "Informe o nome do catálogo.", "erro");
+      input?.focus();
+      return;
+    }
+    const atual = (paginaDados.catalogos || []).find((c) => c.id === id);
+    const nomeAtual = String(atual?.titulo || atual?.arquivo || "").trim();
+    if (nomeAtual === titulo) {
+      cancelarEdicaoCatalogo();
+      return;
+    }
+    const btn = document.querySelector(`[data-save-catalogo="${CSS.escape(id)}"]`);
+    if (btn) btn.disabled = true;
+    if (input) input.disabled = true;
+    try {
+      await aguardarSalvarTextoPendente();
+      await antesMutacaoMidia();
+      const data = await apiPagina("POST", { acao: "catalogo_editar", id, titulo });
+      catalogoEditandoId = null;
+      aplicarPagina(data.pagina);
+      setStatus(status, "Nome do catálogo atualizado.", "ok");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+      if (btn) btn.disabled = false;
+      if (input) {
+        input.disabled = false;
+        input.focus();
+      }
+    }
+  }
+
+  document.getElementById("lista-catalogos")?.addEventListener("keydown", (ev) => {
+    const input = ev.target.closest("[data-cat-nome-input]");
+    if (!input) return;
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      salvarNomeCatalogo(input.getAttribute("data-cat-nome-input"));
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cancelarEdicaoCatalogo();
+    }
+  });
+
   document.getElementById("lista-catalogos")?.addEventListener("click", async (ev) => {
     const btnUp = ev.target.closest("[data-cat-up]");
     const btnDown = ev.target.closest("[data-cat-down]");
+    const btnEdit = ev.target.closest("[data-edit-catalogo]");
+    const btnSave = ev.target.closest("[data-save-catalogo]");
+    const btnCancel = ev.target.closest("[data-cancel-catalogo]");
     const btn = ev.target.closest("[data-rm-catalogo]");
     const status = document.getElementById("editor-status");
+
+    if (btnEdit) {
+      abrirEdicaoCatalogo(btnEdit.getAttribute("data-edit-catalogo"));
+      return;
+    }
+    if (btnCancel) {
+      cancelarEdicaoCatalogo();
+      return;
+    }
+    if (btnSave) {
+      salvarNomeCatalogo(btnSave.getAttribute("data-save-catalogo"));
+      return;
+    }
 
     if (btnUp || btnDown) {
       const id = (btnUp || btnDown).getAttribute(btnUp ? "data-cat-up" : "data-cat-down");
