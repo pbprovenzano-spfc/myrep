@@ -2045,6 +2045,50 @@ a.marca-chip:focus-visible {
   color: var(--mutado);
 }
 
+.campo-arquivo__barra {
+  width: min(220px, 80%);
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sinal) 18%, var(--borda));
+  overflow: hidden;
+}
+
+.campo-arquivo__barra[hidden] {
+  display: none !important;
+}
+
+.campo-arquivo__barra > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--sinal);
+}
+
+.campo-arquivo__cancelar {
+  pointer-events: auto;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sinal-escuro);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.campo-arquivo__cancelar:hover {
+  color: var(--ink);
+}
+
+.campo-arquivo__cancelar:focus-visible {
+  outline: 3px solid var(--sinal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @keyframes campo-arquivo-spin {
   to {
     transform: rotate(360deg);

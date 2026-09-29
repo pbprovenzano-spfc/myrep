@@ -370,7 +370,7 @@
         <div class="ajuda__painel" id="ajuda-catalogos" hidden>
           <p>Os catálogos, tabelas ou listas de produto que você quer disponibilizar.</p>
           <p><strong>Na página:</strong> cada PDF vira um botão para abrir ou baixar. Vinculado a uma marca, ele aparece no grupo dessa marca e também na página dela.</p>
-          <p><strong>Exemplo:</strong> título “Catálogo 2026”, marca “3M”, arquivo em PDF de até 100 MB.</p>
+          <p><strong>Exemplo:</strong> título “Catálogo 2026”, marca “3M”, arquivo em PDF. Até {{UPLOAD_MAX_MB}} MB; se for maior, o painel compacta automaticamente.</p>
         </div>
         <ul class="painel-lista" id="lista-catalogos" aria-describedby="catalogos-ajuda"></ul>
         <form class="painel-form-inline" id="form-catalogo-add">
@@ -393,7 +393,7 @@
             </select>
           </div>
           <div class="campo campo-arquivo" data-tipo="pdf">
-            <span class="campo__rotulo" id="rotulo-catalogo-pdf">Arquivo PDF (até 100 MB) <span class="campo__req">obrigatório</span></span>
+            <span class="campo__rotulo" id="rotulo-catalogo-pdf">Arquivo PDF (até {{UPLOAD_MAX_MB}} MB) <span class="campo__req">obrigatório</span></span>
             <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-catalogo-pdf" aria-describedby="catalogo-pdf-dica">
               <input name="arquivo" type="file" accept="application/pdf,.pdf" required class="campo-arquivo__input" tabindex="-1">
               <div class="campo-arquivo__vazio">
@@ -401,7 +401,7 @@
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
                 </span>
                 <p class="campo-arquivo__titulo">Clique ou solte o PDF do catálogo</p>
-                <p class="campo-arquivo__dica" id="catalogo-pdf-dica">Somente PDF · até 100 MB</p>
+                <p class="campo-arquivo__dica" id="catalogo-pdf-dica">Somente PDF · até {{UPLOAD_MAX_MB}} MB. Arquivos maiores são compactados automaticamente.</p>
               </div>
               <div class="campo-arquivo__preenchido" hidden>
                 <span class="campo-arquivo__badge" aria-hidden="true">PDF</span>
@@ -708,6 +708,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
 <script src="/js/supabase-client.js" defer></script>
 <script src="/js/mapa.js" defer></script>
+<script src="/js/pdf-compress.js" defer></script>
 <script src="/js/painel.js" defer></script>
 </body>
 </html>

@@ -46,17 +46,28 @@ function carregarEnvBuild() {
   }
 }
 
+function limiteUploadBytes() {
+  const n = Number(process.env.UPLOAD_MAX_BYTES);
+  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  return 50 * 1024 * 1024;
+}
+
 function cfgSupabaseBrowser() {
   carregarEnvBuild();
   return JSON.stringify({
     url: process.env.SUPABASE_URL || "",
     anonKey: process.env.SUPABASE_ANON_KEY || "",
-    storageBucket: process.env.SUPABASE_STORAGE_BUCKET || "assets-clientes"
+    storageBucket: process.env.SUPABASE_STORAGE_BUCKET || "assets-clientes",
+    uploadMaxBytes: limiteUploadBytes()
   });
 }
 
 function injetarSupabase(html) {
-  return String(html).replace(/\{\{MYREP_SUPABASE\}\}/g, cfgSupabaseBrowser());
+  carregarEnvBuild();
+  const mb = Math.round(limiteUploadBytes() / (1024 * 1024));
+  return String(html)
+    .replace(/\{\{MYREP_SUPABASE\}\}/g, cfgSupabaseBrowser())
+    .replace(/\{\{UPLOAD_MAX_MB\}\}/g, String(mb));
 }
 
 const esc = (s) =>

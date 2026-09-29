@@ -818,8 +818,35 @@
     bloco.hidden = true;
     bloco.setAttribute("aria-live", "polite");
     bloco.innerHTML =
-      '<span class="campo-arquivo__spinner" aria-hidden="true"></span><p class="campo-arquivo__carregando-texto">Enviando…</p>';
+      '<span class="campo-arquivo__spinner" aria-hidden="true"></span>' +
+      '<p class="campo-arquivo__carregando-texto">Enviando…</p>' +
+      '<div class="campo-arquivo__barra" hidden><span></span></div>' +
+      '<button type="button" class="campo-arquivo__cancelar">Cancelar</button>';
+    bloco.querySelector(".campo-arquivo__cancelar")?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      cancelarOperacaoArquivo();
+    });
     zona.appendChild(bloco);
+  }
+
+  function setCampoArquivoAndamento(input, texto, fracao) {
+    if (!input) return;
+    const zona = input.closest(".campo-arquivo__zona");
+    if (!zona) return;
+    const msg = zona.querySelector(".campo-arquivo__carregando-texto");
+    if (msg && texto) msg.textContent = texto;
+    const barra = zona.querySelector(".campo-arquivo__barra");
+    const preenchimento = barra?.querySelector("span");
+    if (!barra || !preenchimento) return;
+    if (typeof fracao !== "number" || !Number.isFinite(fracao)) {
+      barra.hidden = true;
+      preenchimento.style.width = "0%";
+      return;
+    }
+    const pct = Math.max(0, Math.min(100, Math.round(fracao * 100)));
+    barra.hidden = false;
+    preenchimento.style.width = `${pct}%`;
   }
 
   function setCampoArquivoEnviando(input, enviando, texto) {
@@ -829,6 +856,7 @@
     garantirUiCarregamentoArquivo(zona);
     const msg = zona.querySelector(".campo-arquivo__carregando-texto");
     if (msg && texto) msg.textContent = texto;
+    if (!enviando) setCampoArquivoAndamento(input, "", null);
     const bloco = zona.querySelector(".campo-arquivo__carregando");
     if (bloco) bloco.hidden = !enviando;
     zona.classList.toggle("is-enviando", !!enviando);
@@ -842,10 +870,40 @@
     return !!input?.closest(".campo-arquivo__zona")?.classList.contains("is-enviando");
   }
 
+  function limiteUploadBytes() {
+    const n = Number(window.MYREP_SUPABASE?.uploadMaxBytes);
+    if (Number.isFinite(n) && n > 0) return n;
+    return 50 * 1024 * 1024;
+  }
+
+  function formatarMb(bytes) {
+    const mb = Number(bytes) / (1024 * 1024);
+    if (!Number.isFinite(mb)) return "";
+    return `${mb >= 10 ? mb.toFixed(0) : mb.toFixed(1)} MB`;
+  }
+
   async function aguardarSalvarTextoPendente() {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    if (saveTextoEmAndamento) await saveTextoEmAndamento;
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      salvarTexto();
+    }
+    if (!saveTextoEmAndamento) return;
+    let timer = null;
+    const espera = saveTextoEmAndamento;
+    try {
+      await Promise.race([
+        espera,
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("O salvamento demorou demais. Tente enviar de novo.")),
+            15000
+          );
+        })
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   async function antesMutacaoMidia() {
@@ -1063,6 +1121,7 @@
     const file = form.arquivo?.files?.[0];
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
     if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
+    const ctrl = file ? iniciarOperacaoArquivo() : null;
     try {
       if (file && file.size > MAX_IMAGEM) {
         setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
@@ -1071,7 +1130,12 @@
       await aguardarSalvarTextoPendente();
       await antesMutacaoMidia();
       let arquivo = "";
-      if (file) arquivo = await enviarArquivoStorage(file, "marca", nome);
+      if (file) {
+        arquivo = await enviarArquivoStorage(file, "marca", nome, {
+          signal: ctrl.signal,
+          onProgress: progressoEnvio(inputLogo, "Enviando…")
+        });
+      }
       const contato = contatoDeValor(form.contatoExtra?.value || "");
       const body = {
         acao: "marca_editar",
@@ -1105,8 +1169,10 @@
       if (!opts.silencioso) setStatus(status, "Alterações salvas.", "ok");
       else setStatus(status, "Salvo.", "ok");
     } catch (erro) {
-      setStatus(status, erro.message, "erro");
+      if (erro?.cancelado) setStatus(status, "Envio cancelado.", "info");
+      else setStatus(status, erro.message, "erro");
     } finally {
+      encerrarOperacaoArquivo(ctrl);
       if (file) setCampoArquivoEnviando(inputLogo, false);
     }
   }
@@ -1524,15 +1590,36 @@
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
       if (resp.status === 413) {
-        throw new Error("Arquivo grande demais. Use um PDF de até 100 MB.");
+        throw new Error(`Arquivo grande demais. O limite é ${formatarMb(limiteUploadBytes())}.`);
       }
       throw new Error(data.erro || "Falha ao salvar");
     }
     return data;
   }
 
-  const MAX_CATALOGO = 100 * 1024 * 1024;
   const MAX_IMAGEM = 8 * 1024 * 1024;
+  let operacaoArquivo = null;
+
+  function cancelarOperacaoArquivo() {
+    operacaoArquivo?.abort();
+  }
+
+  function iniciarOperacaoArquivo() {
+    const ctrl = new AbortController();
+    operacaoArquivo = ctrl;
+    return ctrl;
+  }
+
+  function encerrarOperacaoArquivo(ctrl) {
+    if (operacaoArquivo === ctrl) operacaoArquivo = null;
+  }
+
+  function progressoEnvio(input, rotulo) {
+    return (fracao) => {
+      const pct = Math.min(100, Math.round((fracao || 0) * 100));
+      setCampoArquivoAndamento(input, `${rotulo} ${pct}%`, fracao);
+    };
+  }
 
   let campoArquivoBlobUrl = null;
 
@@ -1714,33 +1801,93 @@
     limparCamposArquivoEditor();
   }
 
-  async function enviarArquivoStorage(file, tipo, dica) {
+  function erroEnvioStorage(status, corpo, file) {
+    const texto = String(corpo || "");
+    if (status === 413 || /maximum allowed size|exceeded|entity too large/i.test(texto)) {
+      return new Error(
+        `Este arquivo tem ${formatarMb(file.size)} e o limite atual é ${formatarMb(limiteUploadBytes())}.`
+      );
+    }
+    return new Error("Falha no envio do arquivo.");
+  }
+
+  function enviarPorXhr(url, file, opts = {}) {
+    const ociosoMs = opts.ociosoMs || 60000;
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let motivo = "";
+      let ocioso = setTimeout(estagnou, ociosoMs);
+
+      function limparOcioso() {
+        clearTimeout(ocioso);
+        ocioso = null;
+      }
+
+      function estagnou() {
+        motivo = "ocioso";
+        xhr.abort();
+      }
+
+      function renovarOcioso() {
+        limparOcioso();
+        ocioso = setTimeout(estagnou, ociosoMs);
+      }
+
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.setRequestHeader("x-upsert", "true");
+      xhr.upload.onprogress = (ev) => {
+        if (!ev.lengthComputable || !ev.total) return;
+        renovarOcioso();
+        opts.onProgress?.(ev.loaded / ev.total);
+      };
+      xhr.onload = () => {
+        limparOcioso();
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(erroEnvioStorage(xhr.status, xhr.responseText, file));
+      };
+      xhr.onerror = () => {
+        limparOcioso();
+        reject(new Error("Falha no envio do arquivo."));
+      };
+      xhr.onabort = () => {
+        limparOcioso();
+        if (motivo === "ocioso") {
+          reject(new Error("A conexão travou durante o envio. Verifique a internet e tente de novo."));
+          return;
+        }
+        const erro = new Error("Envio cancelado.");
+        erro.cancelado = true;
+        reject(erro);
+      };
+      if (opts.signal?.aborted) {
+        limparOcioso();
+        const erro = new Error("Envio cancelado.");
+        erro.cancelado = true;
+        reject(erro);
+        return;
+      }
+      opts.signal?.addEventListener(
+        "abort",
+        () => {
+          motivo = "cancelado";
+          xhr.abort();
+        },
+        { once: true }
+      );
+      xhr.send(file);
+    });
+  }
+
+  async function enviarArquivoStorage(file, tipo, dica, opts = {}) {
     const prep = await apiPagina("POST", {
       acao: "upload_url",
       tipo,
       nome: file.name,
       dica: dica || file.name.replace(/\.[^.]+$/, "")
     });
-    const sb = window.MyRepAuth.getClient();
-    const bucket = window.MYREP_SUPABASE?.storageBucket || "assets-clientes";
-    const bucketApi = sb?.storage?.from(bucket);
-    if (typeof bucketApi?.uploadToSignedUrl === "function") {
-      const { error } = await bucketApi.uploadToSignedUrl(prep.path, prep.token, file, {
-        contentType: file.type || undefined,
-        upsert: true
-      });
-      if (error) throw new Error(error.message || "Falha no envio do arquivo.");
-      return prep.arquivo;
-    }
-    const resp = await fetch(prep.signedUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type || "application/octet-stream",
-        "x-upsert": "true"
-      },
-      body: file
-    });
-    if (!resp.ok) throw new Error("Falha no envio do arquivo.");
+    if (!prep.signedUrl) throw new Error("Falha ao preparar o envio do arquivo.");
+    await enviarPorXhr(prep.signedUrl, file, opts);
     return prep.arquivo;
   }
 
@@ -2093,12 +2240,17 @@
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
     fotoLocalUrl = URL.createObjectURL(file);
     atualizarPreview({ perfil: true });
-    setCampoArquivoEnviando(input, true, "Enviando foto…");
+    setCampoArquivoEnviando(input, true, "Enviando… 0%");
+    setCampoArquivoAndamento(input, "Enviando… 0%", 0);
     setStatus(status, "Enviando foto…", "info");
+    const ctrl = iniciarOperacaoArquivo();
     try {
       await aguardarSalvarTextoPendente();
       await antesMutacaoMidia();
-      const arquivo = await enviarArquivoStorage(file, "foto");
+      const arquivo = await enviarArquivoStorage(file, "foto", undefined, {
+        signal: ctrl.signal,
+        onProgress: progressoEnvio(input, "Enviando…")
+      });
       const data = await apiPagina("POST", {
         acao: "foto_set",
         arquivo,
@@ -2112,8 +2264,10 @@
       limparArquivoCampo(input);
       setStatus(status, "Foto atualizada.", "ok");
     } catch (erro) {
-      setStatus(status, erro.message, "erro");
+      if (erro?.cancelado) setStatus(status, "Envio cancelado.", "info");
+      else setStatus(status, erro.message, "erro");
     } finally {
+      encerrarOperacaoArquivo(ctrl);
       setCampoArquivoEnviando(input, false);
     }
   });
@@ -2129,19 +2283,46 @@
       setStatus(status, "Escolha o arquivo PDF do catálogo.", "erro");
       return;
     }
-    if (file.size > MAX_CATALOGO) {
-      setStatus(status, "PDF grande demais (máx. 100 MB).", "erro");
-      return;
-    }
     const inputPdf = form.querySelector(".campo-arquivo__input");
     const btn = form.querySelector('button[type="submit"]');
-    setCampoArquivoEnviando(inputPdf, true, "Enviando catálogo…");
+    const ctrl = iniciarOperacaoArquivo();
+    let envio = file;
+    setCampoArquivoEnviando(inputPdf, true, "Preparando…");
     if (btn) btn.disabled = true;
-    setStatus(status, "Enviando catálogo…", "info");
     try {
+      if (envio.size > limiteUploadBytes()) {
+        if (!window.MyRepPdf?.compactarPdf) {
+          throw new Error("Não foi possível compactar este PDF.");
+        }
+        const tamanhoOriginal = envio.size;
+        setCampoArquivoAndamento(inputPdf, "Compactando…", 0);
+        setStatus(status, "Compactando o PDF para caber no limite…", "info");
+        envio = await window.MyRepPdf.compactarPdf(envio, {
+          limiteBytes: limiteUploadBytes(),
+          alvoBytes: Math.floor(limiteUploadBytes() * 0.9),
+          signal: ctrl.signal,
+          onProgress({ pagina, total }) {
+            setCampoArquivoAndamento(
+              inputPdf,
+              `Compactando… página ${pagina} de ${total}`,
+              total ? pagina / total : 0
+            );
+          }
+        });
+        setStatus(
+          status,
+          `Reduzido de ${formatarMb(tamanhoOriginal)} para ${formatarMb(envio.size)}.`,
+          "info"
+        );
+      }
+      setCampoArquivoAndamento(inputPdf, "Enviando… 0%", 0);
+      setStatus(status, "Enviando catálogo…", "info");
       await aguardarSalvarTextoPendente();
       await antesMutacaoMidia();
-      const arquivo = await enviarArquivoStorage(file, "catalogo", titulo || file.name);
+      const arquivo = await enviarArquivoStorage(envio, "catalogo", titulo || envio.name, {
+        signal: ctrl.signal,
+        onProgress: progressoEnvio(inputPdf, "Enviando…")
+      });
       const data = await apiPagina("POST", {
         acao: "catalogo_add",
         titulo,
@@ -2153,8 +2334,16 @@
       limparArquivoCampo(inputPdf);
       setStatus(status, "Catálogo adicionado.", "ok");
     } catch (erro) {
-      setStatus(status, erro.message, "erro");
+      if (erro?.cancelado) setStatus(status, "Envio cancelado.", "info");
+      else if (erro?.naoCoube) {
+        setStatus(
+          status,
+          `Mesmo compactado, o PDF ficou com ${formatarMb(erro.tamanhoFinal)}. Divida o catálogo em partes menores.`,
+          "erro"
+        );
+      } else setStatus(status, erro.message, "erro");
     } finally {
+      encerrarOperacaoArquivo(ctrl);
       setCampoArquivoEnviando(inputPdf, false);
       if (btn) btn.disabled = false;
     }
@@ -2173,7 +2362,9 @@
     const inputLogo = form.querySelector(".campo-arquivo__input");
     const btn = form.querySelector('button[type="submit"]');
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
-    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
+    const ctrl = file ? iniciarOperacaoArquivo() : null;
+    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando… 0%");
+    if (file) setCampoArquivoAndamento(inputLogo, "Enviando… 0%", 0);
     if (btn) btn.disabled = true;
     setStatus(status, "Enviando marca…", "info");
     try {
@@ -2181,7 +2372,10 @@
       if (file) {
         await aguardarSalvarTextoPendente();
         await antesMutacaoMidia();
-        arquivo = await enviarArquivoStorage(file, "marca", nome);
+        arquivo = await enviarArquivoStorage(file, "marca", nome, {
+          signal: ctrl.signal,
+          onProgress: progressoEnvio(inputLogo, "Enviando…")
+        });
       } else {
         await aguardarSalvarTextoPendente();
         await antesMutacaoMidia();
@@ -2197,8 +2391,10 @@
       limparArquivoCampo(inputLogo);
       setStatus(status, "Marca adicionada.", "ok");
     } catch (erro) {
-      setStatus(status, erro.message, "erro");
+      if (erro?.cancelado) setStatus(status, "Envio cancelado.", "info");
+      else setStatus(status, erro.message, "erro");
     } finally {
+      encerrarOperacaoArquivo(ctrl);
       setCampoArquivoEnviando(inputLogo, false);
       if (btn) btn.disabled = false;
     }
