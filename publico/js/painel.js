@@ -405,6 +405,40 @@
     return base;
   }
 
+  function canalEhEmail(canal) {
+    const nome = String(canal || "").toLowerCase();
+    return nome === "e-mail" || nome === "email";
+  }
+
+  function extrairEmailDeContatos(contatos) {
+    const lista = Array.isArray(contatos) ? contatos : [];
+    const item = lista.find((c) => canalEhEmail(c.canal));
+    return item?.valor || "";
+  }
+
+  function emailDoCampo(valor) {
+    const bruto = String(valor || "").trim();
+    if (!bruto) return { ok: true, contato: null };
+    if (bruto.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bruto)) {
+      return { ok: false, contato: null };
+    }
+    return { ok: true, contato: { canal: "E-mail", valor: bruto, link: `mailto:${bruto}` } };
+  }
+
+  function mesclarContatosEmail(contatosBase, valorEmail) {
+    const base = (Array.isArray(contatosBase) ? contatosBase : []).filter(
+      (c) => !canalEhEmail(c.canal)
+    );
+    const parsed = emailDoCampo(valorEmail);
+    if (!parsed.ok) {
+      const anterior = extrairEmailDeContatos(contatosBase);
+      if (anterior) base.push({ canal: "E-mail", valor: anterior, link: `mailto:${anterior}` });
+      return base;
+    }
+    if (parsed.contato) base.push(parsed.contato);
+    return base;
+  }
+
   function ufsSelecionadas() {
     return [...document.querySelectorAll("#ufs-grid input[type=checkbox]:checked")].map((el) => el.value);
   }
@@ -1244,6 +1278,7 @@
     document.getElementById("campo-whatsapp-ddd").value = zap.ddd;
     document.getElementById("campo-whatsapp-num").value = zap.num;
     document.getElementById("campo-instagram").value = extrairInstagramDeContatos(paginaDados.contatos);
+    document.getElementById("campo-email").value = extrairEmailDeContatos(paginaDados.contatos);
 
     const destaque = paginaDados.destaque === "empresa" ? "empresa" : "pessoa";
     document.querySelectorAll('input[name="destaque"]').forEach((el) => {
@@ -1279,9 +1314,12 @@
   function payloadTexto() {
     const estados = ufsSelecionadas();
     const cidades = cidadesPorUf();
-    const contatos = mesclarContatosInstagram(
-      paginaDados?.contatos,
-      document.getElementById("campo-instagram")?.value || ""
+    const contatos = mesclarContatosEmail(
+      mesclarContatosInstagram(
+        paginaDados?.contatos,
+        document.getElementById("campo-instagram")?.value || ""
+      ),
+      document.getElementById("campo-email")?.value || ""
     );
     return {
       acao: "atualizar",
@@ -1918,7 +1956,11 @@
         if (ultimaMutacaoMidia > seqInicio) return;
         if (perfil) perfil.pagina = data.pagina;
         paginaDados = data.pagina?.dados || paginaDados;
-        setStatus(status, "Salvo.", "ok");
+        if (!emailDoCampo(document.getElementById("campo-email")?.value || "").ok) {
+          setStatus(status, "Informe um e-mail válido.", "erro");
+        } else {
+          setStatus(status, "Salvo.", "ok");
+        }
       } catch (erro) {
         if (ultimaMutacaoMidia <= seqInicio) setStatus(status, erro.message, "erro");
       }
@@ -2160,9 +2202,17 @@
     }, 400);
   });
 
-  ["campo-empresa", "campo-nome", "campo-cargo", "campo-bio", "campo-mensagem-zap", "campo-whatsapp-ddd", "campo-whatsapp-num", "campo-instagram"].forEach(
+  ["campo-empresa", "campo-nome", "campo-cargo", "campo-bio", "campo-mensagem-zap", "campo-whatsapp-ddd", "campo-whatsapp-num", "campo-instagram", "campo-email"].forEach(
     (id) => document.getElementById(id)?.addEventListener("input", agendarSave)
   );
+
+  document.getElementById("campo-email")?.addEventListener("input", () => {
+    const status = document.getElementById("editor-status");
+    const parsed = emailDoCampo(document.getElementById("campo-email")?.value || "");
+    if (!parsed.ok) setStatus(status, "Informe um e-mail válido.", "erro");
+    else if (status?.textContent === "Informe um e-mail válido.") setStatus(status, "", "");
+    agendarPreview("blocos");
+  });
 
   document.getElementById("campo-segmentos")?.addEventListener("input", () => {
     agendarPreview("blocos");

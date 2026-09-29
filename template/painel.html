@@ -279,6 +279,22 @@
         </div>
       </fieldset>
 
+      <fieldset class="briefing-secao" id="secao-email">
+        <legend>E-mail</legend>
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-email">E-mail (opcional)</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-email" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-email" hidden>
+            <p>Um e-mail em que o cliente possa escrever para você.</p>
+            <p><strong>Na página:</strong> vira um botão de e-mail na área de contato. Ao clicar, abre o programa de e-mail do cliente.</p>
+            <p><strong>Exemplo:</strong> contato@suamarca.com.br</p>
+          </div>
+          <input id="campo-email" type="email" maxlength="160" placeholder="contato@suamarca.com.br" autocomplete="email" spellcheck="false" aria-describedby="ajuda-email">
+        </div>
+      </fieldset>
+
       <fieldset class="briefing-secao" id="secao-marcas">
         <legend>Marcas representadas</legend>
         <div class="campo__cabeca">
@@ -662,6 +678,7 @@
             <li><strong>Identidade</strong> — foto, nomes, cargo e bio no topo da página.</li>
             <li><strong>WhatsApp</strong> — o botão principal de contato. A mensagem padrão já vem escrita na conversa.</li>
             <li><strong>Instagram</strong> — atalho opcional para o seu perfil.</li>
+            <li><strong>E-mail</strong> — botão opcional que abre o programa de e-mail do cliente.</li>
             <li><strong>Marcas</strong> — logos na página e porta de entrada para a página de cada marca.</li>
             <li><strong>Área de atuação</strong> — mapa dos estados e cidades, com os segmentos abaixo.</li>
             <li><strong>Catálogos</strong> — PDFs para o cliente abrir. Podem ficar ligados a uma marca.</li>
