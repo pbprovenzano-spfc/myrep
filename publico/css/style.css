@@ -696,6 +696,47 @@ a { color: inherit; }
   padding: 0 0 48px;
 }
 
+/* Atmosfera da IDV: navy da paleta + glow do acento + malha.
+   Pseudos em z-index 0; o cartão fica em z-index 1.
+   fixed (não background-attachment) evita o bug do Safari iOS. */
+html:has(body.pagina-rep),
+html:has(body.pagina-erro) {
+  background-color: var(--ink);
+}
+
+body.pagina-rep,
+body.pagina-erro {
+  background-color: var(--ink);
+  background-image: none;
+  padding: 14px 12px 40px;
+}
+
+body.pagina-rep::before,
+body.pagina-erro::before,
+body.pagina-rep::after,
+body.pagina-erro::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+body.pagina-rep::before,
+body.pagina-erro::before {
+  background:
+    radial-gradient(900px 520px at 50% -8%, rgba(var(--sinal-rgb), .20), transparent 58%),
+    linear-gradient(170deg, var(--ink) 0%, var(--ink-soft) 55%, var(--ink) 100%);
+}
+
+body.pagina-rep::after,
+body.pagina-erro::after {
+  background-image: radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 90%);
+  mask-image: linear-gradient(180deg, #000 30%, transparent 90%);
+}
+
 .shell--estreito {
   width: 100%;
   max-width: var(--largura-estreita);
@@ -704,10 +745,24 @@ a { color: inherit; }
   box-shadow: 0 0 0 1px rgba(10, 22, 32, .06);
 }
 
+.pagina-rep .shell--estreito,
+.pagina-erro .shell--estreito {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--papel);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, .35),
+    0 2px 8px rgba(0, 0, 0, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
 @media (min-width: 600px) {
-  .pagina-rep,
   .pagina-reps,
-  .pagina-erro {
+  body.pagina-rep,
+  body.pagina-erro {
     padding: 40px 20px 64px;
   }
 
@@ -717,6 +772,15 @@ a { color: inherit; }
     overflow: hidden;
     box-shadow: var(--sombra);
   }
+
+  .pagina-rep .shell--estreito,
+  .pagina-erro .shell--estreito {
+    border-radius: 20px;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, .35),
+      0 2px 8px rgba(0, 0, 0, .18),
+      inset 0 1px 0 rgba(255, 255, 255, .35);
+  }
 }
 
 @media (min-width: 900px) {
@@ -724,8 +788,10 @@ a { color: inherit; }
     max-width: var(--largura-estendida);
   }
 
+  /* clip (não hidden) recorta os cantos sem virar scrollport,
+     então o perfil sticky continua preso à janela. */
   .cartao.shell--estreito {
-    overflow: visible;
+    overflow: clip;
   }
 
   .cartao {
@@ -773,6 +839,7 @@ a { color: inherit; }
 .capa {
   text-align: center;
   padding: 40px 24px 8px;
+  background: linear-gradient(180deg, rgba(var(--sinal-rgb), .09), transparent 72%);
   animation: sobe .55s cubic-bezier(.2, .7, .3, 1) both;
 }
 
@@ -926,7 +993,7 @@ a { color: inherit; }
 .catalogo-grupo {
   border: 1px solid var(--borda);
   border-radius: var(--raio);
-  background: var(--papel);
+  background: var(--branco);
   overflow: hidden;
 }
 
@@ -1028,7 +1095,7 @@ a { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--papel);
+  background: var(--branco);
   color: inherit;
   text-decoration: none;
   transition:
@@ -1249,7 +1316,7 @@ a.marca-chip:focus-visible {
   padding: 28px 20px 22px;
   border-radius: 24px;
   border: 1px solid rgba(10, 22, 32, .06);
-  background: #FFFFFF;
+  background: var(--branco);
   box-shadow: 0 10px 32px rgba(10, 22, 32, .07);
   overflow: visible;
 }
@@ -1438,6 +1505,14 @@ a.marca-chip:focus-visible {
   padding: 22px 24px;
   font-size: 12px;
   text-align: center;
+}
+
+/* Base do cartão: o rodapé é a mesma cor do fundo da página.
+   O raio inferior segura o canto quando o cartão está com overflow visível
+   (desktop, por causa do perfil sticky) e o filete separa a barra do conteúdo. */
+.pagina-rep .rodape {
+  border-radius: 0 0 20px 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
 }
 
 .rodape__creditos a {
@@ -4225,12 +4300,16 @@ a.marca-chip:focus-visible {
 }
 
 .painel-preview__viewport {
+  position: relative;
   border-radius: 22px;
   overflow: auto;
   max-height: min(78vh, 860px);
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(var(--sinal-rgb), .14), transparent 55%),
-    linear-gradient(180deg, #E8EEF1 0%, var(--papel) 40%, #E4EBEE 100%);
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px),
+    radial-gradient(900px 520px at 50% -8%, rgba(var(--sinal-rgb), .20), transparent 58%),
+    linear-gradient(170deg, var(--ink) 0%, var(--ink-soft) 55%, var(--ink) 100%);
+  background-size: 22px 22px, auto, auto;
   box-shadow: 0 0 0 1px rgba(10, 22, 32, .10), 0 12px 32px rgba(10, 22, 32, .10);
   border: 8px solid #1a2430;
 }
@@ -4240,17 +4319,23 @@ a.marca-chip:focus-visible {
 }
 
 .painel-preview .shell--estreito {
+  position: relative;
+  z-index: 1;
   min-height: 0;
-  max-width: 100%;
-  margin: 0 auto;
-  border-radius: 0;
-  box-shadow: none;
+  background: var(--papel);
+  width: calc(100% - 24px);
+  max-width: min(430px, calc(100% - 24px));
+  margin: 14px auto 40px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, .35),
+    0 2px 8px rgba(0, 0, 0, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .35);
 }
 
 .painel-preview .cartao {
   display: block;
-  max-width: 430px;
-  margin: 0 auto;
 }
 
 .painel-preview .cartao__perfil {
