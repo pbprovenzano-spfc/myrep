@@ -82,10 +82,16 @@
 
   redirecionarSeLogado();
 
-  if (params.get("erro") === "link_expirado") {
+  if (params.get("erro") === "link_expirado" || params.get("erro") === "sessao") {
     const statusAuth = document.getElementById("auth-status");
     if (statusAuth && (document.getElementById("form-cadastro") || document.getElementById("form-entrar"))) {
-      setStatus(statusAuth, MSG_LINK_EXPIRADO, "erro");
+      setStatus(
+        statusAuth,
+        params.get("erro") === "sessao"
+          ? "Sua sessão expirou. Entre de novo."
+          : MSG_LINK_EXPIRADO,
+        "erro"
+      );
     }
   }
 

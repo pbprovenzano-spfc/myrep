@@ -83,6 +83,7 @@ async function exigirUsuario(req) {
     const sb = getSupabase();
     const { data, error } = await sb.auth.getUser(accessToken);
     if (error || !data?.user) {
+      console.error("auth getUser:", error?.message || "sem usuário");
       const erro = new Error("Sessão inválida ou expirada.");
       erro.status = 401;
       throw erro;

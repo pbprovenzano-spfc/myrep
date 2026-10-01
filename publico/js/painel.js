@@ -1153,9 +1153,8 @@
     }
     setStatus(status, "Salvando…", "info");
     const inputLogo = form.querySelector(".campo-arquivo__input");
-    const file = form.arquivo?.files?.[0];
+    const file = arquivoLogoCampo(inputLogo);
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
-    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
     const ctrl = file ? iniciarOperacaoArquivo() : null;
     try {
       if (file && file.size > MAX_IMAGEM) {
@@ -1166,7 +1165,10 @@
       await antesMutacaoMidia();
       let arquivo = "";
       if (file) {
-        arquivo = await enviarArquivoStorage(file, "marca", nome, {
+        setStatus(status, "Ajustando logo…", "info");
+        const envio = await prepararLogoEnvio(inputLogo, file);
+        setCampoArquivoEnviando(inputLogo, true, "Enviando logo…");
+        arquivo = await enviarArquivoStorage(envio, "marca", nome, {
           signal: ctrl.signal,
           onProgress: progressoEnvio(inputLogo, "Enviando…")
         });
@@ -1686,6 +1688,9 @@
   function limparArquivoCampo(input) {
     if (!input) return;
     input.value = "";
+    input._logoAjustado = null;
+    input._logoOrigem = null;
+    input._logoPromessa = null;
     revogarCampoArquivoBlob();
     const zona = input.closest(".campo-arquivo__zona");
     if (!zona) return;
@@ -1755,7 +1760,8 @@
         const logoThumb =
           (input.id === "input-foto" &&
             document.querySelector('input[name="fotoTipo"]:checked')?.value === "logo") ||
-          !!input.closest("#form-marca-add");
+          !!input.closest("#form-marca-add") ||
+          input.id === "marca-pagina-logo";
         thumb.classList.toggle("campo-arquivo__thumb--logo", logoThumb);
       } else {
         thumb.removeAttribute("src");
@@ -1925,6 +1931,42 @@
       );
       xhr.send(file);
     });
+  }
+
+  function arquivoLogoCampo(input) {
+    if (!input) return null;
+    const atual = input.files?.[0] || null;
+    if (input._logoAjustado && atual && atual === input._logoOrigem) return input._logoAjustado;
+    return atual;
+  }
+
+  async function prepararLogoEnvio(input, file) {
+    if (!file) return file;
+    if (input?._logoAjustado && (file === input._logoAjustado || file === input._logoOrigem)) {
+      return input._logoAjustado;
+    }
+    if (input?._logoPromessa) return input._logoPromessa;
+    if (!window.MyRepLogo?.prepararLogo) return file;
+
+    const promessa = (async () => {
+      setCampoArquivoEnviando(input, true, "Ajustando logo…");
+      setCampoArquivoAndamento(input, "Ajustando logo…", null);
+      const ajustado = await window.MyRepLogo.prepararLogo(file);
+      if (input) {
+        input._logoOrigem = file;
+        input._logoAjustado = ajustado;
+        atualizarArquivoCampo(input, { file: ajustado, nome: ajustado.name });
+      }
+      return ajustado;
+    })();
+
+    if (input) {
+      input._logoPromessa = promessa;
+      promessa.finally(() => {
+        if (input._logoPromessa === promessa) input._logoPromessa = null;
+      });
+    }
+    return promessa;
   }
 
   async function enviarArquivoStorage(file, tipo, dica, opts = {}) {
@@ -2127,7 +2169,13 @@
       carregarSuporte();
     } catch (erro) {
       if (erro.status === 401) {
-        location.replace("/entrar/?next=/painel/");
+        try {
+          await window.MyRepAuth.getClient()?.auth.signOut();
+        } catch {
+          /* ignore */
+        }
+        const volta = encodeURIComponent(location.pathname + location.search);
+        location.replace(`/entrar/?erro=sessao&next=${volta}`);
         return;
       }
       carregando.textContent = erro.message || "Não foi possível carregar.";
@@ -2288,8 +2336,9 @@
 
   document.getElementById("input-foto")?.addEventListener("change", async (ev) => {
     const input = ev.target;
+    if (input._logoIgnorarChange) return;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || file === input._logoAjustado) return;
     const status = document.getElementById("editor-status");
     if (rejeitarImagemCampo(input, file)) return;
     if (file.size > MAX_IMAGEM) {
@@ -2297,17 +2346,31 @@
       limparArquivoCampo(input);
       return;
     }
+    const ehLogo = document.querySelector('input[name="fotoTipo"]:checked')?.value === "logo";
+    let envio = file;
+    if (ehLogo) {
+      setCampoArquivoEnviando(input, true, "Ajustando logo…");
+      setStatus(status, "Ajustando logo…", "info");
+      try {
+        envio = await prepararLogoEnvio(input, file);
+      } catch (erro) {
+        setCampoArquivoEnviando(input, false);
+        setStatus(status, erro.message, "erro");
+        limparArquivoCampo(input);
+        return;
+      }
+    }
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
-    fotoLocalUrl = URL.createObjectURL(file);
+    fotoLocalUrl = URL.createObjectURL(envio);
     atualizarPreview({ perfil: true });
     setCampoArquivoEnviando(input, true, "Enviando… 0%");
     setCampoArquivoAndamento(input, "Enviando… 0%", 0);
-    setStatus(status, "Enviando foto…", "info");
+    setStatus(status, ehLogo ? "Enviando logo…" : "Enviando foto…", "info");
     const ctrl = iniciarOperacaoArquivo();
     try {
       await aguardarSalvarTextoPendente();
       await antesMutacaoMidia();
-      const arquivo = await enviarArquivoStorage(file, "foto", undefined, {
+      const arquivo = await enviarArquivoStorage(envio, "foto", undefined, {
         signal: ctrl.signal,
         onProgress: progressoEnvio(input, "Enviando…")
       });
@@ -2414,7 +2477,8 @@
     const status = document.getElementById("editor-status");
     const form = ev.currentTarget;
     const nome = form.nome?.value?.trim() || "";
-    const file = form.arquivo?.files?.[0];
+    const inputLogoPre = form.querySelector(".campo-arquivo__input");
+    const file = arquivoLogoCampo(inputLogoPre);
     if (file && file.size > MAX_IMAGEM) {
       setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
       return;
@@ -2423,16 +2487,19 @@
     const btn = form.querySelector('button[type="submit"]');
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
     const ctrl = file ? iniciarOperacaoArquivo() : null;
-    if (file) setCampoArquivoEnviando(inputLogo, true, "Enviando… 0%");
-    if (file) setCampoArquivoAndamento(inputLogo, "Enviando… 0%", 0);
     if (btn) btn.disabled = true;
-    setStatus(status, "Enviando marca…", "info");
+    setStatus(status, file ? "Ajustando logo…" : "Enviando marca…", "info");
     try {
       let arquivo = "";
+      let envio = file;
       if (file) {
+        envio = await prepararLogoEnvio(inputLogo, file);
+        setCampoArquivoEnviando(inputLogo, true, "Enviando… 0%");
+        setCampoArquivoAndamento(inputLogo, "Enviando… 0%", 0);
+        setStatus(status, "Enviando marca…", "info");
         await aguardarSalvarTextoPendente();
         await antesMutacaoMidia();
-        arquivo = await enviarArquivoStorage(file, "marca", nome, {
+        arquivo = await enviarArquivoStorage(envio, "marca", nome, {
           signal: ctrl.signal,
           onProgress: progressoEnvio(inputLogo, "Enviando…")
         });
@@ -2584,10 +2651,33 @@
     document.getElementById(id)?.addEventListener("input", agendarSaveMarca);
   });
 
+  document.querySelector("#form-marca-add .campo-arquivo__input")?.addEventListener("change", async (ev) => {
+    const input = ev.target;
+    const file = input.files?.[0];
+    if (!file || file === input._logoAjustado) return;
+    const status = document.getElementById("editor-status");
+    if (rejeitarImagemCampo(input, file)) return;
+    if (file.size > MAX_IMAGEM) {
+      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
+      limparArquivoCampo(input);
+      return;
+    }
+    try {
+      setStatus(status, "Ajustando logo…", "info");
+      await prepararLogoEnvio(input, file);
+      if (status?.textContent === "Ajustando logo…") setStatus(status, "", "");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+      limparArquivoCampo(input);
+    } finally {
+      setCampoArquivoEnviando(input, false);
+    }
+  });
+
   document.getElementById("marca-pagina-logo")?.addEventListener("change", async (ev) => {
     const input = ev.target;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || file === input._logoAjustado) return;
     const status = document.getElementById("marca-pagina-status");
     if (rejeitarImagemCampo(input, file)) return;
     if (file.size > MAX_IMAGEM) {
@@ -2595,8 +2685,19 @@
       limparArquivoCampo(input);
       return;
     }
+    let envio = file;
+    setCampoArquivoEnviando(input, true, "Ajustando logo…");
+    setStatus(status, "Ajustando logo…", "info");
+    try {
+      envio = await prepararLogoEnvio(input, file);
+    } catch (erro) {
+      setCampoArquivoEnviando(input, false);
+      setStatus(status, erro.message, "erro");
+      limparArquivoCampo(input);
+      return;
+    }
     if (marcaLogoLocalUrl) URL.revokeObjectURL(marcaLogoLocalUrl);
-    marcaLogoLocalUrl = URL.createObjectURL(file);
+    marcaLogoLocalUrl = URL.createObjectURL(envio);
     atualizarPreviewMarca();
     await salvarMarcaPagina();
   });
