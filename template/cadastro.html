@@ -40,7 +40,7 @@
     </label>
     <label class="campo">
       <span class="campo__rotulo">Celular com DDD <abbr title="obrigatório">*</abbr></span>
-      <input name="celular" id="cadastro-celular" type="tel" required inputmode="tel" autocomplete="tel" maxlength="16" placeholder="11999999999">
+      <input name="celular" id="cadastro-celular" type="tel" required inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(11) 99999-9999">
     </label>
     <label class="campo">
       <span class="campo__rotulo">CEP <abbr title="obrigatório">*</abbr></span>
@@ -83,7 +83,7 @@
       <input name="senha2" type="password" required autocomplete="new-password" minlength="6" maxlength="72">
     </label>
     <label class="campo">
-      <span class="campo__rotulo">Código</span>
+      <span class="campo__rotulo">Código <span class="campo__opcional">(opcional)</span></span>
       <input name="codigo_vitalicio" type="text" autocomplete="off" maxlength="20" placeholder="MYREP-XXXXXX" spellcheck="false">
     </label>
 
@@ -102,6 +102,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
 <script src="/js/supabase-client.js" defer></script>
 <script src="/js/cep.js" defer></script>
+<script src="/js/mascaras.js" defer></script>
 <script src="/js/auth-pages.js" defer></script>
 </body>
 </html>

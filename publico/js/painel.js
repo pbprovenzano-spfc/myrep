@@ -2238,7 +2238,7 @@
     };
     set("cobranca-nome", c.nome);
     set("cobranca-documento", c.cpfCnpj);
-    set("cobranca-celular", c.celular);
+    set("cobranca-celular", window.MyRepMascaras?.formatarCelular(c.celular) ?? c.celular);
     set("cobranca-cep", c.cep);
     set("cobranca-endereco", c.endereco);
     set("cobranca-numero", c.numero);
@@ -2281,6 +2281,7 @@
     return "";
   }
 
+  window.MyRepMascaras?.ligarCelular(document.getElementById("cobranca-celular"));
   window.MyRepCep?.ligarCep(document.getElementById("cobranca-cep"), {
     endereco: document.getElementById("cobranca-endereco"),
     bairro: document.getElementById("cobranca-bairro"),

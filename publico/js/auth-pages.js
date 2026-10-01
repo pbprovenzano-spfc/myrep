@@ -100,6 +100,7 @@
   if (formCadastro) {
     const status = document.getElementById("auth-status");
     const btn = document.getElementById("btn-cadastro");
+    window.MyRepMascaras?.ligarCelular(document.getElementById("cadastro-celular"));
     window.MyRepCep?.ligarCep(document.getElementById("cadastro-cep"), {
       endereco: document.getElementById("cadastro-endereco"),
       bairro: document.getElementById("cadastro-bairro"),

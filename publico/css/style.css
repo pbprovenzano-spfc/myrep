@@ -1874,6 +1874,12 @@ a.marca-chip:focus-visible {
   color: var(--sinal-escuro);
 }
 
+.campo__opcional {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mutado);
+}
+
 .campo__rotulo abbr {
   text-decoration: none;
   color: var(--sinal-escuro);
