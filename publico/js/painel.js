@@ -413,16 +413,27 @@
   function extrairEmailDeContatos(contatos) {
     const lista = Array.isArray(contatos) ? contatos : [];
     const item = lista.find((c) => canalEhEmail(c.canal));
-    return item?.valor || "";
+    return String(item?.valor || "").trim().toLowerCase();
   }
 
   function emailDoCampo(valor) {
-    const bruto = String(valor || "").trim();
+    const bruto = String(valor || "").trim().toLowerCase();
     if (!bruto) return { ok: true, contato: null };
     if (bruto.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bruto)) {
       return { ok: false, contato: null };
     }
     return { ok: true, contato: { canal: "E-mail", valor: bruto, link: `mailto:${bruto}` } };
+  }
+
+  function pesoContato(canal) {
+    const nome = String(canal || "").toLowerCase();
+    if (canalEhEmail(nome)) return 0;
+    if (nome === "instagram") return 1;
+    return 2;
+  }
+
+  function ordenarContatos(contatos) {
+    return [...contatos].sort((a, b) => pesoContato(a.canal) - pesoContato(b.canal));
   }
 
   function mesclarContatosEmail(contatosBase, valorEmail) {
@@ -1316,12 +1327,14 @@
   function payloadTexto() {
     const estados = ufsSelecionadas();
     const cidades = cidadesPorUf();
-    const contatos = mesclarContatosEmail(
+    const contatos = ordenarContatos(
       mesclarContatosInstagram(
-        paginaDados?.contatos,
+        mesclarContatosEmail(
+          paginaDados?.contatos,
+          document.getElementById("campo-email")?.value || ""
+        ),
         document.getElementById("campo-instagram")?.value || ""
-      ),
-      document.getElementById("campo-email")?.value || ""
+      )
     );
     return {
       acao: "atualizar",
@@ -1530,12 +1543,16 @@
     const catalogosHtml = htmlCatalogosPreview(c);
     if (catalogosHtml) partes.push(catalogosHtml);
 
-    const contatos = Array.isArray(c.contatos) ? c.contatos : [];
+    const contatos = ordenarContatos(Array.isArray(c.contatos) ? c.contatos : []);
     if (contatos.length) {
       const itens = contatos
         .map((ct) => {
-          const externo = /^https?:/.test(ct.link || "") ? ' target="_blank" rel="noopener"' : "";
-          return `<li><a class="link-btn" href="${esc(ct.link || "#")}"${externo}><span class="link-btn__texto">${esc(ct.canal)}</span><span class="link-btn__meta">${esc(ct.valor)}</span></a></li>`;
+          const email = canalEhEmail(ct.canal);
+          const valor = email ? String(ct.valor || "").toLowerCase() : ct.valor;
+          const href = email ? `mailto:${valor}` : ct.link || "#";
+          const externo = /^https?:/.test(href) ? ' target="_blank" rel="noopener"' : "";
+          const metaClasse = email ? "link-btn__meta link-btn__meta--email" : "link-btn__meta";
+          return `<li><a class="link-btn" href="${esc(href)}"${externo}><span class="link-btn__texto">${esc(ct.canal)}</span><span class="${metaClasse}">${esc(valor)}</span></a></li>`;
         })
         .join("");
       partes.push(`<section class="bloco bloco--links"><h2 class="rotulo">Contato</h2><ul class="links">${itens}</ul></section>`);

@@ -282,15 +282,35 @@ ${outrosHtml}
   </section>`;
 }
 
+function canalEhEmail(canal) {
+  const nome = String(canal || "").toLowerCase();
+  return nome === "e-mail" || nome === "email";
+}
+
+function pesoContato(canal) {
+  const nome = String(canal || "").toLowerCase();
+  if (canalEhEmail(nome)) return 0;
+  if (nome === "instagram") return 1;
+  return 2;
+}
+
+function ordenarContatos(contatos) {
+  return [...contatos].sort((a, b) => pesoContato(a.canal) - pesoContato(b.canal));
+}
+
 function blocoContatos(c) {
   if (!temItens(c.contatos)) return "";
-  const itens = c.contatos
+  const itens = ordenarContatos(c.contatos)
     .map((ct) => {
-      const externo = /^https?:/.test(ct.link || "") ? ' target="_blank" rel="noopener"' : "";
+      const email = canalEhEmail(ct.canal);
+      const valor = email ? String(ct.valor || "").toLowerCase() : ct.valor;
+      const href = email ? `mailto:${valor}` : ct.link || "#";
+      const externo = /^https?:/.test(href) ? ' target="_blank" rel="noopener"' : "";
+      const metaClasse = email ? "link-btn__meta link-btn__meta--email" : "link-btn__meta";
       return `        <li>
-          <a class="link-btn" href="${esc(ct.link || "#")}"${externo}>
+          <a class="link-btn" href="${esc(href)}"${externo}>
             <span class="link-btn__texto">${esc(ct.canal)}</span>
-            <span class="link-btn__meta">${esc(ct.valor)}</span>
+            <span class="${metaClasse}">${esc(valor)}</span>
           </a>
         </li>`;
     })

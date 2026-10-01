@@ -975,6 +975,11 @@ body.pagina-erro::after {
   overflow-wrap: anywhere;
 }
 
+.link-btn__meta--email {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .link-btn__logo {
   flex: 0 0 auto;
   width: 44px;
