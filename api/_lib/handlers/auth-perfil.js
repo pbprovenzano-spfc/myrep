@@ -8,9 +8,11 @@ const {
   obterAssinaturaPorUserId,
   obterPaginaPorUserId,
   obterPaginaPorEmail,
-  upsertAssinatura
+  upsertAssinatura,
+  expirarAnualSeVencido
 } = require("../assinaturas");
 const { resgatarCodigoReservado } = require("../codigos-vitalicios");
+const { cobrancaDeUsuario, respostaCobranca } = require("../cobranca");
 const { situacaoDe } = require("../paginas");
 const { paginaResumo } = require("../painel-helpers");
 
@@ -39,6 +41,8 @@ module.exports = async function handler(req, res) {
         });
       }
     }
+
+    if (assinatura) assinatura = await expirarAnualSeVencido(assinatura);
 
     let pagina = await obterPaginaPorUserId(user.id);
     if (!pagina && email) {
@@ -69,6 +73,7 @@ module.exports = async function handler(req, res) {
         nome: user.user_metadata?.nome || user.user_metadata?.full_name || null,
         emailConfirmado: !!user.email_confirmed_at || !!user.confirmed_at
       },
+      cobranca: respostaCobranca(cobrancaDeUsuario(user)),
       assinatura: assinatura
         ? {
             plano: assinatura.plano,

@@ -101,6 +101,20 @@ async function exigirUsuario(req) {
   return { user: data.user, accessToken };
 }
 
+async function buscarUsuarioPorId(userId) {
+  const uid = String(userId || "").trim();
+  if (!uid || !supabaseConfigured()) return null;
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb.auth.admin.getUserById(uid);
+    if (error || !data?.user) return null;
+    return data.user;
+  } catch (erro) {
+    console.error("buscarUsuarioPorId:", erro.message || erro);
+    return null;
+  }
+}
+
 async function buscarUsuarioPorEmail(email) {
   const e = String(email || "")
     .trim()
@@ -197,6 +211,7 @@ module.exports = {
   extrairAccessToken,
   exigirUsuario,
   buscarUsuarioPorEmail,
+  buscarUsuarioPorId,
   listarUsuariosAuth,
   atualizarSenhaUsuario,
   cookieValor

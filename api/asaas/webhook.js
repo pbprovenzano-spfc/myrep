@@ -1,4 +1,12 @@
-const { lerJsonBody, json, PLANOS, valoresIguais, asaasFetch } = require("../_lib/pagamento");
+const {
+  lerJsonBody,
+  json,
+  PLANOS,
+  asaasFetch,
+  identificarPlanoPorValor,
+  lerReferenciaCheckout,
+  proximaCobrancaDoPlano
+} = require("../_lib/pagamento");
 const {
   registrarPagamentoEvento,
   registrarAcesso,
@@ -9,7 +17,7 @@ const {
   marcarAdimplentePorEmail,
   marcarInadimplentePorEmail
 } = require("../_lib/paginas");
-const { buscarUsuarioPorEmail } = require("../_lib/auth");
+const { buscarUsuarioPorEmail, buscarUsuarioPorId } = require("../_lib/auth");
 const {
   upsertAssinatura,
   associarUserIdPorEmail,
@@ -17,15 +25,22 @@ const {
 } = require("../_lib/assinaturas");
 
 function identificarPlano(pagamento) {
-  if (!pagamento || pagamento.value == null) return null;
-  for (const plano of Object.values(PLANOS)) {
-    if (plano.checkout === false) continue;
-    if (valoresIguais(pagamento.value, plano.valor)) return plano;
-  }
-  return null;
+  if (!pagamento) return null;
+  const ref = lerReferenciaCheckout(pagamento.externalReference);
+  if (ref && PLANOS[ref.planoId]) return PLANOS[ref.planoId];
+  return identificarPlanoPorValor(pagamento.value);
+}
+
+function planoDoCheckout(checkout) {
+  if (!checkout) return { plano: null, userId: null };
+  const ref = lerReferenciaCheckout(checkout.externalReference);
+  const porItem = identificarPlanoPorValor(checkout.items?.[0]?.value);
+  const plano = (ref && PLANOS[ref.planoId]) || porItem || null;
+  return { plano, userId: ref?.userId || null };
 }
 
 async function sincronizarContaPorEmail(email, {
+  userId,
   planoId,
   status,
   customerId,
@@ -36,32 +51,70 @@ async function sincronizarContaPorEmail(email, {
   const e = String(email || "")
     .trim()
     .toLowerCase();
-  if (!e) return null;
 
-  const user = await buscarUsuarioPorEmail(e);
-  if (!user) return null;
+  let user = null;
+  if (userId) user = { id: userId };
+  else if (e) user = await buscarUsuarioPorEmail(e);
+  if (!user?.id) return null;
 
   const assinaturaAtual = await obterAssinaturaPorUserId(user.id);
   if (assinaturaAtual?.plano === "vitalicio" && assinaturaAtual?.status === "ativa") {
     return user;
   }
 
-  await upsertAssinatura(user.id, {
-    plano: planoId || "mensal",
+  const planoEfetivo = planoId || assinaturaAtual?.plano || null;
+  const proxima = proximaCobrancaDoPlano(
+    planoEfetivo,
+    assinaturaAtual,
+    proximaCobranca,
+    status || "ativa"
+  );
+  const patch = {
     status: status || "ativa",
-    asaas_customer_id: customerId || null,
-    asaas_subscription_id: subscriptionId || null,
-    asaas_payment_id: paymentId || null,
-    proxima_cobranca: proximaCobranca || null
-  });
+    asaas_customer_id: customerId || assinaturaAtual?.asaas_customer_id || null,
+    asaas_subscription_id: subscriptionId || assinaturaAtual?.asaas_subscription_id || null,
+    asaas_payment_id: paymentId || assinaturaAtual?.asaas_payment_id || null
+  };
+  if (planoId) patch.plano = planoId;
+  if (proxima) patch.proxima_cobranca = proxima;
 
-  try {
-    await associarUserIdPorEmail(e, user.id);
-  } catch (erroAssoc) {
-    console.error("Webhook associar user_id:", erroAssoc.message || erroAssoc);
+  await upsertAssinatura(user.id, patch);
+
+  if (e) {
+    try {
+      await associarUserIdPorEmail(e, user.id);
+    } catch (erroAssoc) {
+      console.error("Webhook associar user_id:", erroAssoc.message || erroAssoc);
+    }
   }
 
   return user;
+}
+
+async function emailsParaAdimplencia(userId, emailInformado) {
+  const emails = new Set();
+  const informado = String(emailInformado || "")
+    .trim()
+    .toLowerCase();
+  if (informado) emails.add(informado);
+  if (userId) {
+    const conta = await buscarUsuarioPorId(userId);
+    const daConta = String(conta?.email || "")
+      .trim()
+      .toLowerCase();
+    if (daConta) emails.add(daConta);
+  }
+  return [...emails];
+}
+
+async function marcarAdimplenteNosEmails(emails) {
+  for (const email of emails) {
+    try {
+      await marcarAdimplentePorEmail(email);
+    } catch (erroPaginas) {
+      console.error("Webhook reativar páginas:", erroPaginas.message || erroPaginas);
+    }
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -83,9 +136,42 @@ module.exports = async function handler(req, res) {
     const pagamento = body.payment || null;
     const plano = identificarPlano(pagamento);
 
+    if (evento === "CHECKOUT_PAID" && body.checkout) {
+      const { plano: planoCheckout, userId } = planoDoCheckout(body.checkout);
+      let emailCheckout = String(body.checkout.customerData?.email || "")
+        .trim()
+        .toLowerCase();
+      const customerId = body.checkout.customer || null;
+      if (!emailCheckout && customerId && process.env.ASAAS_API_KEY) {
+        try {
+          const cliente = await asaasFetch(`/customers/${encodeURIComponent(customerId)}`);
+          emailCheckout = String(cliente?.email || "")
+            .trim()
+            .toLowerCase();
+        } catch (erroCliente) {
+          console.error("Webhook checkout cliente:", erroCliente.message || erroCliente);
+        }
+      }
+      if (planoCheckout && (userId || emailCheckout)) {
+        try {
+          await sincronizarContaPorEmail(emailCheckout, {
+            userId,
+            planoId: planoCheckout.id,
+            status: "ativa",
+            customerId,
+            paymentId: body.checkout.id || null
+          });
+        } catch (erroCheckout) {
+          console.error("Webhook checkout:", erroCheckout.message || erroCheckout);
+        }
+        const emailsCheckout = await emailsParaAdimplencia(userId, emailCheckout);
+        await marcarAdimplenteNosEmails(emailsCheckout);
+      }
+    }
+
     await registrarPagamentoEvento({
       event: evento,
-      paymentId: pagamento?.id || null,
+      paymentId: pagamento?.id || body.checkout?.id || null,
       payload: body
     });
 
@@ -110,13 +196,12 @@ module.exports = async function handler(req, res) {
             dias: 14,
             origem: "webhook"
           });
-          try {
-            await marcarAdimplentePorEmail(email);
-          } catch (erroPaginas) {
-            console.error("Webhook reativar páginas:", erroPaginas.message || erroPaginas);
-          }
+          const refPagamento = lerReferenciaCheckout(pagamento.externalReference);
+          const emailsPagamento = await emailsParaAdimplencia(refPagamento?.userId, email);
+          await marcarAdimplenteNosEmails(emailsPagamento);
           try {
             await sincronizarContaPorEmail(email, {
+              userId: refPagamento?.userId,
               planoId: plano.id,
               status: "ativa",
               customerId: pagamento.customer,

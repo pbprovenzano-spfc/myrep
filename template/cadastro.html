@@ -26,13 +26,49 @@
 <main class="auth-shell">
   <header class="auth-intro">
     <h1 class="auth-intro__titulo">Criar sua conta</h1>
-    <p class="auth-intro__texto">Cadastre-se com e-mail e senha. Depois escolha o plano e pague na Asaas.</p>
+    <p class="auth-intro__texto">Cadastre-se com e-mail e senha. Os dados abaixo são os da cobrança na Asaas.</p>
   </header>
 
   <form class="auth-form" id="form-cadastro" novalidate>
     <label class="campo">
-      <span class="campo__rotulo">Nome (opcional)</span>
-      <input name="nome" type="text" autocomplete="name" maxlength="120" placeholder="Seu nome">
+      <span class="campo__rotulo">Nome completo ou razão social <abbr title="obrigatório">*</abbr></span>
+      <input name="nome" id="cadastro-nome" type="text" required autocomplete="name" maxlength="80" placeholder="Seu nome">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">CPF ou CNPJ <abbr title="obrigatório">*</abbr></span>
+      <input name="documento" id="cadastro-documento" type="text" required inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Celular com DDD <abbr title="obrigatório">*</abbr></span>
+      <input name="celular" id="cadastro-celular" type="tel" required inputmode="tel" autocomplete="tel" maxlength="16" placeholder="11999999999">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">CEP <abbr title="obrigatório">*</abbr></span>
+      <input name="cep" id="cadastro-cep" type="text" required inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Rua <abbr title="obrigatório">*</abbr></span>
+      <input name="endereco" id="cadastro-endereco" type="text" required autocomplete="address-line1" maxlength="255" placeholder="Preenchida pelo CEP">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Número <abbr title="obrigatório">*</abbr></span>
+      <input name="numero" id="cadastro-numero" type="text" required autocomplete="off" maxlength="20" placeholder="123">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Bairro <abbr title="obrigatório">*</abbr></span>
+      <input name="bairro" id="cadastro-bairro" type="text" required autocomplete="off" maxlength="80" placeholder="Preenchido pelo CEP">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Complemento</span>
+      <input name="complemento" id="cadastro-complemento" type="text" autocomplete="address-line2" maxlength="255" placeholder="Apto, sala, bloco">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">Cidade</span>
+      <input name="cidade" id="cadastro-cidade" type="text" autocomplete="address-level2" maxlength="80">
+    </label>
+    <label class="campo">
+      <span class="campo__rotulo">UF</span>
+      <input name="uf" id="cadastro-uf" type="text" autocomplete="address-level1" maxlength="2" placeholder="SP">
     </label>
     <label class="campo">
       <span class="campo__rotulo">E-mail <abbr title="obrigatório">*</abbr></span>
@@ -65,6 +101,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
 <script src="/js/supabase-client.js" defer></script>
+<script src="/js/cep.js" defer></script>
 <script src="/js/auth-pages.js" defer></script>
 </body>
 </html>

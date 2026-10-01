@@ -58,15 +58,71 @@
       </div>
       <div class="ajuda__painel" id="ajuda-assinatura" hidden>
         <p>A assinatura libera o editor e mantém sua página no ar.</p>
-        <p><strong>Na prática:</strong> o plano mensal cobra todo mês. O anual sai mais barato e pode ser parcelado em 12 vezes no cartão.</p>
+        <p><strong>Na prática:</strong> o plano mensal cobra todo mês no cartão. O anual sai mais barato: PIX à vista ou até 12 vezes no cartão.</p>
         <p><strong>Se atrasar:</strong> há 3 dias de carência. Depois disso a página some do ar até o pagamento ser regularizado.</p>
       </div>
-      <p class="painel-card__texto" id="assinatura-texto">Escolha um plano para montar sua página.</p>
-      <div class="painel-planos" id="painel-planos">
-        <button type="button" class="btn btn--primario" data-checkout="mensal">Mensal · R$ 17,90</button>
-        <button type="button" class="btn btn--fantasma-ink" data-checkout="anual">Anual · R$ 130,80</button>
+      <p class="painel-card__texto" id="assinatura-texto">Escolha um plano para montar sua página. O pagamento é na Asaas, por PIX ou cartão.</p>
+      <div id="form-cobranca">
+        <p class="painel-sub">Dados de cobrança</p>
+        <label class="campo">
+          <span class="campo__rotulo">Nome completo ou razão social</span>
+          <input id="cobranca-nome" type="text" autocomplete="name" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">CPF ou CNPJ</span>
+          <input id="cobranca-documento" type="text" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Celular com DDD</span>
+          <input id="cobranca-celular" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="11999999999">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">CEP</span>
+          <input id="cobranca-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Rua</span>
+          <input id="cobranca-endereco" type="text" autocomplete="address-line1" maxlength="255">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Número</span>
+          <input id="cobranca-numero" type="text" autocomplete="off" maxlength="20">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Bairro</span>
+          <input id="cobranca-bairro" type="text" autocomplete="off" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Complemento</span>
+          <input id="cobranca-complemento" type="text" autocomplete="address-line2" maxlength="255">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Cidade</span>
+          <input id="cobranca-cidade" type="text" autocomplete="address-level2" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">UF</span>
+          <input id="cobranca-uf" type="text" autocomplete="address-level1" maxlength="2">
+        </label>
       </div>
-      <p class="painel-card__texto painel-card__nota" id="assinatura-nota-anual">Anual: 12× de R$ 10,90 no cartão (via Asaas).</p>
+      <div class="painel-planos" id="painel-planos">
+        <article class="preco" data-plano-card="mensal">
+          <div class="preco__texto">
+            <h3 class="preco__nome">Mensal</h3>
+            <p class="preco__valor"><span>R$ 17,90</span> /mês</p>
+            <p class="preco__nota">No cartão. Cancele quando quiser.</p>
+          </div>
+          <button type="button" class="btn btn--primario" data-checkout="mensal">Assinar mensal</button>
+        </article>
+        <article class="preco preco--destaque" data-plano-card="anual">
+          <div class="preco__texto">
+            <h3 class="preco__nome">Anual</h3>
+            <p class="preco__valor"><span>R$ 130,80</span> no ano</p>
+            <p class="preco__nota">12× de R$ 10,90 · melhor preço</p>
+          </div>
+          <button type="button" class="btn btn--primario" data-checkout="anual">Assinar anual</button>
+        </article>
+      </div>
       <p class="briefing-status" id="checkout-status" role="status"></p>
     </section>
 
@@ -724,6 +780,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
 <script src="/js/supabase-client.js" defer></script>
+<script src="/js/cep.js" defer></script>
 <script src="/js/mapa.js" defer></script>
 <script src="/js/pdf-compress.js" defer></script>
 <script src="/js/logo-png.js" defer></script>

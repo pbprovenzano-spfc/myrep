@@ -132,8 +132,9 @@ async function removerAsset(slug, nome) {
 }
 
 async function exigirAssinaturaAtiva(userId) {
-  const { obterAssinaturaPorUserId } = require("./assinaturas");
-  const assinatura = await obterAssinaturaPorUserId(userId);
+  const { obterAssinaturaPorUserId, expirarAnualSeVencido } = require("./assinaturas");
+  let assinatura = await obterAssinaturaPorUserId(userId);
+  assinatura = await expirarAnualSeVencido(assinatura);
   if (!assinatura || !["ativa", "inadimplente"].includes(assinatura.status)) {
     throw Object.assign(new Error("Assinatura ativa necessária para esta ação."), { status: 403 });
   }

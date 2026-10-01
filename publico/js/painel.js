@@ -329,8 +329,31 @@
     }
   }
 
+  function formatarDataPlano(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+    if (!m) return String(iso || "");
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
+  function destacarPlanoSugerido() {
+    const plano = new URLSearchParams(location.search).get("plano");
+    if (plano !== "mensal" && plano !== "anual") return;
+    document.querySelectorAll("[data-plano-card]").forEach((el) => {
+      el.classList.toggle("preco--sugerido", el.getAttribute("data-plano-card") === plano);
+    });
+    if (document.getElementById("secao-assinatura")?.hidden) return;
+    document.getElementById("secao-assinatura")?.scrollIntoView({ block: "start" });
+  }
+
   function assinaturaLibera(assinatura) {
     return assinatura && ["ativa", "inadimplente"].includes(assinatura.status);
+  }
+
+  function nomePlano(plano) {
+    if (plano === "mensal") return "Mensal";
+    if (plano === "anual") return "Anual";
+    if (plano === "vitalicio") return "Vitalício";
+    return plano || "plano";
   }
 
   function labelStatus(assinatura) {
@@ -2054,10 +2077,6 @@
     const assinaturaVigente = ass?.status === "ativa";
 
     document.getElementById("painel-planos").hidden = !!(libera && assinaturaVigente);
-    document.getElementById("assinatura-nota-anual")?.toggleAttribute(
-      "hidden",
-      !!(libera && assinaturaVigente)
-    );
     document.getElementById("secao-assinatura")?.toggleAttribute("hidden", assinaturaVigente);
     document.getElementById("secao-url").hidden = !libera || !!pag?.slug;
     document.getElementById("secao-pagina").hidden = !pag?.slug;
@@ -2089,6 +2108,7 @@
 
     document.getElementById("painel-nome-saudacao").textContent = user.nome ? `, ${user.nome}` : "";
     document.getElementById("painel-email").textContent = user.email || "";
+    preencherCobranca(data.cobranca);
 
     const st = labelStatus(assinatura);
     const badge = document.getElementById("painel-badge-assinatura");
@@ -2097,25 +2117,35 @@
 
     const assTexto = document.getElementById("assinatura-texto");
     if (!assinatura) {
-      assTexto.textContent = "Escolha um plano para montar sua página.";
+      assTexto.textContent =
+        "Escolha um plano para montar sua página. O pagamento é na Asaas, por PIX ou cartão.";
     } else if (assinatura.status === "pendente") {
-      assTexto.textContent = `Plano ${assinatura.plano} — conclua o pagamento na Asaas.`;
+      assTexto.textContent = `Plano ${nomePlano(assinatura.plano)} — conclua o pagamento na Asaas.`;
     } else if (assinatura.status === "ativa") {
       if (assinatura.plano === "vitalicio") {
         assTexto.textContent = "Plano Vitalício ativo · sem cobranças.";
+      } else if (assinatura.plano === "anual") {
+        assTexto.textContent = `Plano Anual ativo${
+          assinatura.proxima_cobranca ? ` até ${formatarDataPlano(assinatura.proxima_cobranca)}` : ""
+        }.`;
       } else {
-        assTexto.textContent = `Plano ${assinatura.plano} ativo${
-          assinatura.proxima_cobranca ? ` · próxima cobrança ${assinatura.proxima_cobranca}` : ""
+        assTexto.textContent = `Plano ${nomePlano(assinatura.plano)} ativo${
+          assinatura.proxima_cobranca
+            ? ` · próxima cobrança ${formatarDataPlano(assinatura.proxima_cobranca)}`
+            : ""
         }.`;
       }
     } else if (assinatura.status === "inadimplente") {
       assTexto.textContent =
         "Pagamento em atraso. Regularize para manter a página no ar (carência de 3 dias).";
+    } else if (assinatura.status === "cancelada" && assinatura.plano === "anual") {
+      assTexto.textContent = "O plano anual venceu. Escolha um plano para manter a página no ar.";
     } else {
       assTexto.textContent = `Status: ${assinatura.status}.`;
     }
 
     renderVisibilidade();
+    destacarPlanoSugerido();
 
     if (data.pagina?.dados) {
       preencherEditor(data.pagina.dados);
@@ -2200,24 +2230,102 @@
     }
   }
 
+  function preencherCobranca(c) {
+    if (!c) return;
+    const set = (id, valor) => {
+      const el = document.getElementById(id);
+      if (el) el.value = valor || "";
+    };
+    set("cobranca-nome", c.nome);
+    set("cobranca-documento", c.cpfCnpj);
+    set("cobranca-celular", c.celular);
+    set("cobranca-cep", c.cep);
+    set("cobranca-endereco", c.endereco);
+    set("cobranca-numero", c.numero);
+    set("cobranca-complemento", c.complemento);
+    set("cobranca-bairro", c.bairro);
+    set("cobranca-cidade", c.cidade);
+    set("cobranca-uf", c.uf);
+    const form = document.getElementById("form-cobranca");
+    if (form) form.hidden = !!c.completo;
+  }
+
+  function lerCobrancaForm() {
+    const valor = (id) => document.getElementById(id)?.value || "";
+    return {
+      nome: valor("cobranca-nome"),
+      documento: valor("cobranca-documento"),
+      celular: valor("cobranca-celular"),
+      cep: valor("cobranca-cep"),
+      endereco: valor("cobranca-endereco"),
+      numero: valor("cobranca-numero"),
+      complemento: valor("cobranca-complemento"),
+      bairro: valor("cobranca-bairro"),
+      cidade: valor("cobranca-cidade"),
+      uf: valor("cobranca-uf")
+    };
+  }
+
+  function cobrancaFormIncompleta(c) {
+    const doc = String(c.documento || "").replace(/\D/g, "");
+    let cel = String(c.celular || "").replace(/\D/g, "");
+    if (cel.startsWith("55") && cel.length > 11) cel = cel.slice(2);
+    const cep = String(c.cep || "").replace(/\D/g, "");
+    if ((c.nome || "").trim().length < 3) return "Informe o nome completo ou a razão social.";
+    if (doc.length !== 11 && doc.length !== 14) return "Informe um CPF ou CNPJ válido.";
+    if (cel.length < 10 || cel.length > 11) return "Informe o celular com DDD.";
+    if (cep.length !== 8) return "Informe um CEP válido.";
+    if (!(c.endereco || "").trim()) return "Informe a rua.";
+    if (!(c.numero || "").trim()) return "Informe o número do endereço.";
+    if (!(c.bairro || "").trim()) return "Informe o bairro.";
+    return "";
+  }
+
+  window.MyRepCep?.ligarCep(document.getElementById("cobranca-cep"), {
+    endereco: document.getElementById("cobranca-endereco"),
+    bairro: document.getElementById("cobranca-bairro"),
+    cidade: document.getElementById("cobranca-cidade"),
+    uf: document.getElementById("cobranca-uf")
+  });
+
   document.getElementById("painel-planos")?.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-checkout]");
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     if (perfil?.assinatura?.status === "ativa") {
       return;
     }
     const status = document.getElementById("checkout-status");
-    setStatus(status, "Gerando link…", "info");
+    const form = document.getElementById("form-cobranca");
+    const cobranca = form && !form.hidden ? lerCobrancaForm() : null;
+    if (cobranca) {
+      const erroForm = cobrancaFormIncompleta(cobranca);
+      if (erroForm) {
+        setStatus(status, erroForm, "erro");
+        return;
+      }
+    }
+    const botoes = [...document.querySelectorAll("#painel-planos [data-checkout]")];
+    botoes.forEach((b) => {
+      b.disabled = true;
+    });
+    setStatus(status, "Abrindo o pagamento na Asaas…", "info");
     try {
       const resp = await fetch("/api/painel/checkout", {
         method: "POST",
         headers: await authHeaders(true),
-        body: JSON.stringify({ plano: btn.getAttribute("data-checkout") })
+        body: JSON.stringify({
+          plano: btn.getAttribute("data-checkout"),
+          cobranca
+        })
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.erro);
       location.href = data.linkPagamento;
     } catch (erro) {
+      document.getElementById("form-cobranca")?.removeAttribute("hidden");
+      botoes.forEach((b) => {
+        b.disabled = false;
+      });
       setStatus(status, erro.message, "erro");
     }
   });

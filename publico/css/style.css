@@ -3941,7 +3941,38 @@ a.marca-chip:focus-visible {
   color: var(--mutado);
 }
 
-.painel-planos,
+.painel-planos {
+  display: grid;
+  gap: 0;
+}
+
+.painel-planos .preco {
+  padding: 18px 0;
+}
+
+.painel-planos .preco:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+.painel-planos .btn {
+  border: 0;
+  cursor: pointer;
+}
+
+.painel-planos .btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.painel-planos .preco--sugerido {
+  background: color-mix(in srgb, var(--sinal) 12%, transparent);
+  margin: 0 -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 12px;
+}
+
 .painel-acoes {
   display: flex;
   flex-wrap: wrap;

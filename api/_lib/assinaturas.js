@@ -3,6 +3,7 @@
    ========================================================= */
 
 const { getSupabase, supabaseConfigured } = require("./supabase");
+const { dataIso } = require("./pagamento");
 
 const STATUS_OK = new Set(["ativa", "inadimplente", "cancelada", "pendente"]);
 
@@ -81,6 +82,18 @@ async function upsertAssinatura(userId, patch = {}) {
     return null;
   }
   return data;
+}
+
+async function expirarAnualSeVencido(assinatura) {
+  if (!assinatura || assinatura.plano !== "anual") return assinatura;
+  if (!["ativa", "inadimplente"].includes(assinatura.status)) return assinatura;
+  const limite = String(assinatura.proxima_cobranca || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(limite) || limite >= dataIso()) return assinatura;
+  const atualizada = await upsertAssinatura(assinatura.user_id, {
+    plano: "anual",
+    status: "cancelada"
+  });
+  return atualizada || { ...assinatura, status: "cancelada" };
 }
 
 async function listarAssinaturasLocais({ limit = 100 } = {}) {
@@ -219,6 +232,7 @@ async function associarUserIdPorEmail(email, userId) {
 module.exports = {
   obterAssinaturaPorUserId,
   upsertAssinatura,
+  expirarAnualSeVencido,
   listarAssinaturasLocais,
   vincularUserIdNaPagina,
   obterPaginaPorUserId,

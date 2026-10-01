@@ -12,7 +12,7 @@ const {
   emitirSessaoAdmin,
   lerSessaoAdmin,
   cookieValor,
-  valoresIguais,
+  identificarPlanoPorValor,
   buscarClientePorEmail,
   listarPagamentosCliente
 } = require("./_lib/pagamento");
@@ -64,11 +64,7 @@ function exigirAdmin(req) {
 }
 
 function planoPorValor(valor) {
-  for (const p of Object.values(PLANOS)) {
-    if (p.checkout === false) continue;
-    if (valoresIguais(valor, p.valor)) return p;
-  }
-  return null;
+  return identificarPlanoPorValor(valor);
 }
 
 function mrrDeAssinatura(sub) {

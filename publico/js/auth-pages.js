@@ -100,6 +100,12 @@
   if (formCadastro) {
     const status = document.getElementById("auth-status");
     const btn = document.getElementById("btn-cadastro");
+    window.MyRepCep?.ligarCep(document.getElementById("cadastro-cep"), {
+      endereco: document.getElementById("cadastro-endereco"),
+      bairro: document.getElementById("cadastro-bairro"),
+      cidade: document.getElementById("cadastro-cidade"),
+      uf: document.getElementById("cadastro-uf")
+    });
     formCadastro.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const fd = new FormData(formCadastro);
@@ -107,9 +113,32 @@
       const senha = String(fd.get("senha") || "");
       const senha2 = String(fd.get("senha2") || "");
       const nome = String(fd.get("nome") || "").trim();
+      const documento = String(fd.get("documento") || "");
+      const celular = String(fd.get("celular") || "");
+      const cep = String(fd.get("cep") || "");
+      const endereco = String(fd.get("endereco") || "").trim();
+      const numero = String(fd.get("numero") || "").trim();
+      const complemento = String(fd.get("complemento") || "").trim();
+      const bairro = String(fd.get("bairro") || "").trim();
+      const cidade = String(fd.get("cidade") || "").trim();
+      const uf = String(fd.get("uf") || "").trim();
       const codigoVitalicio = String(fd.get("codigo_vitalicio") || "").trim();
       const aceiteTermos = fd.get("aceite_termos") === "on";
+      const docDigitos = documento.replace(/\D/g, "");
+      const celDigitos = celular.replace(/\D/g, "").replace(/^55(?=\d{10,})/, "");
+      const cepDigitos = cep.replace(/\D/g, "");
 
+      if (nome.length < 3) return setStatus(status, "Informe o nome completo ou a razão social.", "erro");
+      if (docDigitos.length !== 11 && docDigitos.length !== 14) {
+        return setStatus(status, "Informe um CPF ou CNPJ válido.", "erro");
+      }
+      if (celDigitos.length < 10 || celDigitos.length > 11) {
+        return setStatus(status, "Informe o celular com DDD.", "erro");
+      }
+      if (cepDigitos.length !== 8) return setStatus(status, "Informe um CEP válido.", "erro");
+      if (!endereco) return setStatus(status, "Informe a rua.", "erro");
+      if (!numero) return setStatus(status, "Informe o número do endereço.", "erro");
+      if (!bairro) return setStatus(status, "Informe o bairro.", "erro");
       if (!email.includes("@")) return setStatus(status, "Informe um e-mail válido.", "erro");
       if (senha.length < 6) return setStatus(status, "A senha precisa ter ao menos 6 caracteres.", "erro");
       if (senha !== senha2) return setStatus(status, "As senhas não coincidem.", "erro");
@@ -136,9 +165,18 @@
         const sb = await esperarSupabase();
         const metadata = {
           termos_aceitos_em: new Date().toISOString(),
-          termos_versao: TERMOS_VERSAO
+          termos_versao: TERMOS_VERSAO,
+          nome,
+          cpf_cnpj: docDigitos,
+          celular: celDigitos,
+          cep: cepDigitos,
+          endereco,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          uf: uf.toUpperCase()
         };
-        if (nome) metadata.nome = nome;
 
         const { data, error } = await sb.auth.signUp({
           email,

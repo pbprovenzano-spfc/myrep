@@ -22,8 +22,9 @@
         ja.href = "/painel/";
         ja.textContent = "Meu painel";
       }
-      document.querySelectorAll('#precos a[href="/cadastro/"]').forEach((a) => {
-        a.href = "/painel/";
+      document.querySelectorAll('#precos a[href^="/cadastro/"]').forEach((a) => {
+        const plano = new URL(a.href, location.origin).searchParams.get("plano");
+        a.href = plano ? `/painel/?plano=${encodeURIComponent(plano)}` : "/painel/";
         a.textContent = "Meu painel";
       });
       const entrarPrecos = document.querySelector('#precos .precos__rodape a[href="/entrar/"]');
