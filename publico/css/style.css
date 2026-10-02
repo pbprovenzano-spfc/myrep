@@ -821,6 +821,15 @@ body.pagina-erro::after {
     grid-area: rodape;
   }
 
+  .cartao .rodape-cta {
+    max-width: 560px;
+    padding: 14px 18px;
+  }
+
+  .cartao .rodape-cta__titulo {
+    font-size: 19px;
+  }
+
   .cartao .capa,
   .cartao .acoes,
   .cartao .bloco,
@@ -1498,6 +1507,16 @@ a.marca-chip:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .mapa-painel { animation: none; }
+  .rodape-cta,
+  .rodape-cta__seta {
+    transition: none;
+  }
+  .rodape-cta:hover,
+  .rodape-cta:focus-visible,
+  .rodape-cta:hover .rodape-cta__seta,
+  .rodape-cta:focus-visible .rodape-cta__seta {
+    transform: none;
+  }
 }
 
 /* =========================================================
@@ -1518,6 +1537,8 @@ a.marca-chip:focus-visible {
 .pagina-rep .rodape {
   border-radius: 0 0 20px 20px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+  padding: 16px 16px 20px;
+  text-align: initial;
 }
 
 .rodape__creditos a {
@@ -1528,6 +1549,103 @@ a.marca-chip:focus-visible {
 .rodape__creditos a:hover {
   color: var(--sinal);
   border-color: var(--sinal);
+}
+
+.rodape-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  margin-inline: auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: var(--raio);
+  background: rgba(255, 255, 255, .06);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    transform var(--transicao),
+    background var(--transicao),
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+
+.rodape-cta:hover,
+.rodape-cta:focus-visible {
+  background: rgba(255, 255, 255, .1);
+  border-color: var(--sinal);
+  transform: translateY(-2px);
+}
+
+.rodape-cta:hover .rodape-cta__seta,
+.rodape-cta:focus-visible .rodape-cta__seta {
+  transform: translateX(3px);
+}
+
+.rodape-cta__selo {
+  flex: 0 0 auto;
+  display: flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--branco);
+}
+
+.rodape-cta__selo img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.rodape-cta__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.rodape-cta__rotulo {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--mutado-claro);
+}
+
+.rodape-cta__titulo {
+  font-family: var(--fonte-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  color: var(--branco);
+}
+
+.rodape-cta__sub {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--mutado-claro);
+  text-wrap: balance;
+}
+
+.rodape-cta__seta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  color: var(--sinal);
+  transition: transform var(--transicao);
+}
+
+@media (max-width: 359px) {
+  .rodape-cta__sub {
+    display: none;
+  }
 }
 
 /* Landing — barra full-bleed, conteúdo alinhado ao grid da página */
