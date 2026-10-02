@@ -42,9 +42,13 @@ create table if not exists public.assinaturas (
   asaas_subscription_id text,
   asaas_payment_id text,
   proxima_cobranca date,
+  cancelamento_agendado boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.assinaturas
+  add column if not exists cancelamento_agendado boolean not null default false;
 
 create unique index if not exists assinaturas_user_id_uniq
   on public.assinaturas (user_id);

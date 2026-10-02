@@ -55,6 +55,10 @@ async function upsertAssinatura(userId, patch = {}) {
       patch.proxima_cobranca !== undefined
         ? patch.proxima_cobranca
         : atual?.proxima_cobranca || null,
+    cancelamento_agendado:
+      patch.cancelamento_agendado !== undefined
+        ? patch.cancelamento_agendado === true
+        : atual?.cancelamento_agendado === true,
     updated_at: agora
   };
 
@@ -84,15 +88,14 @@ async function upsertAssinatura(userId, patch = {}) {
   return data;
 }
 
-async function expirarAnualSeVencido(assinatura) {
-  if (!assinatura || assinatura.plano !== "anual") return assinatura;
+async function expirarSeVencido(assinatura) {
+  if (!assinatura) return assinatura;
   if (!["ativa", "inadimplente"].includes(assinatura.status)) return assinatura;
+  const temPrazo = assinatura.plano === "anual" || assinatura.cancelamento_agendado === true;
+  if (!temPrazo) return assinatura;
   const limite = String(assinatura.proxima_cobranca || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(limite) || limite >= dataIso()) return assinatura;
-  const atualizada = await upsertAssinatura(assinatura.user_id, {
-    plano: "anual",
-    status: "cancelada"
-  });
+  const atualizada = await upsertAssinatura(assinatura.user_id, { status: "cancelada" });
   return atualizada || { ...assinatura, status: "cancelada" };
 }
 
@@ -232,7 +235,7 @@ async function associarUserIdPorEmail(email, userId) {
 module.exports = {
   obterAssinaturaPorUserId,
   upsertAssinatura,
-  expirarAnualSeVencido,
+  expirarSeVencido,
   listarAssinaturasLocais,
   vincularUserIdNaPagina,
   obterPaginaPorUserId,

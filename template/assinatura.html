@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha assinatura — My Rep</title>
+<meta name="description" content="Gerencie sua assinatura My Rep: plano, cartão, dados de cobrança e pagamentos.">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="/img/favicon.png" type="image/png">
+<script>window.MYREP_SUPABASE={{MYREP_SUPABASE}};</script>
+</head>
+<body class="pagina-painel">
+
+<a class="pular-conteudo" href="#conteudo-principal">Pular para o conteúdo</a>
+
+<header class="briefing-topo painel-topo">
+  <a class="marca marca--compacta" href="/">
+    <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+  </a>
+  <p class="eyebrow">Minha assinatura</p>
+  <div class="painel-topo__acoes">
+    <a class="painel-topo__manual" href="/painel/">Voltar ao painel</a>
+    <button type="button" class="btn btn--fantasma-ink assinantes-sair" id="btn-sair" hidden>Sair</button>
+  </div>
+</header>
+
+<main class="painel-shell" id="conteudo-principal" tabindex="-1">
+  <p class="briefing-status" id="assinatura-carregando" role="status">Carregando…</p>
+
+  <div id="assinatura-conteudo" hidden>
+    <nav class="painel-marca-nav" aria-label="Navegação">
+      <a href="/painel/" class="painel-voltar">← Voltar ao painel</a>
+    </nav>
+
+    <header class="painel-intro">
+      <div>
+        <h1 class="painel-intro__titulo">Minha assinatura</h1>
+        <p class="painel-intro__email" id="assinatura-email"></p>
+      </div>
+      <p class="painel-badge" id="assinatura-badge" data-status="">—</p>
+    </header>
+
+    <section class="painel-card" aria-labelledby="plano-titulo">
+      <h2 class="painel-card__titulo" id="plano-titulo">Plano atual</h2>
+      <p class="painel-card__texto" id="plano-resumo">—</p>
+      <p class="painel-card__meta" id="plano-prazo"></p>
+      <p class="briefing-status" id="plano-aviso" role="status"></p>
+    </section>
+
+    <section class="painel-card" id="secao-cartao" aria-labelledby="cartao-titulo" hidden>
+      <h2 class="painel-card__titulo" id="cartao-titulo">Forma de pagamento</h2>
+      <p class="painel-card__texto painel-cartao" id="cartao-resumo">—</p>
+      <p class="briefing-status" id="cartao-status" role="status"></p>
+      <div class="painel-acoes">
+        <button type="button" class="btn btn--fantasma-ink" id="btn-abrir-cartao">Trocar cartão</button>
+      </div>
+
+      <form class="painel-form-inline painel-form-inline--edit" id="form-cartao" novalidate hidden autocomplete="off">
+        <label class="campo">
+          <span class="campo__rotulo">Nome impresso no cartão</span>
+          <input id="cartao-titular" type="text" maxlength="80" autocomplete="cc-name" required>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Número do cartão</span>
+          <input id="cartao-numero" type="text" inputmode="numeric" maxlength="23" placeholder="0000 0000 0000 0000" autocomplete="cc-number" required>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Validade</span>
+          <input id="cartao-validade" type="text" inputmode="numeric" maxlength="7" placeholder="MM/AA" autocomplete="cc-exp" required>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Código de segurança (CVV)</span>
+          <input id="cartao-cvv" type="text" inputmode="numeric" maxlength="4" placeholder="000" autocomplete="cc-csc" required>
+        </label>
+        <p class="painel-card__nota">Os dados vão direto para a Asaas. O My Rep não guarda o número do cartão.</p>
+        <div class="painel-form-inline__acoes">
+          <button type="submit" class="btn btn--primario" id="btn-salvar-cartao">Salvar cartão</button>
+          <button type="button" class="btn btn--fantasma-ink" id="btn-cancelar-cartao">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="painel-card" id="secao-troca" aria-labelledby="troca-titulo" hidden>
+      <h2 class="painel-card__titulo" id="troca-titulo">Trocar de plano</h2>
+      <p class="painel-card__texto" id="troca-texto">O plano novo vale depois do pagamento. O período que você já pagou é respeitado.</p>
+      <div class="painel-planos" id="planos-troca">
+        <article class="preco" data-plano-card="mensal">
+          <div class="preco__texto">
+            <h3 class="preco__nome">Mensal</h3>
+            <p class="preco__valor"><span>R$ 17,90</span> /mês</p>
+            <p class="preco__nota">No cartão. Cancele quando quiser.</p>
+          </div>
+          <button type="button" class="btn btn--primario" data-troca="mensal">Trocar para mensal</button>
+        </article>
+        <article class="preco preco--destaque" data-plano-card="anual">
+          <div class="preco__texto">
+            <h3 class="preco__nome">Anual</h3>
+            <p class="preco__valor"><span>R$ 130,80</span> no ano</p>
+            <p class="preco__nota">12× de R$ 10,90 · melhor preço</p>
+          </div>
+          <button type="button" class="btn btn--primario" data-troca="anual">Trocar para anual</button>
+        </article>
+      </div>
+      <p class="briefing-status" id="troca-status" role="status"></p>
+    </section>
+
+    <section class="painel-card" aria-labelledby="cobranca-titulo">
+      <div class="campo__cabeca">
+        <h2 class="painel-card__titulo" id="cobranca-titulo">Dados de cobrança</h2>
+        <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-cobranca" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+      </div>
+      <div class="ajuda__painel" id="ajuda-cobranca" hidden>
+        <p>São os dados que vão na nota e na cobrança da Asaas.</p>
+        <p><strong>Na prática:</strong> mantenha o CPF/CNPJ e o endereço em dia — o cartão é recusado quando eles não batem com o cadastro do banco.</p>
+      </div>
+      <form id="form-cobranca" novalidate>
+        <label class="campo">
+          <span class="campo__rotulo">Nome completo ou razão social</span>
+          <input id="cobranca-nome" type="text" autocomplete="name" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">CPF ou CNPJ</span>
+          <input id="cobranca-documento" type="text" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="000.000.000-00">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Celular com DDD</span>
+          <input id="cobranca-celular" type="tel" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(11) 99999-9999">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">CEP</span>
+          <input id="cobranca-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Rua</span>
+          <input id="cobranca-endereco" type="text" autocomplete="address-line1" maxlength="255">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Número</span>
+          <input id="cobranca-numero" type="text" autocomplete="off" maxlength="20">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Bairro</span>
+          <input id="cobranca-bairro" type="text" autocomplete="off" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Complemento</span>
+          <input id="cobranca-complemento" type="text" autocomplete="address-line2" maxlength="255">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Cidade</span>
+          <input id="cobranca-cidade" type="text" autocomplete="address-level2" maxlength="80">
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">UF</span>
+          <input id="cobranca-uf" type="text" autocomplete="address-level1" maxlength="2">
+        </label>
+        <p class="briefing-status" id="cobranca-status" role="status"></p>
+        <div class="painel-acoes">
+          <button type="submit" class="btn btn--primario" id="btn-salvar-cobranca">Salvar dados</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="painel-card" aria-labelledby="historico-titulo">
+      <h2 class="painel-card__titulo" id="historico-titulo">Pagamentos</h2>
+      <p class="painel-card__texto" id="historico-vazio">Nenhuma cobrança por aqui ainda.</p>
+      <ul class="painel-pagamentos" id="historico-lista" hidden></ul>
+    </section>
+
+    <section class="painel-card" id="secao-cancelar" aria-labelledby="cancelar-titulo" hidden>
+      <h2 class="painel-card__titulo" id="cancelar-titulo">Cancelar assinatura</h2>
+      <p class="painel-card__texto" id="cancelar-texto">Você para de ser cobrado e mantém a página no ar até o fim do período já pago.</p>
+      <div class="painel-acoes">
+        <button type="button" class="btn btn--fantasma-ink" id="btn-cancelar">Quero cancelar</button>
+      </div>
+      <div id="cancelar-confirma" hidden>
+        <p class="painel-card__texto" id="cancelar-confirma-texto">Confirma o cancelamento?</p>
+        <div class="painel-acoes">
+          <button type="button" class="btn btn--primario" id="btn-cancelar-confirmar">Sim, cancelar</button>
+          <button type="button" class="btn btn--fantasma-ink" id="btn-cancelar-voltar">Não, manter</button>
+        </div>
+      </div>
+      <p class="briefing-status" id="cancelar-status" role="status"></p>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
+<script src="/js/supabase-client.js" defer></script>
+<script src="/js/cep.js" defer></script>
+<script src="/js/mascaras.js" defer></script>
+<script src="/js/assinatura.js" defer></script>
+</body>
+</html>

@@ -361,6 +361,9 @@
     if (assinatura.plano === "vitalicio" && assinatura.status === "ativa") {
       return { texto: "Vitalício", status: "ativa" };
     }
+    if (assinatura.cancelamento_agendado && assinatura.status === "ativa") {
+      return { texto: "Cancelamento agendado", status: "pendente" };
+    }
     const mapa = {
       ativa: "Adimplente",
       inadimplente: "Inadimplente",
@@ -2075,6 +2078,8 @@
     const pag = perfil?.pagina;
     const libera = assinaturaLibera(ass);
     const assinaturaVigente = ass?.status === "ativa";
+
+    document.getElementById("link-assinatura-topo")?.toggleAttribute("hidden", !ass);
 
     document.getElementById("painel-planos").hidden = !!(libera && assinaturaVigente);
     document.getElementById("secao-assinatura")?.toggleAttribute("hidden", assinaturaVigente);

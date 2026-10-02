@@ -39,6 +39,15 @@ function planoDoCheckout(checkout) {
   return { plano, userId: ref?.userId || null };
 }
 
+async function encerrarRecorrencia(subscriptionId) {
+  if (!subscriptionId || !process.env.ASAAS_API_KEY) return;
+  try {
+    await asaasFetch(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "DELETE" });
+  } catch (erro) {
+    console.error("Webhook encerrar recorrência:", erro.message || erro);
+  }
+}
+
 async function sincronizarContaPorEmail(email, {
   userId,
   planoId,
@@ -69,14 +78,24 @@ async function sincronizarContaPorEmail(email, {
     proximaCobranca,
     status || "ativa"
   );
+
+  // Troca de plano: a recorrência antiga pararia de ser usada, mas continuaria cobrando.
+  let recorrenciaAnterior = assinaturaAtual?.asaas_subscription_id || null;
+  const trocouDePlano = planoId && assinaturaAtual?.plano && planoId !== assinaturaAtual.plano;
+  if (trocouDePlano && recorrenciaAnterior && recorrenciaAnterior !== subscriptionId) {
+    await encerrarRecorrencia(recorrenciaAnterior);
+    recorrenciaAnterior = null;
+  }
+
   const patch = {
     status: status || "ativa",
     asaas_customer_id: customerId || assinaturaAtual?.asaas_customer_id || null,
-    asaas_subscription_id: subscriptionId || assinaturaAtual?.asaas_subscription_id || null,
+    asaas_subscription_id: subscriptionId || recorrenciaAnterior || null,
     asaas_payment_id: paymentId || assinaturaAtual?.asaas_payment_id || null
   };
   if (planoId) patch.plano = planoId;
   if (proxima) patch.proxima_cobranca = proxima;
+  if ((status || "ativa") === "ativa") patch.cancelamento_agendado = false;
 
   await upsertAssinatura(user.id, patch);
 

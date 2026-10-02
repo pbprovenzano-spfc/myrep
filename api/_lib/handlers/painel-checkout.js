@@ -11,8 +11,7 @@ const {
   asaasPronta,
   linkPlanoUtil,
   sitePublico,
-  montarCorpoCheckout,
-  buscarClientePorEmail
+  montarCorpoCheckout
 } = require("../pagamento");
 const { getSupabase, supabaseConfigured } = require("../supabase");
 const { exigirUsuario } = require("../auth");
@@ -23,43 +22,8 @@ const {
   validarCobranca,
   lerCobranca,
   metadataDeCobranca,
-  clienteAsaasDeCobranca
+  garantirClienteAsaas
 } = require("../cobranca");
-
-async function garantirClienteAsaas({ customerId, email, userId, cobranca }) {
-  const payload = clienteAsaasDeCobranca(cobranca, { email, userId });
-  if (customerId) {
-    try {
-      const atualizado = await asaasFetch(`/customers/${encodeURIComponent(customerId)}`, {
-        method: "PUT",
-        body: JSON.stringify(payload)
-      });
-      return atualizado?.id || customerId;
-    } catch (erro) {
-      console.error("checkout atualizar cliente:", erro.message || erro);
-    }
-  }
-
-  const existente = await buscarClientePorEmail(email);
-  if (existente?.id) {
-    const atualizado = await asaasFetch(`/customers/${encodeURIComponent(existente.id)}`, {
-      method: "PUT",
-      body: JSON.stringify(payload)
-    });
-    return atualizado?.id || existente.id;
-  }
-
-  const criado = await asaasFetch("/customers", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-  if (!criado?.id) {
-    const erro = new Error("A Asaas não devolveu o cliente.");
-    erro.status = 502;
-    throw erro;
-  }
-  return criado.id;
-}
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -86,8 +50,17 @@ module.exports = async function handler(req, res) {
     }
 
     const assinaturaAtual = await obterAssinaturaPorUserId(user.id);
-    if (assinaturaAtual?.status === "ativa") {
-      return json(res, 409, { erro: "Você já possui assinatura ativa." });
+    const vigente = assinaturaAtual?.status === "ativa";
+    if (vigente) {
+      if (body.troca !== true) {
+        return json(res, 409, { erro: "Você já possui assinatura ativa." });
+      }
+      if (assinaturaAtual.plano === "vitalicio") {
+        return json(res, 400, { erro: "O plano vitalício não precisa de troca." });
+      }
+      if (assinaturaAtual.plano === planoId) {
+        return json(res, 400, { erro: "Você já está neste plano." });
+      }
     }
 
     const cobranca = mesclarCobranca(cobrancaDeUsuario(user), lerCobranca(body.cobranca || body));
@@ -113,7 +86,9 @@ module.exports = async function handler(req, res) {
             plano,
             userId: user.id,
             origem: sitePublico(req),
-            customerId
+            customerId,
+            // Na troca, a recorrência nova só começa quando o período já pago termina.
+            nextDueDate: vigente ? assinaturaAtual.proxima_cobranca : null
           })
         )
       });
@@ -142,15 +117,18 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    await upsertAssinatura(user.id, {
-      plano: planoId,
-      status: "pendente",
-      asaas_customer_id: customerId
-    });
+    // Numa troca, o plano atual continua valendo até a Asaas confirmar o pagamento.
+    await upsertAssinatura(
+      user.id,
+      vigente
+        ? { asaas_customer_id: customerId }
+        : { plano: planoId, status: "pendente", asaas_customer_id: customerId }
+    );
 
     return json(res, 200, {
       ok: true,
       plano: planoId,
+      troca: vigente,
       linkPagamento
     });
   } catch (erro) {

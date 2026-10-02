@@ -11,7 +11,11 @@ function acaoDe(req) {
   const path = url.pathname.replace(/\/+$/, "");
   const partes = path.split("/").filter(Boolean);
   const ultimo = partes[partes.length - 1] || "";
-  if (["checkout", "pagina", "slug", "suporte"].includes(ultimo)) return ultimo;
+  if (
+    ["checkout", "pagina", "slug", "suporte", "assinatura", "cobranca", "cartao"].includes(ultimo)
+  ) {
+    return ultimo;
+  }
   return "";
 }
 
@@ -19,6 +23,15 @@ module.exports = async function handler(req, res) {
   const acao = acaoDe(req);
   if (acao === "checkout") {
     return require("./_lib/handlers/painel-checkout")(req, res);
+  }
+  if (acao === "assinatura") {
+    return require("./_lib/handlers/painel-assinatura")(req, res);
+  }
+  if (acao === "cobranca") {
+    return require("./_lib/handlers/painel-cobranca")(req, res);
+  }
+  if (acao === "cartao") {
+    return require("./_lib/handlers/painel-cartao")(req, res);
   }
   if (acao === "pagina") {
     return require("./_lib/handlers/painel-pagina")(req, res);
@@ -30,7 +43,7 @@ module.exports = async function handler(req, res) {
     return require("./_lib/handlers/painel-suporte")(req, res);
   }
   return json(res, 400, {
-    erro: "Ação inválida. Use checkout, pagina, slug ou suporte."
+    erro: "Ação inválida. Use checkout, assinatura, cobranca, cartao, pagina, slug ou suporte."
   });
 };
 

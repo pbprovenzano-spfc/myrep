@@ -9,7 +9,7 @@ const {
   obterPaginaPorUserId,
   obterPaginaPorEmail,
   upsertAssinatura,
-  expirarAnualSeVencido
+  expirarSeVencido
 } = require("../assinaturas");
 const { resgatarCodigoReservado } = require("../codigos-vitalicios");
 const { cobrancaDeUsuario, respostaCobranca } = require("../cobranca");
@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    if (assinatura) assinatura = await expirarAnualSeVencido(assinatura);
+    if (assinatura) assinatura = await expirarSeVencido(assinatura);
 
     let pagina = await obterPaginaPorUserId(user.id);
     if (!pagina && email) {
@@ -79,6 +79,7 @@ module.exports = async function handler(req, res) {
             plano: assinatura.plano,
             status: assinatura.status,
             proxima_cobranca: assinatura.proxima_cobranca,
+            cancelamento_agendado: assinatura.cancelamento_agendado === true,
             asaas_customer_id: assinatura.asaas_customer_id,
             asaas_subscription_id: assinatura.asaas_subscription_id
           }

@@ -4121,6 +4121,53 @@ a.marca-chip:focus-visible {
   color: var(--ink);
 }
 
+.painel-pagamentos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.painel-pagamento {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--borda);
+  font-size: 0.95rem;
+}
+
+.painel-pagamento:last-child {
+  border-bottom: 0;
+}
+
+.painel-pagamento__valor {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.painel-pagamento__status,
+.painel-pagamento__links {
+  color: var(--mutado);
+  font-size: 0.875rem;
+}
+
+.painel-pagamento__links a {
+  color: var(--sinal-escuro);
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .painel-pagamento {
+    grid-template-columns: 90px 110px 1fr auto;
+    align-items: baseline;
+  }
+}
+
+.painel-cartao {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
 .painel-lista {
   list-style: none;
   margin: 0 0 14px;

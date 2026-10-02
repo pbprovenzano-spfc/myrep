@@ -80,6 +80,7 @@ async function asaasFetch(caminho, opcoes = {}) {
       `Asaas HTTP ${resp.status}`;
     const erro = new Error(msg);
     erro.status = resp.status >= 500 ? 502 : 400;
+    erro.httpStatus = resp.status;
     erro.asaas = body;
     throw erro;
   }
@@ -296,7 +297,13 @@ function cnpjValido(d) {
   return calc(d.slice(0, 12)) === Number(d[12]) && calc(d.slice(0, 13)) === Number(d[13]);
 }
 
-function montarCorpoCheckout({ plano, userId, origem, customerId }) {
+function dataFutura(iso) {
+  const d = String(iso || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+  return d > dataIso() ? d : "";
+}
+
+function montarCorpoCheckout({ plano, userId, origem, customerId, nextDueDate }) {
   const item = {
     name: plano.id === "anual" ? "Plano anual" : "Plano mensal",
     description:
@@ -330,7 +337,7 @@ function montarCorpoCheckout({ plano, userId, origem, customerId }) {
   } else {
     corpo.subscription = {
       cycle: "MONTHLY",
-      nextDueDate: dataIso()
+      nextDueDate: dataFutura(nextDueDate) || dataIso()
     };
   }
 
@@ -429,6 +436,7 @@ module.exports = {
   referenciaCheckout,
   lerReferenciaCheckout,
   dataIso,
+  dataFutura,
   somarUmAno,
   proximaCobrancaDoPlano,
   sitePublico,

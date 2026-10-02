@@ -2,7 +2,12 @@
    Dados de cobrança — o que a Asaas precisa para cobrar
    ========================================================= */
 
-const { documentoValido, digitosDocumento } = require("./pagamento");
+const {
+  documentoValido,
+  digitosDocumento,
+  asaasFetch,
+  buscarClientePorEmail
+} = require("./pagamento");
 
 function soDigitos(valor) {
   return String(valor || "").replace(/\D/g, "");
@@ -112,6 +117,55 @@ function respostaCobranca(cobranca) {
   return { ...c, completo: cobrancaCompleta(c) };
 }
 
+async function garantirClienteAsaas({ customerId, email, userId, cobranca }) {
+  const payload = clienteAsaasDeCobranca(cobranca, { email, userId });
+  if (customerId) {
+    try {
+      const atualizado = await asaasFetch(`/customers/${encodeURIComponent(customerId)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+      return atualizado?.id || customerId;
+    } catch (erro) {
+      console.error("garantirClienteAsaas atualizar:", erro.message || erro);
+    }
+  }
+
+  const existente = await buscarClientePorEmail(email);
+  if (existente?.id) {
+    const atualizado = await asaasFetch(`/customers/${encodeURIComponent(existente.id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+    return atualizado?.id || existente.id;
+  }
+
+  const criado = await asaasFetch("/customers", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!criado?.id) {
+    const erro = new Error("A Asaas não devolveu o cliente.");
+    erro.status = 502;
+    throw erro;
+  }
+  return criado.id;
+}
+
+function titularAsaasDeCobranca(cobranca, { email }) {
+  const c = lerCobranca(cobranca);
+  const corpo = {
+    name: c.nome,
+    email,
+    cpfCnpj: c.cpfCnpj,
+    postalCode: c.cep,
+    addressNumber: c.numero,
+    phone: c.celular
+  };
+  if (c.complemento) corpo.addressComplement = c.complemento;
+  return corpo;
+}
+
 module.exports = {
   lerCobranca,
   cobrancaDeUsuario,
@@ -120,5 +174,7 @@ module.exports = {
   cobrancaCompleta,
   metadataDeCobranca,
   clienteAsaasDeCobranca,
+  titularAsaasDeCobranca,
+  garantirClienteAsaas,
   respostaCobranca
 };
