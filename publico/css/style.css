@@ -4325,6 +4325,28 @@ a.marca-chip:focus-visible {
   line-height: 1.45;
 }
 
+.painel-trilha__toggle {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--sinal-escuro);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.painel-trilha__toggle:hover,
+.painel-trilha__toggle:focus-visible {
+  text-decoration: underline;
+}
+
+.painel-trilha--oculta {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .painel-trilha__agora {
   margin: 0 0 14px;
   padding: 12px 14px;

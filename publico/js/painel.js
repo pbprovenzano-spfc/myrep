@@ -93,6 +93,15 @@
 
   const MIME_IMAGEM_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
   const EXT_IMAGEM_OK = /\.(jpe?g|png|webp)$/i;
+  const CHAVE_TRILHA_OCULTA = "myrep-trilha-oculta";
+
+  let trilhaOcultaEstado = (() => {
+    try {
+      return localStorage.getItem(CHAVE_TRILHA_OCULTA) === "1";
+    } catch {
+      return false;
+    }
+  })();
 
   function esc(s) {
     return String(s ?? "")
@@ -259,8 +268,50 @@
     }
   }
 
+  function trilhaOculta() {
+    return trilhaOcultaEstado;
+  }
+
+  function aplicarTrilhaOculta() {
+    const oculta = trilhaOcultaEstado;
+    const corpo = document.getElementById("trilha-corpo");
+    const botao = document.getElementById("btn-trilha-toggle");
+    if (corpo) corpo.hidden = oculta;
+    if (botao) {
+      botao.textContent = oculta ? "Mostrar" : "Ocultar";
+      botao.setAttribute("aria-expanded", oculta ? "false" : "true");
+    }
+    document.getElementById("secao-trilha")?.classList.toggle("painel-trilha--oculta", oculta);
+  }
+
+  function definirTrilhaOculta(oculta) {
+    trilhaOcultaEstado = !!oculta;
+    try {
+      localStorage.setItem(CHAVE_TRILHA_OCULTA, trilhaOcultaEstado ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    aplicarTrilhaOculta();
+  }
+
+  function abrirTrilha(ev) {
+    if (ev) ev.preventDefault();
+    const secao = document.getElementById("secao-trilha");
+    if (!secao || secao.hidden) return;
+    definirTrilhaOculta(false);
+    secao.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start"
+    });
+    document.getElementById("trilha-titulo")?.focus();
+  }
+
   function focarProximoPassoTrilha() {
     renderTrilha();
+    if (trilhaOculta()) {
+      document.getElementById("trilha-titulo")?.focus?.();
+      return;
+    }
     const atual = document.querySelector('.painel-trilha__passo[aria-current="step"]');
     const link = atual?.querySelector("a");
     const alvo = link || atual || document.getElementById("trilha-agora");
@@ -2071,6 +2122,7 @@
     }
 
     document.getElementById("secao-trilha")?.removeAttribute("hidden");
+    aplicarTrilhaOculta();
     document.getElementById("secao-manual")?.removeAttribute("hidden");
     document.getElementById("link-manual-topo")?.removeAttribute("hidden");
 
@@ -2957,9 +3009,16 @@
     location.href = "/";
   });
 
+  document.getElementById("btn-trilha-toggle")?.addEventListener("click", () => {
+    definirTrilhaOculta(!trilhaOculta());
+  });
+
   initAjudas();
   document.querySelectorAll("[data-abrir-manual]").forEach((el) => {
     el.addEventListener("click", abrirManual);
+  });
+  document.querySelectorAll("[data-abrir-trilha]").forEach((el) => {
+    el.addEventListener("click", abrirTrilha);
   });
   initCamposArquivo();
   carregar();

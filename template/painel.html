@@ -43,13 +43,18 @@
     </header>
 
     <section class="painel-card painel-trilha" id="secao-trilha" aria-labelledby="trilha-titulo">
-      <h2 class="painel-card__titulo" id="trilha-titulo">Primeiros passos</h2>
-      <p class="painel-card__texto" id="trilha-resumo">Siga a lista. O passo em destaque é o que falta agora.</p>
-      <p class="painel-trilha__agora" id="trilha-agora"></p>
-      <ol class="painel-trilha__lista" id="trilha-lista"></ol>
-      <p class="painel-trilha__manual">
-        <a href="#secao-manual" data-abrir-manual>Abrir o manual de uso</a>
-      </p>
+      <div class="campo__cabeca">
+        <h2 class="painel-card__titulo" id="trilha-titulo" tabindex="-1">Primeiros passos</h2>
+        <button type="button" class="painel-trilha__toggle" id="btn-trilha-toggle" aria-expanded="true" aria-controls="trilha-corpo">Ocultar</button>
+      </div>
+      <div id="trilha-corpo">
+        <p class="painel-card__texto" id="trilha-resumo">Siga a lista. O passo em destaque é o que falta agora.</p>
+        <p class="painel-trilha__agora" id="trilha-agora"></p>
+        <ol class="painel-trilha__lista" id="trilha-lista"></ol>
+        <p class="painel-trilha__manual">
+          <a href="#secao-manual" data-abrir-manual>Abrir o manual de uso</a>
+        </p>
+      </div>
     </section>
 
     <section class="painel-card" id="secao-assinatura">
@@ -703,7 +708,7 @@
 
     <section class="painel-card painel-manual" id="secao-manual" aria-labelledby="manual-titulo">
       <h2 class="painel-card__titulo" id="manual-titulo" tabindex="-1">Manual de uso</h2>
-      <p class="painel-card__texto">Guia do painel. Abra o assunto que você precisa — ou volte à <a href="#secao-trilha">lista de primeiros passos</a>.</p>
+      <p class="painel-card__texto">Guia do painel. Abra o assunto que você precisa — ou volte à <a href="#secao-trilha" data-abrir-trilha>lista de primeiros passos</a>.</p>
 
       <details class="painel-manual__bloco">
         <summary>Como funciona a My Rep em 1 minuto</summary>
