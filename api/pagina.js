@@ -5,7 +5,14 @@
 const { RESERVADOS, normalizarSlug } = require("./_lib/slugs");
 const { getSupabase, supabaseConfigured } = require("./_lib/supabase");
 const { paginaAtiva } = require("./_lib/paginas");
-const { gerarPagina, gerarPaginaMarca, gerar404, lerTemplatePagina, setAssetsModo } = require("./_lib/render/pagina");
+const {
+  gerarPagina,
+  gerarPaginaMarca,
+  gerar404,
+  gerarErroTemporario,
+  lerTemplatePagina,
+  setAssetsModo,
+} = require("./_lib/render/pagina");
 const { normalizarDados, resolverMarcaPorSlug } = require("./_lib/dados");
 
 let _tplCache = null;
@@ -16,10 +23,17 @@ function lerTemplate() {
   return _tplCache;
 }
 
+// Página publicada fica 60 s no CDN (e serve a cópia antiga por até 5 min
+// enquanto revalida). 404 e erros não são cacheados, para que publicar e
+// voltar de uma falha apareçam na hora.
+const CACHE_OK = "public, s-maxage=60, stale-while-revalidate=300";
+const CACHE_404 = "public, s-maxage=0, must-revalidate";
+const CACHE_ERRO = "no-store";
+
 function enviarHtml(res, status, body) {
   res.statusCode = status;
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Cache-Control", "public, s-maxage=0, must-revalidate");
+  res.setHeader("Cache-Control", status === 200 ? CACHE_OK : status === 404 ? CACHE_404 : CACHE_ERRO);
   res.end(body);
 }
 
@@ -40,7 +54,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (!supabaseConfigured()) {
-    return enviarHtml(res, 503, gerar404());
+    return enviarHtml(res, 503, gerarErroTemporario());
   }
 
   try {
@@ -58,7 +72,7 @@ module.exports = async function handler(req, res) {
 
     if (error) {
       console.error("pagina render:", error.message);
-      return enviarHtml(res, 500, gerar404());
+      return enviarHtml(res, 500, gerarErroTemporario());
     }
 
     if (!data || data.publicado === false || data.ativo === false) {
@@ -84,13 +98,13 @@ module.exports = async function handler(req, res) {
     if (req.method === "HEAD") {
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, s-maxage=0, must-revalidate");
+      res.setHeader("Cache-Control", CACHE_OK);
       return res.end();
     }
 
     return enviarHtml(res, 200, htmlOut);
   } catch (erro) {
     console.error("pagina handler:", erro);
-    return enviarHtml(res, 500, gerar404());
+    return enviarHtml(res, 500, gerarErroTemporario());
   }
 };

@@ -8,12 +8,12 @@
 
   const NOMES = {
     mensal: "Mensal (R$ 17,90/mês)",
-    anual: "Anual (R$ 130,80 · 12× R$ 10,90)"
+    anual: "Anual (R$ 130,80 · 12× R$ 10,90 sem juros)"
   };
 
   const plano = new URLSearchParams(location.search).get("plano") || "";
 
   if (NOMES[plano]) {
-    planoTexto.textContent = `Plano ${NOMES[plano]} confirmado. Entre no painel com a mesma conta ou e-mail usado no pagamento para montar e publicar sua página.`;
+    planoTexto.textContent = `Plano ${NOMES[plano]}. Assim que a Asaas confirmar o pagamento, sua assinatura é ativada — no cartão leva segundos; no PIX, até alguns minutos. Entre no painel com a mesma conta para montar e publicar sua página.`;
   }
 })();

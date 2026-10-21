@@ -1,0 +1,33 @@
+{
+  "slug": "exemplo-alimentos",
+  "nome": "Fernanda Rocha",
+  "empresa": "Rocha Distribuição",
+  "destaque": "empresa",
+  "cargo": "Representação de alimentos — Pernambuco, Paraíba e Rio Grande do Norte",
+  "bio": "Mercearia seca, biscoitos e food service para supermercados, atacarejos e padarias. Atendimento com mix sugerido por loja.",
+  "foto": "logo.svg",
+  "fotoTipo": "logo",
+  "whatsapp": "5581900000002",
+  "mensagemWhatsapp": "Olá, Fernanda! Vim pela página da Rocha Distribuição.",
+  "paleta": "oceano",
+  "marcas": [
+    { "id": "m_sabor", "nome": "Sabor do Agreste", "logo": "marca-sabor-do-agreste.svg", "descricao": "Biscoitos, bolachas e salgadinhos regionais." },
+    { "id": "m_grao", "nome": "Grão Nobre", "logo": "marca-grao-nobre.svg", "descricao": "Arroz, feijão, cuscuz e farinhas." },
+    { "id": "m_doce", "nome": "Doce Serra", "logo": "marca-doce-serra.svg", "descricao": "Doces em pasta, goiabada e geleias." }
+  ],
+  "estados": ["PE", "PB", "RN"],
+  "cidades": {
+    "PE": ["Recife", "Caruaru", "Petrolina"],
+    "PB": ["João Pessoa", "Campina Grande"],
+    "RN": ["Natal", "Mossoró"]
+  },
+  "segmentos": "Alimentos · mercearia seca · food service",
+  "catalogos": [
+    { "id": "c_sabor", "titulo": "Sabor do Agreste — mix 2026", "arquivo": "catalogo-sabor-do-agreste.pdf", "tipo": "PDF", "marcaId": "m_sabor" },
+    { "id": "c_grao", "titulo": "Grão Nobre — linha completa", "arquivo": "catalogo-grao-nobre.pdf", "tipo": "PDF", "marcaId": "m_grao" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "fernanda@exemplo.myrep.com.br", "link": "mailto:fernanda@exemplo.myrep.com.br" },
+    { "canal": "Telefone", "valor": "(81) 90000-0002", "link": "tel:+5581900000002" }
+  ]
+}

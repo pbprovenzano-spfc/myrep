@@ -1,16 +1,25 @@
 /* =========================================================
    build.js — gerador estático do My Rep
    Páginas de representantes são renderizadas em runtime via /api/pagina.
+   As páginas de exemplo (exemplos/*.json, dados fictícios) saem estáticas.
    ========================================================= */
 
 const fs = require("fs");
 const path = require("path");
-const { gerar404 } = require("./api/_lib/render/pagina");
+const {
+  gerar404,
+  gerarPagina,
+  gerarPaginaMarca,
+  lerTemplatePagina,
+  setAssetsModo
+} = require("./api/_lib/render/pagina");
+const { normalizarDados } = require("./api/_lib/dados");
 
 const RAIZ = __dirname;
 const DIR_TEMPLATE = path.join(RAIZ, "template");
 const DIR_PUBLICO = path.join(RAIZ, "publico");
 const DIR_GEO = path.join(RAIZ, "geo");
+const DIR_EXEMPLOS = path.join(RAIZ, "exemplos");
 const DIST = path.join(RAIZ, "dist");
 
 const temTexto = (s) => typeof s === "string" && s.trim() !== "";
@@ -99,6 +108,86 @@ function paginaRedirect(destino, titulo = "Redirecionando...") {
 `;
 }
 
+const SITE = "https://www.myrep.com.br";
+
+// Faixa + aviso nos contatos: os números e e-mails dos exemplos são fictícios.
+const EXEMPLO_FAIXA = `<div class="exemplo-faixa" role="note">
+  <span>Página de exemplo · dados fictícios</span>
+  <a href="/cadastro/">Criar a minha</a>
+</div>`;
+
+const EXEMPLO_SCRIPT = `<p class="exemplo-toast" id="exemplo-toast" role="status" hidden></p>
+<script>
+(function () {
+  var toast = document.getElementById("exemplo-toast");
+  var timer;
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    var ficticio = ["https://wa.me/", "tel:", "mailto:", "https://www.instagram.com"].some(function (p) {
+      return href.indexOf(p) === 0;
+    });
+    if (!ficticio) return;
+    ev.preventDefault();
+    toast.textContent = "Contato fictício: esta é uma página de exemplo. Na sua, o cliente cai direto no seu WhatsApp.";
+    toast.hidden = false;
+    clearTimeout(timer);
+    timer = setTimeout(function () { toast.hidden = true; }, 4000);
+  });
+})();
+</script>`;
+
+function marcarExemplo(html) {
+  return html
+    .replace("<head>", '<head>\n<meta name="robots" content="noindex">')
+    .replace(/<body([^>]*)>/, `<body$1>\n${EXEMPLO_FAIXA}`)
+    .replace("</body>", `${EXEMPLO_SCRIPT}\n</body>`);
+}
+
+function gerarExemplos() {
+  if (!fs.existsSync(DIR_EXEMPLOS)) return;
+  setAssetsModo("local");
+  const tpl = lerTemplatePagina();
+  const arquivos = fs.readdirSync(DIR_EXEMPLOS).filter((f) => f.endsWith(".json"));
+  for (const arquivo of arquivos) {
+    const bruto = JSON.parse(fs.readFileSync(path.join(DIR_EXEMPLOS, arquivo), "utf8"));
+    const dados = normalizarDados(bruto);
+    const pasta = path.join(DIST, dados.slug);
+    fs.mkdirSync(pasta, { recursive: true });
+    fs.writeFileSync(path.join(pasta, "index.html"), marcarExemplo(gerarPagina(dados, tpl)));
+    for (const marca of dados.marcas) {
+      const pastaMarca = path.join(pasta, marca.slug);
+      fs.mkdirSync(pastaMarca, { recursive: true });
+      fs.writeFileSync(path.join(pastaMarca, "index.html"), marcarExemplo(gerarPaginaMarca(dados, marca, tpl)));
+    }
+    copiarPasta(path.join(DIR_EXEMPLOS, "assets", dados.slug), path.join(DIST, "assets-clientes", dados.slug));
+    console.log(`  ✓ /${dados.slug}/ (exemplo, ${dados.marcas.length} marcas)`);
+  }
+}
+
+function robotsTxt() {
+  return [
+    "User-agent: *",
+    "Disallow: /painel/",
+    "Disallow: /admin/",
+    "Disallow: /assinantes/",
+    "Disallow: /api/",
+    "Disallow: /pagamento/",
+    "",
+    `Sitemap: ${SITE}/sitemap.xml`,
+    ""
+  ].join("\n");
+}
+
+// Só as páginas fixas; as dos representantes entram quando houver sitemap dinâmico.
+function sitemapXml() {
+  const urls = ["/", "/termos/"]
+    .map((p) => `  <url><loc>${SITE}${p}</loc></url>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
 async function build() {
   const inicio = Date.now();
   console.log("\n▸ Gerando site…\n");
@@ -180,6 +269,12 @@ async function build() {
     );
     console.log(`  ✓ /${legado}/ → /painel/`);
   }
+
+  gerarExemplos();
+
+  fs.writeFileSync(path.join(DIST, "robots.txt"), robotsTxt());
+  fs.writeFileSync(path.join(DIST, "sitemap.xml"), sitemapXml());
+  console.log("  ✓ /robots.txt + /sitemap.xml");
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log("  ✓ /404.html");

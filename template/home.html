@@ -6,9 +6,18 @@
 <title>My Rep — Sua página de representante comercial</title>
 <meta name="description" content="My Rep é a página única do representante comercial: contatos, marcas, catálogos e WhatsApp em um link só.">
 
+<link rel="canonical" href="https://www.myrep.com.br/">
+
 <meta property="og:type" content="website">
-<meta property="og:title" content="My Rep">
+<meta property="og:site_name" content="My Rep">
+<meta property="og:url" content="https://www.myrep.com.br/">
+<meta property="og:title" content="My Rep — Sua página de representante comercial">
 <meta property="og:description" content="Sua página de representante comercial. Um link. Tudo que o cliente precisa.">
+<meta property="og:image" content="https://www.myrep.com.br/img/og-myrep.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.myrep.com.br/img/og-myrep.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +32,7 @@
   <div class="hero__grade">
     <div class="hero__conteudo">
       <p class="marca marca--hero">
-        <img src="/img/logo.png" alt="My Rep" width="96" height="96">
+        <img src="/img/logo-192.png" alt="My Rep" width="96" height="96">
       </p>
       <h1 class="hero__titulo">Sua página de representante. Um link. Pronto.</h1>
       <p class="hero__sub">O My Rep reúne WhatsApp, marcas, catálogos e área de atuação numa página limpa — fácil de compartilhar no Instagram, no cartão ou no WhatsApp.</p>
@@ -31,13 +40,14 @@
         <a class="btn btn--primario" href="/cadastro/">Criar meu My Rep</a>
         <a class="btn btn--fantasma" href="/entrar/">Já sou usuário</a>
       </div>
+      <p class="hero__exemplos"><a href="#exemplos">Ver páginas de exemplo ↓</a></p>
     </div>
     <aside class="hero__mockup" aria-hidden="true">
       <div class="phone">
         <div class="phone__notch"></div>
         <div class="phone__tela">
           <div class="mock-capa">
-            <img class="mock-avatar" src="/img/mock-foto.png" alt="" width="56" height="56">
+            <img class="mock-avatar" src="/img/mock-foto.jpg" alt="" width="56" height="56">
             <p class="mock-empresa">Norte Rep</p>
             <p class="mock-nome">Joao Silva</p>
             <p class="mock-cargo">Representante comercial · BA / SE</p>
@@ -48,8 +58,8 @@
             <span class="mock-btn">Instagram</span>
           </div>
           <div class="mock-marcas">
-            <span class="mock-chip"><img src="/img/mock-marca-1.png" alt="" width="48" height="48"></span>
-            <span class="mock-chip"><img src="/img/mock-marca-2.png" alt="" width="48" height="48"></span>
+            <span class="mock-chip"><img src="/img/mock-marca-1.jpg" alt="" width="48" height="48"></span>
+            <span class="mock-chip"><img src="/img/mock-marca-2.jpg" alt="" width="48" height="48"></span>
           </div>
           <div class="mock-mapa">
             <svg class="mock-mapa__svg" viewBox="720 335 210 280" aria-hidden="true">
@@ -89,6 +99,46 @@
   </div>
 </section>
 
+<section class="exemplos" id="exemplos">
+  <div class="exemplos__interno">
+    <p class="eyebrow">Na prática</p>
+    <h2 class="exemplos__titulo">Veja como fica</h2>
+    <p class="exemplos__sub">Três páginas de exemplo, com dados fictícios. Abra no celular e toque nos botões.</p>
+    <ul class="exemplos__lista">
+      <li>
+        <a class="exemplo-card" href="/exemplo-autopecas/" style="--exemplo-cor:#F0A202">
+          <img class="exemplo-card__foto" src="/assets-clientes/exemplo-autopecas/foto.svg" alt="" width="52" height="52" loading="lazy">
+          <span>
+            <span class="exemplo-card__nome">Ricardo Andrade</span>
+            <span class="exemplo-card__meta">Autopeças · BA e SE</span>
+          </span>
+          <span class="exemplo-card__seta" aria-hidden="true">→</span>
+        </a>
+      </li>
+      <li>
+        <a class="exemplo-card" href="/exemplo-alimentos/" style="--exemplo-cor:#1AA6B8">
+          <img class="exemplo-card__foto" src="/assets-clientes/exemplo-alimentos/logo.svg" alt="" width="52" height="52" loading="lazy">
+          <span>
+            <span class="exemplo-card__nome">Rocha Distribuição</span>
+            <span class="exemplo-card__meta">Alimentos · PE, PB e RN</span>
+          </span>
+          <span class="exemplo-card__seta" aria-hidden="true">→</span>
+        </a>
+      </li>
+      <li>
+        <a class="exemplo-card" href="/exemplo-epi/" style="--exemplo-cor:#C44B3A">
+          <img class="exemplo-card__foto" src="/assets-clientes/exemplo-epi/foto.svg" alt="" width="52" height="52" loading="lazy">
+          <span>
+            <span class="exemplo-card__nome">Marcos Teixeira</span>
+            <span class="exemplo-card__meta">EPI e ferramentas · SP e MG</span>
+          </span>
+          <span class="exemplo-card__seta" aria-hidden="true">→</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
 <section class="precos" id="precos">
   <div class="precos__interno">
     <p class="eyebrow">Assinatura</p>
@@ -108,7 +158,7 @@
         <div class="preco__texto">
           <h3 class="preco__nome">Anual</h3>
           <p class="preco__valor"><span>R$ 130,80</span> no ano</p>
-          <p class="preco__nota">12× de R$ 10,90 · melhor preço</p>
+          <p class="preco__nota">12× de R$ 10,90 sem juros · economize 39%</p>
         </div>
         <a class="btn btn--primario" href="/cadastro/?plano=anual">Criar conta</a>
       </li>
@@ -132,15 +182,15 @@
 <footer class="rodape rodape--landing">
   <div class="rodape--landing__interno">
     <p class="marca marca--compacta">
-      <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+      <img src="/img/logo-192.png" alt="My Rep" width="36" height="36">
     </p>
     <p class="rodape__creditos">Página única para representantes comerciais · <a href="/termos/">Termos de uso</a></p>
   </div>
 </footer>
 
-<div class="cookies" id="cookies-banner" hidden role="dialog" aria-live="polite" aria-label="Aviso de cookies">
-  <p class="cookies__texto">Usamos cookies para melhorar sua experiência. Ao continuar, você concorda com o uso.</p>
-  <button type="button" class="btn btn--primario cookies__btn" id="cookies-aceitar">Aceitar</button>
+<div class="cookies" id="cookies-banner" hidden role="region" aria-label="Aviso de cookies">
+  <p class="cookies__texto">Usamos só cookies essenciais para o site funcionar. <a href="/termos/#privacidade">Saiba mais</a></p>
+  <button type="button" class="btn btn--primario cookies__btn" id="cookies-aceitar">Entendi</button>
 </div>
 
 <script>window.MYREP_SUPABASE={{MYREP_SUPABASE}};</script>

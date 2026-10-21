@@ -1141,7 +1141,7 @@
     root.innerHTML = `<div class="cartao shell--estreito pagina-marca">
       ${htmlPerfilMarcaPreview(estado)}
       <div class="cartao__blocos">${htmlBlocosMarcaPreview(estado)}</div>
-      <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo.png" alt="My Rep" width="28" height="28"></span></p></footer>
+      <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo-192.png" alt="My Rep" width="28" height="28"></span></p></footer>
     </div>`;
     atualizarResumoPreviewMarca(estado);
   }
@@ -1673,7 +1673,7 @@
     root.innerHTML = `<div class="cartao shell--estreito">
       ${htmlPerfilPreview(c)}
       <div class="cartao__blocos">${blocosHtml}</div>
-      <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo.png" alt="My Rep" width="28" height="28"></span></p></footer>
+      <footer class="rodape"><p class="rodape__creditos"><span class="marca marca--compacta"><img src="/img/logo-192.png" alt="My Rep" width="28" height="28"></span></p></footer>
     </div>`;
 
     montarMapaPreview(root);
@@ -2922,11 +2922,14 @@
     }
   });
 
-  document.getElementById("btn-publicar")?.addEventListener("click", async () => {
+  document.getElementById("btn-publicar")?.addEventListener("click", async (ev) => {
+    const botao = ev.currentTarget;
+    if (botao.disabled) return;
     const status = document.getElementById("compartilhar-status");
     const publicado = perfil?.pagina?.publicado;
     const fd = new FormData();
     fd.append("acao", publicado ? "despublicar" : "publicar");
+    botao.disabled = true;
     try {
       const data = await midiaRequest(fd);
       perfil.pagina = data.pagina;
@@ -2935,6 +2938,8 @@
       focarProximoPassoTrilha();
     } catch (erro) {
       setStatus(status, erro.message, "erro");
+    } finally {
+      botao.disabled = false;
     }
   });
 
@@ -2945,7 +2950,8 @@
     const url = urlAbsoluta(path);
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Meu cartão — My Rep", url });
+        const nome = paginaDados?.nome || paginaDados?.empresa || "";
+        await navigator.share({ title: nome ? `${nome} — My Rep` : "Meu cartão — My Rep", url });
       } else {
         await navigator.clipboard.writeText(url);
         setStatus(status, "Link copiado.", "ok");

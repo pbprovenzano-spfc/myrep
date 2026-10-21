@@ -52,7 +52,8 @@ function slugValido(slug) {
       return { ok: false, slug: s, motivo: "Use só letras minúsculas, números e hífen." };
     }
   }
-  if (RESERVADOS.has(s)) {
+  // exemplo-* fica para as páginas de demonstração geradas no build.
+  if (RESERVADOS.has(s) || s.startsWith("exemplo")) {
     return { ok: false, slug: s, motivo: "Este endereço está reservado." };
   }
   return { ok: true, slug: s, motivo: null };
