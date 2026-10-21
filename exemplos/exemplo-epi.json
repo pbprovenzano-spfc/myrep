@@ -1,0 +1,32 @@
+{
+  "slug": "exemplo-epi",
+  "nome": "Marcos Teixeira",
+  "empresa": "Teixeira Rep",
+  "destaque": "pessoa",
+  "cargo": "Representante de EPI e ferramentas — São Paulo e Minas Gerais",
+  "bio": "Equipamentos de proteção e ferramentas para revendas, construtoras e indústria. Ajudo a montar o mix por norma e por obra.",
+  "foto": "foto.svg",
+  "fotoTipo": "pessoa",
+  "whatsapp": "5511900000003",
+  "mensagemWhatsapp": "Olá, Marcos! Vi sua página e quero uma cotação de EPI.",
+  "paleta": "rubi",
+  "marcas": [
+    { "id": "m_protemax", "nome": "Protemax", "logo": "marca-protemax.svg", "descricao": "Luvas, óculos e protetores auriculares." },
+    { "id": "m_ferrabril", "nome": "Ferrabril", "logo": "marca-ferrabril.svg", "descricao": "Ferramentas manuais e acessórios para obra." },
+    { "id": "m_segurtex", "nome": "Segurtex", "descricao": "Uniformes e vestimentas de proteção." }
+  ],
+  "estados": ["SP", "MG"],
+  "cidades": {
+    "SP": ["Campinas", "Ribeirão Preto", "São José dos Campos"],
+    "MG": ["Uberlândia", "Pouso Alegre"]
+  },
+  "segmentos": "EPI · ferramentas · uniformes profissionais",
+  "catalogos": [
+    { "id": "c_protemax", "titulo": "Protemax — catálogo de EPI", "arquivo": "catalogo-protemax.pdf", "tipo": "PDF", "marcaId": "m_protemax" },
+    { "id": "c_ferrabril", "titulo": "Ferrabril — ferramentas 2026", "arquivo": "catalogo-ferrabril.pdf", "tipo": "PDF", "marcaId": "m_ferrabril" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "marcos@exemplo.myrep.com.br", "link": "mailto:marcos@exemplo.myrep.com.br" },
+    { "canal": "Telefone", "valor": "(11) 90000-0003", "link": "tel:+5511900000003" }
+  ]
+}

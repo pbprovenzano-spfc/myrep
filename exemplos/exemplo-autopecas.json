@@ -1,0 +1,35 @@
+{
+  "slug": "exemplo-autopecas",
+  "nome": "Ricardo Andrade",
+  "empresa": "Andrade Representações",
+  "destaque": "pessoa",
+  "cargo": "Representante comercial de autopeças — Bahia e Sergipe",
+  "bio": "Atendo autopeças, oficinas e distribuidores do interior da Bahia e de Sergipe há 15 anos. Pedido pelo WhatsApp, tabela sempre atualizada e visita quinzenal.",
+  "foto": "foto.svg",
+  "fotoTipo": "pessoa",
+  "whatsapp": "5575900000001",
+  "mensagemWhatsapp": "Olá, Ricardo! Vi sua página e quero falar sobre autopeças.",
+  "paleta": "ambar",
+  "marcas": [
+    { "id": "m_freiotec", "nome": "Freiotec", "logo": "marca-freiotec.svg", "descricao": "Pastilhas, discos e lonas de freio para linha leve e pesada." },
+    { "id": "m_rodaflex", "nome": "Rodaflex", "logo": "marca-rodaflex.svg", "descricao": "Amortecedores, molas e kits de suspensão." },
+    { "id": "m_motorvia", "nome": "Motorvia", "logo": "marca-motorvia.svg", "descricao": "Filtros, correias e itens de manutenção de motor." },
+    { "id": "m_lumicar", "nome": "Lumicar", "descricao": "Lâmpadas e iluminação automotiva." }
+  ],
+  "estados": ["BA", "SE"],
+  "cidades": {
+    "BA": ["Feira de Santana", "Alagoinhas", "Santo Antônio de Jesus", "Cruz das Almas"],
+    "SE": ["Aracaju", "Itabaiana", "Lagarto"]
+  },
+  "segmentos": "Autopeças · linha leve e pesada · oficinas e distribuidores",
+  "catalogos": [
+    { "id": "c_freiotec", "titulo": "Freiotec — linha 2026", "arquivo": "catalogo-freiotec-2026.pdf", "tipo": "PDF", "marcaId": "m_freiotec" },
+    { "id": "c_rodaflex", "titulo": "Rodaflex — suspensão", "arquivo": "catalogo-rodaflex.pdf", "tipo": "PDF", "marcaId": "m_rodaflex" },
+    { "id": "c_tabela", "titulo": "Tabela de preços — outubro", "arquivo": "tabela-precos.pdf", "tipo": "PDF" }
+  ],
+  "contatos": [
+    { "canal": "E-mail", "valor": "ricardo@exemplo.myrep.com.br", "link": "mailto:ricardo@exemplo.myrep.com.br" },
+    { "canal": "Instagram", "valor": "@andraderep.exemplo", "link": "https://www.instagram.com/" },
+    { "canal": "Telefone", "valor": "(75) 90000-0001", "link": "tel:+5575900000001" }
+  ]
+}

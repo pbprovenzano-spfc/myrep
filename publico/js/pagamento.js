@@ -8,7 +8,7 @@
 
   const NOMES = {
     mensal: "Mensal (R$ 17,90/mês)",
-    anual: "Anual (R$ 130,80 · 12× R$ 10,90)"
+    anual: "Anual (R$ 130,80 · 12× R$ 10,90 sem juros)"
   };
 
   const plano = new URLSearchParams(location.search).get("plano") || "";
