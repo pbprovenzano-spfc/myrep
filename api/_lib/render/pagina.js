@@ -87,6 +87,16 @@ function setDirGeo(dir) {
   if (dir) _dirGeo = dir;
 }
 
+const SITE = "https://www.myrep.com.br";
+const OG_PADRAO = `${SITE}/img/og-myrep.png`;
+
+/** og:image precisa de URL absoluta; sem imagem, usa a arte padrão do My Rep. */
+function imagemCompartilhamento(slug, arquivo) {
+  const url = caminhoAsset(slug, arquivo);
+  if (!url) return OG_PADRAO;
+  return url.startsWith("/") ? SITE + url : url;
+}
+
 function caminhoAsset(slug, arquivo) {
   if (!arquivo) return "";
   if (_assetsModo === "storage") {
@@ -406,8 +416,9 @@ function gerarPagina(c, template) {
   return template
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep")
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
-    .replace(/\{\{DESCRICAO\}\}/g, esc(c.cargo || c.bio || ""))
-    .replace(/\{\{FOTO\}\}/g, caminhoAsset(c.slug, c.foto))
+    .replace(/\{\{DESCRICAO\}\}/g, esc(c.cargo || c.bio || `${tituloPrincipal} — representante comercial. Marcas, catálogos e contato pelo WhatsApp.`))
+    .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/`)
+    .replace(/\{\{FOTO\}\}/g, esc(imagemCompartilhamento(c.slug, c.foto)))
     .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
     .replace(/\{\{FOTO_CLASSE\}\}/g, fotoClasse)
     .replace(/\{\{ANTES_NOME\}\}/g, antesNome)
@@ -437,8 +448,9 @@ function gerarPaginaMarca(c, marca, template) {
   return template
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep pagina-marca")
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
-    .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || ""))
-    .replace(/\{\{FOTO\}\}/g, marca.logo ? caminhoAsset(c.slug, marca.logo) : "")
+    .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || `Catálogos e contato de ${marca.nome} com ${repNome}, representante comercial.`))
+    .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/${esc(marca.slug || "")}/`)
+    .replace(/\{\{FOTO\}\}/g, esc(imagemCompartilhamento(c.slug, marca.logo)))
     .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
     .replace(/\{\{FOTO_CLASSE\}\}/g, marca.logo ? "capa__foto capa__foto--logo" : "capa__foto capa__foto--inicial")
     .replace(/\{\{ANTES_NOME\}\}/g, voltar)
@@ -452,13 +464,13 @@ function gerarPaginaMarca(c, marca, template) {
     .replace(/\{\{BLOCOS\}\}/g, blocos || `<p class="segmentos">Nenhum catálogo desta marca ainda.</p>`);
 }
 
-function gerar404() {
+function paginaErro({ codigo, titulo, texto }) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Página não encontrada — My Rep</title>
+<title>${titulo} — My Rep</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -468,16 +480,32 @@ function gerar404() {
 <body class="pagina-erro">
   <main class="shell shell--estreito erro">
     <p class="marca marca--compacta">
-      <img src="/img/logo.png" alt="My Rep" width="36" height="36">
+      <img src="/img/logo-192.png" alt="My Rep" width="36" height="36">
     </p>
-    <p class="eyebrow">Erro 404</p>
-    <h1 class="erro__titulo">Página não encontrada</h1>
-    <p class="erro__sub">Esse endereço não existe ou o representante não está cadastrado.</p>
+    <p class="eyebrow">Erro ${codigo}</p>
+    <h1 class="erro__titulo">${titulo}</h1>
+    <p class="erro__sub">${texto}</p>
     <a class="btn btn--primario" href="/">Voltar ao My Rep</a>
   </main>
 </body>
 </html>
 `;
+}
+
+function gerar404() {
+  return paginaErro({
+    codigo: 404,
+    titulo: "Página não encontrada",
+    texto: "Esse endereço não existe ou o representante não está cadastrado."
+  });
+}
+
+function gerarErroTemporario() {
+  return paginaErro({
+    codigo: 503,
+    titulo: "Instabilidade temporária",
+    texto: "Não conseguimos carregar esta página agora. Tente de novo em alguns minutos."
+  });
 }
 
 function lerTemplatePagina() {
@@ -511,5 +539,6 @@ module.exports = {
   gerarPagina,
   gerarPaginaMarca,
   gerar404,
+  gerarErroTemporario,
   lerTemplatePagina
 };

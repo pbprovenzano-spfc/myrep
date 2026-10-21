@@ -50,6 +50,26 @@
     return "/painel/";
   }
 
+  // Mensagens do Supabase Auth chegam em inglês; traduz as mais comuns.
+  const ERROS_AUTH = [
+    [/invalid login credentials/i, "E-mail ou senha incorretos."],
+    [/email not confirmed/i, "Confirme seu e-mail antes de entrar. Veja a caixa de entrada e o spam."],
+    [/user already registered|already been registered/i, "Este e-mail já tem conta. Entre ou recupere a senha."],
+    [/password should be at least/i, "A senha precisa ter ao menos 6 caracteres."],
+    [/new password should be different/i, "A nova senha precisa ser diferente da atual."],
+    [/(rate limit|too many requests|for security purposes)/i, "Muitas tentativas. Aguarde um minuto e tente de novo."],
+    [/unable to validate email|invalid email|email address .* is invalid/i, "E-mail inválido."],
+    [/(failed to fetch|network)/i, "Sem conexão. Verifique a internet e tente de novo."]
+  ];
+
+  function mensagemErro(erro, padrao) {
+    const msg = (erro && erro.message) || "";
+    for (const [padraoIngles, traducao] of ERROS_AUTH) {
+      if (padraoIngles.test(msg)) return traducao;
+    }
+    return msg || padrao;
+  }
+
   function setStatus(el, msg, tipo) {
     if (!el) return;
     el.textContent = msg || "";
@@ -197,7 +217,7 @@
 
         location.replace(`/cadastro/confirme/?email=${encodeURIComponent(email)}`);
       } catch (erro) {
-        setStatus(status, erro.message || "Não foi possível criar a conta.", "erro");
+        setStatus(status, mensagemErro(erro, "Não foi possível criar a conta."), "erro");
       } finally {
         btn.disabled = false;
       }
@@ -227,7 +247,7 @@
         setStatus(status, "Login ok. Redirecionando…", "ok");
         location.href = destinoAposLogin();
       } catch (erro) {
-        setStatus(status, erro.message || "E-mail ou senha incorretos.", "erro");
+        setStatus(status, mensagemErro(erro, "E-mail ou senha incorretos."), "erro");
       } finally {
         btn.disabled = false;
       }
@@ -266,12 +286,14 @@
 
   if (formRecuperar) {
     const status = document.getElementById("auth-status");
+    const btn = formRecuperar.querySelector('button[type="submit"]');
     formRecuperar.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const email = String(new FormData(formRecuperar).get("email") || "")
         .trim()
         .toLowerCase();
       if (!email.includes("@")) return setStatus(status, "Informe um e-mail válido.", "erro");
+      if (btn) btn.disabled = true;
       setStatus(status, "Enviando link…", "info");
       try {
         const sb = await esperarSupabase();
@@ -281,7 +303,9 @@
         if (error) throw error;
         setStatus(status, "Link enviado. Confira sua caixa de entrada.", "ok");
       } catch (erro) {
-        setStatus(status, erro.message || "Não foi possível enviar o link.", "erro");
+        setStatus(status, mensagemErro(erro, "Não foi possível enviar o link."), "erro");
+      } finally {
+        if (btn) btn.disabled = false;
       }
     });
   }
@@ -303,7 +327,7 @@
         setStatus(status, "Senha atualizada. Redirecionando…", "ok");
         location.href = "/painel/";
       } catch (erro) {
-        setStatus(status, erro.message || "Não foi possível salvar a senha.", "erro");
+        setStatus(status, mensagemErro(erro, "Não foi possível salvar a senha."), "erro");
       }
     });
   }
