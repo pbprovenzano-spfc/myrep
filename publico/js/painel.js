@@ -2109,6 +2109,30 @@
     }
   }
 
+  // Ao trocar de aba ou fechar a página, envia a edição que ainda esperava o
+  // intervalo do autosave. keepalive deixa o pedido terminar mesmo após o fechamento.
+  function salvarAoSair() {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const corpo = JSON.stringify(payloadTexto());
+    window.MyRepAuth.accessToken()
+      .then((token) =>
+        fetch("/api/painel/pagina", {
+          method: "PUT",
+          keepalive: true,
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: corpo
+        })
+      )
+      .catch(() => {});
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") salvarAoSair();
+  });
+  window.addEventListener("pagehide", salvarAoSair);
+
   async function midiaRequest(formData) {
     return apiPagina("POST", null, formData);
   }
@@ -2271,6 +2295,7 @@
       conteudo.hidden = false;
       btnSair.hidden = false;
       carregarSuporte();
+      aguardarConfirmacaoPagamento();
     } catch (erro) {
       if (erro.status === 401) {
         try {
@@ -2285,6 +2310,60 @@
       carregando.textContent = erro.message || "Não foi possível carregar.";
       carregando.dataset.tipo = "erro";
     }
+  }
+
+  // Na volta da Asaas (ou com assinatura pendente), consulta o perfil até o
+  // webhook ativar a assinatura e então recarrega o painel já liberado.
+  function aguardarConfirmacaoPagamento() {
+    const voltouDoCheckout = new URLSearchParams(location.search).get("pagamento") === "retorno";
+    const ass = perfil?.assinatura;
+    if (assinaturaLibera(ass)) {
+      if (voltouDoCheckout) history.replaceState(null, "", location.pathname);
+      return;
+    }
+    if (!voltouDoCheckout && ass?.status !== "pendente") return;
+
+    const texto = document.getElementById("assinatura-texto");
+    const aviso = "Aguardando a confirmação da Asaas — o painel atualiza sozinho. No PIX, pode levar alguns minutos.";
+    if (texto) texto.textContent = aviso;
+
+    const INTERVALO = 5000;
+    const LIMITE = 36;
+    let tentativas = 0;
+    let timer = null;
+    let consultando = false;
+
+    async function consultar() {
+      if (consultando) return;
+      consultando = true;
+      try {
+        const data = await window.MyRepAuth.apiPerfil();
+        if (assinaturaLibera(data?.assinatura)) {
+          location.replace(location.pathname);
+          return;
+        }
+      } catch {
+        /* tenta de novo no próximo ciclo */
+      } finally {
+        consultando = false;
+      }
+      tentativas += 1;
+      if (tentativas >= LIMITE) {
+        if (texto) {
+          texto.textContent =
+            "Ainda não recebemos a confirmação. Se pagou por PIX, aguarde alguns minutos e recarregue a página.";
+        }
+        return;
+      }
+      timer = setTimeout(consultar, INTERVALO);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || tentativas >= LIMITE) return;
+      clearTimeout(timer);
+      consultar();
+    });
+    timer = setTimeout(consultar, INTERVALO);
   }
 
   function preencherCobranca(c) {
@@ -2541,6 +2620,12 @@
         setStatus(status, erro.message, "erro");
         limparArquivoCampo(input);
         return;
+      }
+    } else if (window.MyRepLogo?.prepararFoto) {
+      try {
+        envio = await window.MyRepLogo.prepararFoto(file);
+      } catch {
+        envio = file;
       }
     }
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
@@ -2927,10 +3012,16 @@
     if (botao.disabled) return;
     const status = document.getElementById("compartilhar-status");
     const publicado = perfil?.pagina?.publicado;
+    if (!publicado && montarWhatsapp().length < 12) {
+      setStatus(status, "Preencha o WhatsApp antes de publicar — é o botão principal da página.", "erro");
+      document.getElementById("campo-whatsapp-ddd")?.focus();
+      return;
+    }
     const fd = new FormData();
     fd.append("acao", publicado ? "despublicar" : "publicar");
     botao.disabled = true;
     try {
+      await aguardarSalvarTextoPendente();
       const data = await midiaRequest(fd);
       perfil.pagina = data.pagina;
       renderVisibilidade();
