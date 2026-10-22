@@ -5115,3 +5115,15 @@ a.marca-chip:focus-visible {
   margin-left: 10px;
   background: var(--sinal-escuro);
 }
+
+.painel-indexar {
+  margin: 16px 0 2px;
+  font-weight: 600;
+  min-height: 32px;
+}
+
+.painel-indexar input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--sinal-escuro);
+}

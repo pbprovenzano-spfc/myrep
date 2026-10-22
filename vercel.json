@@ -17,6 +17,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/admin", "destination": "/admin/" },
     { "source": "/assinantes", "destination": "/assinantes/" },
     { "source": "/termos", "destination": "/termos/" },

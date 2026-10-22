@@ -69,6 +69,9 @@ function aplicarCamposTexto(dados, campos) {
   if (campos.contatos !== undefined && Array.isArray(campos.contatos)) {
     out.contatos = campos.contatos;
   }
+  if (campos.indexar !== undefined) {
+    out.indexar = campos.indexar !== false && campos.indexar !== "false";
+  }
   return out;
 }
 

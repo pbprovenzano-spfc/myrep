@@ -1370,6 +1370,9 @@
     document.getElementById("campo-instagram").value = extrairInstagramDeContatos(paginaDados.contatos);
     document.getElementById("campo-email").value = extrairEmailDeContatos(paginaDados.contatos);
 
+    const indexar = document.getElementById("campo-indexar");
+    if (indexar) indexar.checked = paginaDados.indexar !== false;
+
     const destaque = paginaDados.destaque === "empresa" ? "empresa" : "pessoa";
     document.querySelectorAll('input[name="destaque"]').forEach((el) => {
       el.checked = el.value === destaque;
@@ -1425,6 +1428,7 @@
       destaque: document.querySelector('input[name="destaque"]:checked')?.value || "pessoa",
       paleta: document.querySelector('input[name="paleta"]:checked')?.value || "ambar",
       fotoTipo: document.querySelector('input[name="fotoTipo"]:checked')?.value || "pessoa",
+      indexar: document.getElementById("campo-indexar")?.checked ?? true,
       estados,
       cidades: estados.length <= 1 && estados[0] ? cidades[estados[0]] || [] : cidades,
       contatos
@@ -2614,6 +2618,8 @@
     else if (status?.textContent === "Informe um e-mail válido.") setStatus(status, "", "");
     agendarPreview("blocos");
   });
+
+  document.getElementById("campo-indexar")?.addEventListener("change", agendarSave);
 
   document.getElementById("campo-segmentos")?.addEventListener("input", () => {
     agendarPreview("blocos");

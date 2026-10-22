@@ -181,14 +181,6 @@ function robotsTxt() {
   ].join("\n");
 }
 
-// Só as páginas fixas; as dos representantes entram quando houver sitemap dinâmico.
-function sitemapXml() {
-  const urls = ["/", "/termos/"]
-    .map((p) => `  <url><loc>${SITE}${p}</loc></url>`)
-    .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
-}
-
 async function build() {
   const inicio = Date.now();
   console.log("\n▸ Gerando site…\n");
@@ -274,8 +266,7 @@ async function build() {
   gerarExemplos();
 
   fs.writeFileSync(path.join(DIST, "robots.txt"), robotsTxt());
-  fs.writeFileSync(path.join(DIST, "sitemap.xml"), sitemapXml());
-  console.log("  ✓ /robots.txt + /sitemap.xml");
+  console.log("  ✓ /robots.txt (sitemap.xml é dinâmico: /api/sitemap)");
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log("  ✓ /404.html");

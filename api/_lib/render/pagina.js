@@ -90,6 +90,68 @@ function setDirGeo(dir) {
 const SITE = "https://www.myrep.com.br";
 const OG_PADRAO = `${SITE}/img/og-myrep.png`;
 
+const NOME_UF = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia",
+  CE: "Ceará", DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás",
+  MA: "Maranhão", MT: "Mato Grosso", MS: "Mato Grosso do Sul", MG: "Minas Gerais",
+  PA: "Pará", PB: "Paraíba", PR: "Paraná", PE: "Pernambuco", PI: "Piauí",
+  RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul",
+  RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo",
+  SE: "Sergipe", TO: "Tocantins"
+};
+
+/** Primeiro item de "Autopeças · linha leve e pesada", em minúsculas. */
+function segmentoPrincipal(c) {
+  if (!temTexto(c.segmentos)) return "";
+  const primeiro = c.segmentos.split(/\s[·|—–-]\s|[·,;|]/)[0].trim().slice(0, 50);
+  return primeiro ? primeiro.charAt(0).toLowerCase() + primeiro.slice(1) : "";
+}
+
+/** "BA", "BA e SE", "PE, PB e RN" ou "6 estados". */
+function regiaoCurta(c) {
+  const ufs = temItens(c.estados) ? c.estados.map((u) => String(u).toUpperCase()) : [];
+  if (ufs.length > 4) return `${ufs.length} estados`;
+  if (ufs.length <= 1) return ufs[0] || "";
+  return `${ufs.slice(0, -1).join(", ")} e ${ufs[ufs.length - 1]}`;
+}
+
+/** "Representante de autopeças · BA e SE" — vai no título que aparece no Google. */
+function descritorRep(c) {
+  const seg = segmentoPrincipal(c);
+  const regiao = regiaoCurta(c);
+  return [seg ? `Representante de ${seg}` : "Representante comercial", regiao].filter(Boolean).join(" · ");
+}
+
+function indexavel(c) {
+  return c.indexar !== false;
+}
+
+function metaRobots(c) {
+  return indexavel(c) ? "" : '<meta name="robots" content="noindex">';
+}
+
+/** Dados estruturados (schema.org) para o Google entender quem é e onde atua. */
+function jsonLd(c, { nome, url, descricao, imagem }) {
+  if (!indexavel(c)) return "";
+  const empresa = c.destaque === "empresa" && temTexto(c.empresa);
+  const dados = {
+    "@context": "https://schema.org",
+    "@type": empresa ? "Organization" : "Person",
+    name: nome,
+    description: descricao,
+    url,
+    ...(imagem ? { image: imagem } : {}),
+    ...(!empresa ? { jobTitle: descritorRep(c).split(" · ")[0] } : {}),
+    ...(!empresa && temTexto(c.empresa) ? { worksFor: { "@type": "Organization", name: c.empresa } } : {}),
+    ...(temItens(c.estados)
+      ? { areaServed: c.estados.map((uf) => ({ "@type": "State", name: NOME_UF[String(uf).toUpperCase()] || uf })) }
+      : {}),
+    ...(temItens(c.marcas) ? { knowsAbout: c.marcas.map((m) => m.nome) } : {})
+  };
+  const corpo = JSON.stringify(dados).replace(/</g, "\\u003c");
+  return `<script type="application/ld+json">${corpo}</script>`;
+}
+
 /** og:image precisa de URL absoluta; sem imagem, usa a arte padrão do My Rep. */
 function imagemCompartilhamento(slug, arquivo) {
   const url = caminhoAsset(slug, arquivo);
@@ -399,7 +461,13 @@ function gerarPagina(c, template) {
   const destaqueEmpresa = c.destaque === "empresa" && temTexto(c.empresa);
   const tituloPrincipal = destaqueEmpresa ? c.empresa : c.nome;
   const tituloSecundario = destaqueEmpresa ? c.nome : c.empresa;
-  const titulo = [tituloPrincipal, tituloSecundario].filter(Boolean).join(" — ");
+  const titulo = `${tituloPrincipal} — ${descritorRep(c)}`;
+  const marcasTexto = temItens(c.marcas) ? ` Marcas: ${c.marcas.map((m) => m.nome).join(", ")}.` : "";
+  const descricao =
+    c.cargo ||
+    c.bio ||
+    `${tituloPrincipal}${temTexto(tituloSecundario) ? ` (${tituloSecundario})` : ""}: ${descritorRep(c).toLowerCase()}.${marcasTexto} Fale pelo WhatsApp.`;
+  const url = `${SITE}/${c.slug}/`;
   const bio = temTexto(c.bio) ? `<p class="capa__bio">${esc(c.bio)}</p>` : "";
   const linhaSecundaria = temTexto(tituloSecundario)
     ? `<p class="capa__empresa${destaqueEmpresa ? " capa__empresa--abaixo" : ""}">${esc(tituloSecundario)}</p>`
@@ -417,8 +485,13 @@ function gerarPagina(c, template) {
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep")
     .replace(/\{\{SLUG\}\}/g, esc(c.slug || ""))
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
-    .replace(/\{\{DESCRICAO\}\}/g, esc(c.cargo || c.bio || `${tituloPrincipal} — representante comercial. Marcas, catálogos e contato pelo WhatsApp.`))
-    .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/`)
+    .replace(/\{\{DESCRICAO\}\}/g, esc(descricao))
+    .replace(/\{\{URL\}\}/g, esc(url))
+    .replace(/\{\{ROBOTS\}\}/g, metaRobots(c))
+    .replace(
+      /\{\{JSONLD\}\}/g,
+      jsonLd(c, { nome: tituloPrincipal, url, descricao, imagem: c.foto ? imagemCompartilhamento(c.slug, c.foto) : "" })
+    )
     .replace(/\{\{FOTO\}\}/g, esc(imagemCompartilhamento(c.slug, c.foto)))
     .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
     .replace(/\{\{FOTO_CLASSE\}\}/g, fotoClasse)
@@ -444,14 +517,16 @@ function gerarPaginaMarca(c, marca, template) {
     : `<div class="capa__foto capa__foto--inicial" aria-hidden="true">${esc(marca.nome.slice(0, 1))}</div>`;
   const voltar = `<p class="capa__voltar"><a href="/${esc(c.slug)}/">← Representada por ${esc(repNome)}</a></p>`;
   const descricao = temTexto(marca.descricao) ? `<p class="capa__bio">${esc(marca.descricao)}</p>` : "";
-  const titulo = `${marca.nome} — ${repNome}`;
+  const titulo = `${marca.nome} — ${repNome}, ${descritorRep(c).replace(/^R/, "r")}`;
 
   return template
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep pagina-marca")
     .replace(/\{\{SLUG\}\}/g, esc(c.slug || ""))
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
-    .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || `Catálogos e contato de ${marca.nome} com ${repNome}, representante comercial.`))
+    .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || `Catálogos e contato de ${marca.nome} com ${repNome}, ${descritorRep(c).toLowerCase()}.`))
     .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/${esc(marca.slug || "")}/`)
+    .replace(/\{\{ROBOTS\}\}/g, metaRobots(c))
+    .replace(/\{\{JSONLD\}\}/g, "")
     .replace(/\{\{FOTO\}\}/g, esc(imagemCompartilhamento(c.slug, marca.logo)))
     .replace(/\{\{FOTO_CAPA\}\}/g, fotoCapa)
     .replace(/\{\{FOTO_CLASSE\}\}/g, marca.logo ? "capa__foto capa__foto--logo" : "capa__foto capa__foto--inicial")
@@ -542,5 +617,7 @@ module.exports = {
   gerarPaginaMarca,
   gerar404,
   gerarErroTemporario,
+  descritorRep,
+  indexavel,
   lerTemplatePagina
 };
