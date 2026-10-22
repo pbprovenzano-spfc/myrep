@@ -130,7 +130,7 @@
     }
 
     return `<div class="mapa-wrap">
-        <svg class="mapa" viewBox="${esc(mapa.viewBox)}" role="img" aria-label="${esc(titulo)}">
+        <svg class="mapa" viewBox="${esc(mapa.viewBox)}" role="${clicavel ? "group" : "img"}" aria-label="${esc(titulo)}">
           <title>${esc(titulo)}</title>
           <defs>
             <filter id="${glowId}" x="-25%" y="-25%" width="150%" height="150%">

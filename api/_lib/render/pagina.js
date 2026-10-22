@@ -208,7 +208,7 @@ function itemCatalogoHtml(c, cat) {
   const meta = logoCatalogo(c, cat);
   return `        <li>
           <a class="link-btn" href="${caminhoAsset(c.slug, cat.arquivo)}" target="_blank" rel="noopener">
-            <span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>
+            <span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}<span class="visually-hidden"> (PDF, abre em nova aba)</span></span>
             ${meta}
           </a>
         </li>`;
@@ -219,12 +219,9 @@ function cabecaGrupoCatalogo(c, marca, titulo) {
     ? `<img class="catalogo-grupo__logo" src="${caminhoAsset(c.slug, marca.logo)}" alt="" loading="lazy">`
     : "";
   const nome = esc(titulo || marca?.nome || "Outros");
-  const linkMarca =
-    marca?.slug && !titulo
-      ? `<a class="catalogo-grupo__link-marca" href="${esc(urlMarca(c, marca))}">${logo}<span class="catalogo-grupo__nome">${nome}</span></a>`
-      : `${logo}<span class="catalogo-grupo__nome">${nome}</span>`;
+  // Só texto no summary: um link aqui disputaria o clique de abrir o grupo.
   return `      <summary class="catalogo-grupo__cabeca">
-        ${linkMarca}
+        ${logo}<span class="catalogo-grupo__nome">${nome}</span>
         <span class="catalogo-grupo__seta" aria-hidden="true"></span>
       </summary>`;
 }
@@ -265,11 +262,14 @@ ${itens}
     .map((marca) => {
       const cats = porMarca.get(marca.id);
       const itens = cats.map((cat) => itemCatalogoHtml(c, cat)).join("\n");
+      const linkMarca = marca.slug
+        ? `\n      <p class="catalogo-grupo__marca"><a href="${esc(urlMarca(c, marca))}">Ver a página de ${esc(marca.nome)} →</a></p>`
+        : "";
       return `    <details class="catalogo-grupo">
 ${cabecaGrupoCatalogo(c, marca)}
       <ul class="links catalogo-grupo__links">
 ${itens}
-      </ul>
+      </ul>${linkMarca}
     </details>`;
     })
     .join("\n");
