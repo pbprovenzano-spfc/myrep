@@ -69,20 +69,46 @@ async function registrarPagamentoEvento({ event, paymentId, payload }) {
 
 const EVENTO_EMAIL_PAGAMENTO = "EMAIL_PAGAMENTO_ENVIADO";
 
-async function jaEnviouEmailPagamento(paymentId) {
-  if (!paymentId || !supabaseConfigured()) return false;
+/** Já existe um evento `event` para esta chave (id de cobrança ou de usuário)? */
+async function jaRegistrouEvento(event, chave) {
+  if (!chave || !supabaseConfigured()) return false;
   const sb = getSupabase();
   const { data, error } = await sb
     .from("pagamentos_eventos")
     .select("id")
-    .eq("payment_id", String(paymentId))
-    .eq("event", EVENTO_EMAIL_PAGAMENTO)
+    .eq("payment_id", String(chave))
+    .eq("event", event)
     .limit(1);
   if (error) {
-    console.error("jaEnviouEmailPagamento:", error.message);
+    console.error("jaRegistrouEvento:", error.message);
     return false;
   }
   return Array.isArray(data) && data.length > 0;
+}
+
+/** Chaves (entre as informadas) que já têm algum dos eventos — uma consulta só. */
+async function chavesComEventos(eventos, chaves) {
+  const lista = [...new Set((chaves || []).map(String).filter(Boolean))];
+  const encontrados = new Map(eventos.map((e) => [e, new Set()]));
+  if (!lista.length || !supabaseConfigured()) return encontrados;
+  const sb = getSupabase();
+  for (let i = 0; i < lista.length; i += 200) {
+    const { data, error } = await sb
+      .from("pagamentos_eventos")
+      .select("event, payment_id")
+      .in("event", eventos)
+      .in("payment_id", lista.slice(i, i + 200));
+    if (error) {
+      console.error("chavesComEventos:", error.message);
+      continue;
+    }
+    for (const row of data || []) encontrados.get(row.event)?.add(row.payment_id);
+  }
+  return encontrados;
+}
+
+async function jaEnviouEmailPagamento(paymentId) {
+  return jaRegistrouEvento(EVENTO_EMAIL_PAGAMENTO, paymentId);
 }
 
 module.exports = {
@@ -91,5 +117,7 @@ module.exports = {
   listarAcessos,
   registrarPagamentoEvento,
   jaEnviouEmailPagamento,
+  jaRegistrouEvento,
+  chavesComEventos,
   EVENTO_EMAIL_PAGAMENTO
 };

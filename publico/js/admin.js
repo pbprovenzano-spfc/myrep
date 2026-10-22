@@ -287,6 +287,37 @@
     }
 
     renderPagamentos(r.pagamentosRecentes || [], tbodyPagResumo);
+    renderFunil(r.funil);
+  }
+
+  const ETAPAS_FUNIL = [
+    ["contas", "Contas criadas"],
+    ["confirmadas", "E-mail confirmado"],
+    ["assinaram", "Iniciaram a assinatura"],
+    ["pagaram", "Pagaram"],
+    ["publicaram", "Página publicada"]
+  ];
+
+  function renderFunil(funil) {
+    const tbody = document.querySelector("#tabela-funil tbody");
+    if (!tbody) return;
+    if (!funil) {
+      tbody.innerHTML = `<tr><td colspan="4">Funil indisponível (Supabase não configurado ou erro ao consultar).</td></tr>`;
+      return;
+    }
+    const recente = funil.ultimos30 || {};
+    const total = funil.total || {};
+    tbody.innerHTML = ETAPAS_FUNIL.map(([chave, rotulo], i) => {
+      const anterior = i > 0 ? recente[ETAPAS_FUNIL[i - 1][0]] : null;
+      const atual = recente[chave] ?? 0;
+      const taxa = i === 0 ? "—" : anterior ? `${Math.round((atual / anterior) * 100)}%` : "—";
+      return `<tr>
+        <th scope="row">${esc(rotulo)}</th>
+        <td>${atual}</td>
+        <td>${taxa}</td>
+        <td>${total[chave] ?? 0}</td>
+      </tr>`;
+    }).join("");
   }
 
   function labelTipo(t) {

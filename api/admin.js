@@ -50,6 +50,7 @@ const {
   revogarCodigo
 } = require("./_lib/codigos-vitalicios");
 const { supabaseConfigured } = require("./_lib/supabase");
+const { calcularFunil } = require("./_lib/funil");
 
 function exigirAdmin(req) {
   const token =
@@ -293,6 +294,13 @@ async function calcularResumo() {
   }
   const paginasResumo = resumirPaginas(paginas);
 
+  let funil = null;
+  try {
+    funil = await calcularFunil();
+  } catch (erro) {
+    console.error("resumo funil:", erro.message || erro);
+  }
+
   const vazio = {
     mrr: 0,
     assinaturasAtivas: 0,
@@ -304,7 +312,8 @@ async function calcularResumo() {
     vencidos: { quantidade: 0, soma: 0 },
     naoLidas: 0,
     pagamentosRecentes: [],
-    paginas: paginasResumo
+    paginas: paginasResumo,
+    funil
   };
 
   let naoLidas = 0;
@@ -390,6 +399,7 @@ async function calcularResumo() {
       naoLidas,
       pagamentosRecentes,
       paginas: paginasResumo,
+      funil,
       emailParaSlug: Object.fromEntries(emailParaSlug)
     };
   } catch (erro) {

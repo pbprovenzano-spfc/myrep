@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "crons": [{ "path": "/api/cron/lembretes", "schedule": "0 13 * * *" }],
   "headers": [
     { "source": "/img/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },
     { "source": "/geo/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },

@@ -1545,19 +1545,21 @@
       meta = `<img class="link-btn__logo" src="${esc(urlAsset(cat.logo))}" alt="">`;
     }
     const href = urlAsset(cat.arquivo) || "#";
-    return `<li><a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener"><span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}</span>${meta}</a></li>`;
+    return `<li><a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener"><span class="link-btn__texto">${esc(cat.titulo || "Catálogo")}<span class="visually-hidden"> (PDF, abre em nova aba)</span></span>${meta}</a></li>`;
   }
 
-  function htmlCabecaGrupoPreview(marca, titulo, slugRep) {
+  function htmlCabecaGrupoPreview(marca, titulo) {
     const logo = marca?.logo
       ? `<img class="catalogo-grupo__logo" src="${esc(urlAsset(marca.logo))}" alt="">`
       : "";
     const nome = esc(titulo || marca?.nome || "Outros");
-    const url = !titulo && marca ? urlMarcaPreview(marca, slugRep) : "";
-    const conteudo = url
-      ? `<a class="catalogo-grupo__link-marca" href="${esc(url)}">${logo}<span class="catalogo-grupo__nome">${nome}</span></a>`
-      : `${logo}<span class="catalogo-grupo__nome">${nome}</span>`;
-    return `<summary class="catalogo-grupo__cabeca">${conteudo}<span class="catalogo-grupo__seta" aria-hidden="true"></span></summary>`;
+    return `<summary class="catalogo-grupo__cabeca">${logo}<span class="catalogo-grupo__nome">${nome}</span><span class="catalogo-grupo__seta" aria-hidden="true"></span></summary>`;
+  }
+
+  function htmlLinkMarcaPreview(marca, slugRep) {
+    const url = marca ? urlMarcaPreview(marca, slugRep) : "";
+    if (!url) return "";
+    return `<p class="catalogo-grupo__marca"><a href="${esc(url)}">Ver a página de ${esc(marca.nome)} →</a></p>`;
   }
 
   function htmlCatalogosPreview(c) {
@@ -1578,7 +1580,8 @@
       .map((grupo) => {
         const titulo = grupo.tipo === "outros" ? "Outros" : null;
         const itens = grupo.catalogos.map((cat) => htmlItemCatalogoPreview(cat, marcas)).join("");
-        return `<details class="catalogo-grupo">${htmlCabecaGrupoPreview(grupo.marca, titulo, slugRep)}<ul class="links catalogo-grupo__links">${itens}</ul></details>`;
+        const linkMarca = titulo ? "" : htmlLinkMarcaPreview(grupo.marca, slugRep);
+        return `<details class="catalogo-grupo">${htmlCabecaGrupoPreview(grupo.marca, titulo)}<ul class="links catalogo-grupo__links">${itens}</ul>${linkMarca}</details>`;
       })
       .join("");
 
@@ -1882,6 +1885,11 @@
       input.dataset.arquivoInit = "1";
       input.tabIndex = -1;
       zona.setAttribute("role", "button");
+      // A zona inteira já abre o seletor; o "Trocar" dentro dela seria um botão dentro de botão.
+      if (btnTrocar) {
+        btnTrocar.tabIndex = -1;
+        btnTrocar.setAttribute("aria-hidden", "true");
+      }
       if (!zona.getAttribute("aria-label") && !zona.getAttribute("aria-labelledby")) {
         const rotulo = campo.querySelector(".campo__rotulo");
         zona.setAttribute("aria-label", rotulo?.textContent?.trim() || "Enviar arquivo");

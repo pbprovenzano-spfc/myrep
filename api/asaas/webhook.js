@@ -11,8 +11,10 @@ const {
   registrarPagamentoEvento,
   registrarAcesso,
   jaEnviouEmailPagamento,
-  EVENTO_EMAIL_PAGAMENTO
+  EVENTO_EMAIL_PAGAMENTO,
+  jaRegistrouEvento
 } = require("../_lib/acessos");
+const { EVENTO_EMAIL_ATRASO, emailsConfigurados, enviarEmail, emailAtraso } = require("../_lib/emails");
 const {
   marcarAdimplentePorEmail,
   marcarInadimplentePorEmail
@@ -311,6 +313,26 @@ module.exports = async function handler(req, res) {
               subscriptionId: pagamento.subscription || null,
               paymentId: pagamento.id
             });
+
+            // Um aviso por cobrança vencida (OVERDUE e UPDATED podem chegar juntos).
+            if (emailsConfigurados() && pagamento.id && !(await jaRegistrouEvento(EVENTO_EMAIL_ATRASO, pagamento.id))) {
+              const valor = Number(pagamento.value);
+              const email = emailAtraso({
+                nome: cliente.name,
+                valor: Number.isFinite(valor) ? valor.toFixed(2).replace(".", ",") : "",
+                linkFatura: pagamento.invoiceUrl || ""
+              });
+              const envio = await enviarEmail({ para: cliente.email, ...email });
+              if (envio.ok) {
+                await registrarPagamentoEvento({
+                  event: EVENTO_EMAIL_ATRASO,
+                  paymentId: pagamento.id,
+                  payload: { email: cliente.email }
+                });
+              } else {
+                console.error("Webhook e-mail atraso:", envio.erro);
+              }
+            }
           }
         }
       } catch (erroOverdue) {

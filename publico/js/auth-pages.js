@@ -74,6 +74,11 @@
     if (!el) return;
     el.textContent = msg || "";
     el.dataset.tipo = tipo || "";
+    // Erro: leva o foco à mensagem para leitor de tela e teclado.
+    if (tipo === "erro" && msg) {
+      el.tabIndex = -1;
+      el.focus();
+    }
   }
 
   function esperarSupabase(tentativas = 40) {

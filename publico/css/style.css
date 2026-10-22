@@ -1321,19 +1321,17 @@ body.pagina-erro::after {
   min-width: 0;
 }
 
-.catalogo-grupo__link-marca {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 auto;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
+.catalogo-grupo__marca {
+  padding: 0 18px 16px;
+  font-size: 14px;
 }
 
-.catalogo-grupo__link-marca:hover .catalogo-grupo__nome,
-.catalogo-grupo__link-marca:focus-visible .catalogo-grupo__nome {
+.catalogo-grupo__marca a {
+  display: inline-block;
+  padding: 6px 0;
   color: var(--sinal-texto);
+  font-weight: 600;
+  text-underline-offset: 3px;
 }
 
 .catalogo-grupo__seta {
@@ -1819,6 +1817,8 @@ a.marca-chip:focus-visible {
 }
 
 .rodape__creditos a {
+  display: inline-block;
+  padding: 4px 0;
   text-decoration: none;
   border-bottom: 1px solid rgba(143, 166, 179, .4);
 }
@@ -3202,6 +3202,8 @@ a.marca-chip:focus-visible {
 }
 
 .precos__rodape a {
+  display: inline-block;
+  padding: 4px 0;
   color: var(--sinal-texto);
   font-weight: 600;
 }
@@ -4273,6 +4275,8 @@ a.marca-chip:focus-visible {
 }
 
 .auth-rodape a {
+  display: inline-block;
+  padding: 4px 0;
   color: var(--sinal-texto);
   font-weight: 700;
 }
