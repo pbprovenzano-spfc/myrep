@@ -415,6 +415,7 @@ function gerarPagina(c, template) {
 
   return template
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep")
+    .replace(/\{\{SLUG\}\}/g, esc(c.slug || ""))
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
     .replace(/\{\{DESCRICAO\}\}/g, esc(c.cargo || c.bio || `${tituloPrincipal} — representante comercial. Marcas, catálogos e contato pelo WhatsApp.`))
     .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/`)
@@ -447,6 +448,7 @@ function gerarPaginaMarca(c, marca, template) {
 
   return template
     .replace(/\{\{BODY_CLASS\}\}/g, "pagina-rep pagina-marca")
+    .replace(/\{\{SLUG\}\}/g, esc(c.slug || ""))
     .replace(/\{\{TITULO\}\}/g, esc(titulo))
     .replace(/\{\{DESCRICAO\}\}/g, esc(marca.descricao || `Catálogos e contato de ${marca.nome} com ${repNome}, representante comercial.`))
     .replace(/\{\{URL\}\}/g, `${SITE}/${esc(c.slug)}/${esc(marca.slug || "")}/`)

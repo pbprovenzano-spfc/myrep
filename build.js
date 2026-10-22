@@ -141,6 +141,7 @@ const EXEMPLO_SCRIPT = `<p class="exemplo-toast" id="exemplo-toast" role="status
 function marcarExemplo(html) {
   return html
     .replace("<head>", '<head>\n<meta name="robots" content="noindex">')
+    .replace(/ data-slug="[^"]*"/, ' data-slug=""')
     .replace(/<body([^>]*)>/, `<body$1>\n${EXEMPLO_FAIXA}`)
     .replace("</body>", `${EXEMPLO_SCRIPT}\n</body>`);
 }

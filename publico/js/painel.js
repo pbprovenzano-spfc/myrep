@@ -2186,9 +2186,91 @@
         ? "Despublicar"
         : "Publicar página";
     }
+    renderQr(pag);
+    document.getElementById("secao-estatisticas")?.toggleAttribute("hidden", !pag?.publicado);
 
     renderTrilha();
   }
+
+  function dataCurta(iso) {
+    const [, m, d] = String(iso).split("-");
+    return `${Number(d)}/${Number(m)}`;
+  }
+
+  function renderEstatisticas(dados) {
+    const { dias = [], semana = { visitas: 0, cliques: 0 } } = dados || {};
+    document.getElementById("stats-visitas").textContent = String(semana.visitas);
+    document.getElementById("stats-cliques").textContent = String(semana.cliques);
+    document.getElementById("stats-taxa").textContent = semana.visitas
+      ? `${Math.round((semana.cliques / semana.visitas) * 100)}%`
+      : "—";
+
+    const maior = Math.max(1, ...dias.map((d) => d.visitas));
+    document.getElementById("stats-grafico").innerHTML = dias
+      .map((d) => {
+        const hv = Math.round((d.visitas / maior) * 100);
+        const hc = Math.round((d.cliques / maior) * 100);
+        return `<div class="painel-stats__dia" title="${dataCurta(d.dia)}: ${d.visitas} visitas, ${d.cliques} WhatsApp">
+          <span class="painel-stats__barra painel-stats__barra--visitas" style="height:${hv}%"></span>
+          <span class="painel-stats__barra painel-stats__barra--cliques" style="height:${hc}%"></span>
+        </div>`;
+      })
+      .join("");
+
+    document.querySelector("#stats-tabela tbody").innerHTML = dias
+      .map((d) => `<tr><th scope="row">${dataCurta(d.dia)}</th><td>${d.visitas}</td><td>${d.cliques}</td></tr>`)
+      .join("");
+  }
+
+  async function carregarEstatisticas() {
+    if (modoMarca || !perfil?.pagina?.publicado) return;
+    const status = document.getElementById("stats-status");
+    try {
+      const resp = await fetch("/api/painel/estatisticas", { headers: await authHeaders(false) });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.erro || "Não foi possível carregar as estatísticas.");
+      renderEstatisticas(data);
+      setStatus(status, data.mes?.visitas ? "" : "Ainda sem visitas registradas. Compartilhe o link para começar.", "info");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+    }
+  }
+
+  // O QR sempre aponta para o endereço oficial, mesmo testando em outro host.
+  function urlQr(pag) {
+    return pag?.slug ? `https://www.myrep.com.br/${pag.slug}/` : "";
+  }
+
+  function renderQr(pag) {
+    const bloco = document.getElementById("painel-qr");
+    const canvas = document.getElementById("qr-canvas");
+    const url = urlQr(pag);
+    if (!bloco || !canvas || !url || !window.MyRepQr) {
+      bloco?.setAttribute("hidden", "");
+      return;
+    }
+    bloco.removeAttribute("hidden");
+    document.getElementById("qr-aviso")?.toggleAttribute("hidden", !!pag.publicado);
+    if (canvas.dataset.url === url) return;
+    canvas.dataset.url = url;
+    canvas.setAttribute("aria-label", `QR code que abre ${url.replace(/^https:\/\//, "")}`);
+    window.MyRepQr.desenhar(canvas, url, 400);
+  }
+
+  document.getElementById("btn-qr-png")?.addEventListener("click", async () => {
+    const url = urlQr(perfil?.pagina);
+    if (!url) return;
+    try {
+      await window.MyRepQr.baixarPng(url, `myrep-${perfil.pagina.slug}-qr`);
+    } catch (erro) {
+      setStatus(document.getElementById("compartilhar-status"), erro.message, "erro");
+    }
+  });
+
+  document.getElementById("btn-qr-svg")?.addEventListener("click", () => {
+    const url = urlQr(perfil?.pagina);
+    if (url) window.MyRepQr.baixarSvg(url, `myrep-${perfil.pagina.slug}-qr`);
+  });
 
   async function renderPerfil(data) {
     perfil = data;
@@ -2303,6 +2385,7 @@
       conteudo.hidden = false;
       btnSair.hidden = false;
       carregarSuporte();
+      carregarEstatisticas();
       aguardarConfirmacaoPagamento();
     } catch (erro) {
       if (erro.status === 401) {
