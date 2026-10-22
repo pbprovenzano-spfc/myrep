@@ -17,6 +17,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/admin", "destination": "/admin/" },
     { "source": "/assinantes", "destination": "/assinantes/" },
     { "source": "/termos", "destination": "/termos/" },
@@ -39,6 +40,7 @@
     { "source": "/api/painel/pagina", "destination": "/api/painel?acao=pagina" },
     { "source": "/api/painel/slug", "destination": "/api/painel?acao=slug" },
     { "source": "/api/painel/suporte", "destination": "/api/painel?acao=suporte" },
+    { "source": "/api/painel/estatisticas", "destination": "/api/painel?acao=estatisticas" },
     { "source": "/:slug/:marca", "destination": "/api/pagina?slug=:slug&marca=:marca" },
     { "source": "/:slug/:marca/", "destination": "/api/pagina?slug=:slug&marca=:marca" },
     { "source": "/:slug", "destination": "/api/pagina?slug=:slug" },

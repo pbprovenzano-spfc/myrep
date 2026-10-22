@@ -7,6 +7,8 @@
 <meta name="description" content="{{DESCRICAO}}">
 
 <link rel="canonical" href="{{URL}}">
+{{ROBOTS}}
+{{JSONLD}}
 
 <meta property="og:type" content="profile">
 <meta property="og:site_name" content="My Rep">
@@ -24,7 +26,7 @@
 <link rel="icon" href="/img/favicon.png" type="image/png">
 {{PALETA_CSS}}
 </head>
-<body class="{{BODY_CLASS}}">
+<body class="{{BODY_CLASS}}" data-slug="{{SLUG}}">
 
 <main class="shell shell--estreito cartao">
 
@@ -66,6 +68,23 @@
 
 </main>
 
+<script>
+/* Conta a visita e os toques no WhatsApp (total do dia, sem cookie). */
+(function () {
+  var slug = document.body.getAttribute("data-slug");
+  if (!slug || !navigator.sendBeacon) return;
+  function enviar(tipo) {
+    try {
+      var corpo = new Blob([JSON.stringify({ slug: slug, tipo: tipo })], { type: "text/plain" });
+      navigator.sendBeacon("/api/paginas/evento", corpo);
+    } catch (e) {}
+  }
+  enviar("visita");
+  document.addEventListener("click", function (ev) {
+    if (ev.target.closest && ev.target.closest('a[href^="https://wa.me/"]')) enviar("whatsapp");
+  });
+})();
+</script>
 <script src="/js/mapa.js"></script>
 </body>
 </html>

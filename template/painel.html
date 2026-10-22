@@ -172,12 +172,52 @@
         <a id="pagina-link" href="#" target="_blank" rel="noopener"></a>
       </p>
       <p class="painel-card__meta" id="pagina-situacao"></p>
+      <label class="opcao painel-indexar">
+        <input type="checkbox" id="campo-indexar" checked aria-describedby="indexar-dica">
+        <span>Aparecer no Google</span>
+      </label>
+      <p class="painel-card__meta" id="indexar-dica">Deixa sua página ser encontrada em buscas como “representante de autopeças na Bahia”. Desmarque se preferir que só quem tem o link a veja.</p>
       <div class="painel-acoes">
         <button type="button" class="btn btn--primario" id="btn-compartilhar">Compartilhar link</button>
         <button type="button" class="btn btn--fantasma-ink" id="btn-copiar-link">Copiar link</button>
         <button type="button" class="btn btn--fantasma-ink" id="btn-publicar">Publicar página</button>
       </div>
       <p class="briefing-status" id="compartilhar-status" role="status"></p>
+
+      <div class="painel-qr" id="painel-qr" hidden>
+        <h3 class="painel-qr__titulo">QR code do cartão</h3>
+        <div class="painel-qr__corpo">
+          <canvas class="painel-qr__canvas" id="qr-canvas" width="200" height="200" role="img" aria-label="QR code que abre a sua página"></canvas>
+          <div class="painel-qr__info">
+            <p class="painel-card__texto">Imprima no cartão de visita, no banner da feira ou na embalagem. Quem apontar a câmera do celular abre a sua página.</p>
+            <p class="painel-card__meta painel-qr__aviso" id="qr-aviso" hidden>A página ainda é rascunho: publique para o QR funcionar. Até lá, quem escanear vê “página não encontrada”.</p>
+            <div class="painel-acoes">
+              <button type="button" class="btn btn--fantasma-ink" id="btn-qr-png">Baixar PNG</button>
+              <button type="button" class="btn btn--fantasma-ink" id="btn-qr-svg">Baixar SVG (gráfica)</button>
+            </div>
+            <p class="painel-card__meta">Imprima com pelo menos 2 cm de lado e teste com o celular antes de mandar para a gráfica.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="painel-card" id="secao-estatisticas" aria-labelledby="estatisticas-titulo" hidden>
+      <h2 class="painel-card__titulo" id="estatisticas-titulo">Estatísticas</h2>
+      <p class="painel-card__texto">Quantas vezes sua página foi aberta e quantos toques o botão do WhatsApp recebeu. Contamos só os totais: não identificamos quem visitou.</p>
+      <div class="painel-stats__numeros">
+        <p class="painel-stats__numero"><strong id="stats-visitas">—</strong><span>visitas em 7 dias</span></p>
+        <p class="painel-stats__numero"><strong id="stats-cliques">—</strong><span>toques no WhatsApp em 7 dias</span></p>
+        <p class="painel-stats__numero"><strong id="stats-taxa">—</strong><span>das visitas viraram conversa</span></p>
+      </div>
+      <h3 class="painel-stats__subtitulo">Últimos 30 dias</h3>
+      <div class="painel-stats__grafico" id="stats-grafico" aria-hidden="true"></div>
+      <p class="painel-stats__legenda" aria-hidden="true"><span class="painel-stats__chave painel-stats__chave--visitas"></span>Visitas <span class="painel-stats__chave painel-stats__chave--cliques"></span>WhatsApp</p>
+      <table class="visually-hidden" id="stats-tabela">
+        <caption>Visitas e toques no WhatsApp por dia, últimos 30 dias</caption>
+        <thead><tr><th scope="col">Dia</th><th scope="col">Visitas</th><th scope="col">WhatsApp</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="briefing-status" id="stats-status" role="status"></p>
     </section>
 
     <div class="painel-editor-layout" id="secao-editor" hidden>
@@ -791,6 +831,8 @@
 <script src="/js/mapa.js" defer></script>
 <script src="/js/pdf-compress.js" defer></script>
 <script src="/js/logo-png.js" defer></script>
+<script src="/js/vendor/qrcode.js" defer></script>
+<script src="/js/qr-cartao.js" defer></script>
 <script src="/js/painel.js" defer></script>
 </body>
 </html>

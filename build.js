@@ -141,6 +141,7 @@ const EXEMPLO_SCRIPT = `<p class="exemplo-toast" id="exemplo-toast" role="status
 function marcarExemplo(html) {
   return html
     .replace("<head>", '<head>\n<meta name="robots" content="noindex">')
+    .replace(/ data-slug="[^"]*"/, ' data-slug=""')
     .replace(/<body([^>]*)>/, `<body$1>\n${EXEMPLO_FAIXA}`)
     .replace("</body>", `${EXEMPLO_SCRIPT}\n</body>`);
 }
@@ -178,14 +179,6 @@ function robotsTxt() {
     `Sitemap: ${SITE}/sitemap.xml`,
     ""
   ].join("\n");
-}
-
-// Só as páginas fixas; as dos representantes entram quando houver sitemap dinâmico.
-function sitemapXml() {
-  const urls = ["/", "/termos/"]
-    .map((p) => `  <url><loc>${SITE}${p}</loc></url>`)
-    .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
 async function build() {
@@ -273,8 +266,7 @@ async function build() {
   gerarExemplos();
 
   fs.writeFileSync(path.join(DIST, "robots.txt"), robotsTxt());
-  fs.writeFileSync(path.join(DIST, "sitemap.xml"), sitemapXml());
-  console.log("  ✓ /robots.txt + /sitemap.xml");
+  console.log("  ✓ /robots.txt (sitemap.xml é dinâmico: /api/sitemap)");
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log("  ✓ /404.html");
