@@ -408,13 +408,6 @@ module.exports = async function handler(req, res) {
         if (!dados.nome && !dados.empresa) {
           throw Object.assign(new Error("Preencha pelo menos o nome antes de publicar."), { status: 400 });
         }
-        // DDD + número (10 ou 11 dígitos), com ou sem o 55 na frente.
-        const zap = String(dados.whatsapp || "").replace(/\D/g, "");
-        if (zap.length < 10) {
-          throw Object.assign(new Error("Preencha o WhatsApp antes de publicar — é o botão principal da página."), {
-            status: 400
-          });
-        }
         return dados;
       };
       patchMeta = { publicado: true, publicado_em: new Date().toISOString() };

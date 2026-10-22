@@ -3012,11 +3012,6 @@
     if (botao.disabled) return;
     const status = document.getElementById("compartilhar-status");
     const publicado = perfil?.pagina?.publicado;
-    if (!publicado && montarWhatsapp().length < 12) {
-      setStatus(status, "Preencha o WhatsApp antes de publicar — é o botão principal da página.", "erro");
-      document.getElementById("campo-whatsapp-ddd")?.focus();
-      return;
-    }
     const fd = new FormData();
     fd.append("acao", publicado ? "despublicar" : "publicar");
     botao.disabled = true;
