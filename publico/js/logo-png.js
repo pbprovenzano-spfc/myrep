@@ -2,10 +2,14 @@
    Ajusta logo no navegador antes do envio.
    Remove margem branca ou preta ligada à borda, recorta
    o desenho e devolve um PNG com um respiro curto.
+   Fotos de pessoa só são reduzidas e salvas em JPEG.
    ========================================================= */
 
 (function (global) {
-  const LADO_MAX = 1024;
+  // Logo aparece a no máximo 96 px; 512 cobre telas de alta densidade.
+  const LADO_MAX = 512;
+  const FOTO_LADO_MAX = 640;
+  const FOTO_QUALIDADE = 0.85;
   const LIMIAR_BRANCO = 240;
   const LIMIAR_PRETO = 25;
   const BORDA_UNIFORME = 0.8;
@@ -197,11 +201,11 @@
     });
   }
 
-  function desenharLimitado(img) {
+  function desenharLimitado(img, ladoMax = LADO_MAX) {
     const largura = img.naturalWidth || img.width;
     const altura = img.naturalHeight || img.height;
     if (!largura || !altura) throw new Error("Não foi possível ler o logo.");
-    const escala = Math.min(1, LADO_MAX / Math.max(largura, altura));
+    const escala = Math.min(1, ladoMax / Math.max(largura, altura));
     const w = Math.max(1, Math.round(largura * escala));
     const h = Math.max(1, Math.round(altura * escala));
     const canvas = document.createElement("canvas");
@@ -242,5 +246,23 @@
     }
   }
 
-  global.MyRepLogo = { prepararLogo };
+  async function prepararFoto(file) {
+    if (!file) throw new Error("Não foi possível ler a foto.");
+    const img = await carregarImagem(file);
+    try {
+      const { canvas, ctx, w, h } = desenharLimitado(img, FOTO_LADO_MAX);
+      // JPEG não tem transparência: fundo branco em vez de preto.
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, w, h);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", FOTO_QUALIDADE));
+      if (!blob || blob.size >= file.size) return file;
+      const base = String(file.name || "foto").replace(/\.[^.]+$/, "") || "foto";
+      return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+    } finally {
+      img.close?.();
+    }
+  }
+
+  global.MyRepLogo = { prepararLogo, prepararFoto };
 })(typeof window !== "undefined" ? window : globalThis);
