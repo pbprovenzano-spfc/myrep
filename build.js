@@ -4,6 +4,7 @@
    As páginas de exemplo (exemplos/*.json, dados fictícios) saem estáticas.
    ========================================================= */
 
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -217,6 +218,44 @@ function minificarDist() {
   console.log(`  ✓ CSS/JS compactados: ${Math.round(antes / 1024)} KB → ${Math.round(depois / 1024)} KB`);
 }
 
+/**
+ * Acrescenta ?v=<hash do conteúdo> nos links de /css e /js de todos os HTML do
+ * dist. Sem isso, o navegador pode juntar o HTML novo com o CSS antigo em
+ * cache (stale-while-revalidate de um dia) e a página aparece sem estilo.
+ */
+function versionarAssets() {
+  const hashes = new Map();
+  for (const sub of ["css", "js", path.join("js", "vendor")]) {
+    const pasta = path.join(DIST, sub);
+    if (!fs.existsSync(pasta)) continue;
+    for (const nome of fs.readdirSync(pasta)) {
+      const arquivo = path.join(pasta, nome);
+      if (!/\.(css|js)$/.test(nome) || !fs.statSync(arquivo).isFile()) continue;
+      const hash = crypto.createHash("sha1").update(fs.readFileSync(arquivo)).digest("hex").slice(0, 8);
+      hashes.set(`/${sub.split(path.sep).join("/")}/${nome}`, hash);
+    }
+  }
+  let paginas = 0;
+  const visitar = (pasta) => {
+    for (const nome of fs.readdirSync(pasta)) {
+      const caminho = path.join(pasta, nome);
+      if (fs.statSync(caminho).isDirectory()) visitar(caminho);
+      else if (nome.endsWith(".html")) {
+        const html = fs.readFileSync(caminho, "utf8");
+        const novo = html.replace(/(href|src)="(\/(?:css|js)\/[^"?#]+)"/g, (m, attr, url) =>
+          hashes.has(url) ? `${attr}="${url}?v=${hashes.get(url)}"` : m
+        );
+        if (novo !== html) {
+          fs.writeFileSync(caminho, novo);
+          paginas++;
+        }
+      }
+    }
+  };
+  visitar(DIST);
+  console.log(`  ✓ CSS/JS versionados em ${paginas} páginas`);
+}
+
 async function build() {
   const inicio = Date.now();
   console.log("\n▸ Gerando site…\n");
@@ -313,6 +352,8 @@ async function build() {
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log("  ✓ /404.html");
+
+  versionarAssets();
   console.log("  ✓ Páginas de representantes → /api/pagina (runtime)");
 
   console.log(`\n▸ Build concluído em ${Date.now() - inicio}ms → /dist\n`);
