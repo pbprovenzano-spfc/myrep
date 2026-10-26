@@ -2165,6 +2165,14 @@
     const ass = perfil?.assinatura;
     const pag = perfil?.pagina;
     const libera = assinaturaLibera(ass);
+    const caixaIndexar = document.getElementById("campo-indexar");
+    if (caixaIndexar) caixaIndexar.disabled = !libera;
+    const dicaIndexar = document.getElementById("indexar-dica");
+    if (dicaIndexar) {
+      dicaIndexar.textContent = libera
+        ? "Deixa sua página ser encontrada em buscas como “representante de autopeças na Bahia”. Desmarque se preferir que só quem tem o link a veja."
+        : "Disponível com a assinatura ativa.";
+    }
     const assinaturaVigente = ass?.status === "ativa";
 
     document.getElementById("link-assinatura-topo")?.toggleAttribute("hidden", !ass);
@@ -2619,7 +2627,31 @@
     agendarPreview("blocos");
   });
 
-  document.getElementById("campo-indexar")?.addEventListener("change", agendarSave);
+  // Salva na hora e responde ao lado da caixa: o status do editor pode estar oculto.
+  document.getElementById("campo-indexar")?.addEventListener("change", async (ev) => {
+    const caixa = ev.currentTarget;
+    const status = document.getElementById("compartilhar-status");
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    caixa.disabled = true;
+    try {
+      const data = await apiPagina("PUT", payloadTexto());
+      if (perfil) perfil.pagina = data.pagina;
+      paginaDados = data.pagina?.dados || paginaDados;
+      setStatus(
+        status,
+        caixa.checked
+          ? "Pronto: sua página pode aparecer no Google."
+          : "Pronto: sua página não vai aparecer no Google. Quem tem o link continua abrindo.",
+        "ok"
+      );
+    } catch (erro) {
+      caixa.checked = !caixa.checked;
+      setStatus(status, erro.message, "erro");
+    } finally {
+      caixa.disabled = !assinaturaLibera(perfil?.assinatura);
+    }
+  });
 
   document.getElementById("campo-segmentos")?.addEventListener("input", () => {
     agendarPreview("blocos");
