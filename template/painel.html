@@ -72,10 +72,11 @@
       </div>
       <div class="ajuda__painel" id="ajuda-assinatura" hidden>
         <p>A assinatura libera o editor e mantém sua página no ar.</p>
-        <p><strong>Na prática:</strong> o plano mensal cobra todo mês no cartão. O anual sai mais barato: PIX à vista ou até 12 vezes no cartão.</p>
+        <p><strong>Teste grátis:</strong> os primeiros 14 dias não custam nada. Você escolhe o plano e cadastra o cartão agora; a cobrança só começa no fim do teste. Cancele antes e nada é cobrado.</p>
+        <p><strong>Na prática:</strong> o plano mensal cobra todo mês no cartão. O anual sai mais barato: até 12 vezes sem juros no cartão.</p>
         <p><strong>Se atrasar:</strong> há 3 dias de carência. Depois disso a página some do ar até o pagamento ser regularizado.</p>
       </div>
-      <p class="painel-card__texto" id="assinatura-texto">Escolha um plano para montar sua página. O pagamento é na Asaas, por PIX ou cartão.</p>
+      <p class="painel-card__texto" id="assinatura-texto">Teste grátis por 14 dias. Escolha o plano que vai valer depois e cadastre o cartão: hoje não cobramos nada.</p>
       <div id="form-cobranca">
         <p class="painel-sub">Dados de cobrança</p>
         <label class="campo">
@@ -137,6 +138,30 @@
           <button type="button" class="btn btn--primario" data-checkout="anual">Assinar anual</button>
         </article>
       </div>
+      <form class="painel-teste" id="form-teste" novalidate hidden>
+        <p class="painel-sub">Cartão para depois do teste</p>
+        <p class="painel-teste__resumo" id="teste-resumo" aria-live="polite"></p>
+        <label class="campo">
+          <span class="campo__rotulo">Nome impresso no cartão</span>
+          <input id="teste-cartao-titular" type="text" maxlength="80" autocomplete="cc-name" required>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Número do cartão</span>
+          <input id="teste-cartao-numero" type="text" inputmode="numeric" maxlength="23" placeholder="0000 0000 0000 0000" autocomplete="cc-number" required>
+        </label>
+        <div class="painel-teste__linha">
+          <label class="campo">
+            <span class="campo__rotulo">Validade</span>
+            <input id="teste-cartao-validade" type="text" inputmode="numeric" maxlength="5" placeholder="MM/AA" autocomplete="cc-exp" required>
+          </label>
+          <label class="campo">
+            <span class="campo__rotulo">CVV</span>
+            <input id="teste-cartao-cvv" type="text" inputmode="numeric" maxlength="4" placeholder="000" autocomplete="cc-csc" required>
+          </label>
+        </div>
+        <p class="painel-card__nota">Os dados vão direto para a Asaas, que confere o cartão com o banco. O My Rep não guarda o número.</p>
+        <button type="submit" class="btn btn--primario" id="btn-comecar-teste">Começar meu teste grátis</button>
+      </form>
       <p class="briefing-status" id="checkout-status" role="status"></p>
     </section>
 

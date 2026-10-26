@@ -81,9 +81,12 @@ module.exports = async function handler(req, res) {
             proxima_cobranca: assinatura.proxima_cobranca,
             cancelamento_agendado: assinatura.cancelamento_agendado === true,
             asaas_customer_id: assinatura.asaas_customer_id,
-            asaas_subscription_id: assinatura.asaas_subscription_id
+            asaas_subscription_id: assinatura.asaas_subscription_id,
+            teste_ate: assinatura.status === "teste" ? assinatura.teste_ate || null : null
           }
         : null,
+      // Teste grátis: um por conta (o CPF/CNPJ é conferido quando o rep envia o cartão).
+      testeDisponivel: !assinatura || (assinatura.status === "pendente" && !assinatura.teste_ate),
       pagina: paginaOut
     });
   } catch (erro) {

@@ -44,5 +44,34 @@
     });
   }
 
-  global.MyRepMascaras = { formatarCelular, ligarCelular };
+  /* Cartão: número em grupos de 4, validade MM/AA e CVV só com dígitos. */
+  function formatarNumeroCartao(valor) {
+    return String(valor || "")
+      .replace(/\D/g, "")
+      .slice(0, 19)
+      .replace(/(\d{4})(?=\d)/g, "$1 ")
+      .trim();
+  }
+
+  function formatarValidade(valor) {
+    const d = String(valor || "").replace(/\D/g, "").slice(0, 4);
+    if (d.length <= 2) return d;
+    return `${d.slice(0, 2)}/${d.slice(2)}`;
+  }
+
+  function ligarCampo(input, formatar) {
+    input?.addEventListener("input", () => {
+      const noFim = input.selectionStart === input.value.length;
+      input.value = formatar(input.value);
+      if (noFim) input.setSelectionRange(input.value.length, input.value.length);
+    });
+  }
+
+  function ligarCartao({ numero, validade, cvv }) {
+    ligarCampo(numero, formatarNumeroCartao);
+    ligarCampo(validade, formatarValidade);
+    ligarCampo(cvv, (v) => String(v || "").replace(/\D/g, "").slice(0, 4));
+  }
+
+  global.MyRepMascaras = { formatarCelular, ligarCelular, formatarNumeroCartao, formatarValidade, ligarCartao };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -321,6 +321,7 @@
     ["contas", "Contas criadas"],
     ["confirmadas", "E-mail confirmado"],
     ["assinaram", "Iniciaram a assinatura"],
+    ["testaram", "Começaram o teste grátis"],
     ["pagaram", "Pagaram"],
     ["publicaram", "Página publicada"]
   ];

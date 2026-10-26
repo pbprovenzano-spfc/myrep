@@ -2,12 +2,14 @@
    GET /api/cron/lembretes — cron diário da Vercel (vercel.json)
    - Conta criada há 1–7 dias, e-mail confirmado, sem assinatura paga → lembrete dos planos
    - Assinatura paga há 2–30 dias e página não publicada → lembrete para publicar
+   - Teste grátis: aviso 2 dias antes, cobrança do anual e fim dos testes cancelados
    Cada lembrete sai uma vez por usuário (registro em pagamentos_eventos).
    ========================================================= */
 
 const { json } = require("../_lib/pagamento");
 const { supabaseConfigured } = require("../_lib/supabase");
 const { carregarBase, pagou } = require("../_lib/funil");
+const { processarTestes } = require("../_lib/teste-gratis");
 const { chavesComEventos, registrarPagamentoEvento } = require("../_lib/acessos");
 const {
   EVENTO_EMAIL_FALTA_PUBLICAR,
@@ -49,6 +51,7 @@ function escolherLembretes(base, agora) {
     }
 
     if (ass.status === "cancelada" || pagina?.publicado) continue;
+    // No teste, o lembrete de publicar sai igual: é quando a página mais precisa ir ao ar.
     const idade = idadeDias(ass.created_at, agora);
     if (idade != null && idade >= 2 && idade <= 30) {
       fila.push({ usuario: u, evento: EVENTO_EMAIL_FALTA_PUBLICAR });
@@ -101,6 +104,14 @@ module.exports = async function handler(req, res) {
         resultado.falhas += 1;
         console.error("cron lembretes:", usuario.id, envio.erro);
       }
+    }
+
+    let teste = null;
+    try {
+      teste = await processarTestes({ usuariosPorId: new Map(base.usuarios.map((u) => [u.id, u])) });
+      resultado.teste = teste;
+    } catch (erroTeste) {
+      await registrarFalha("Teste grátis: tarefa diária", erroTeste);
     }
 
     console.log("cron lembretes:", resultado);

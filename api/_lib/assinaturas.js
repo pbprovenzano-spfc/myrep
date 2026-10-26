@@ -5,7 +5,13 @@
 const { getSupabase, supabaseConfigured } = require("./supabase");
 const { dataIso } = require("./pagamento");
 
-const STATUS_OK = new Set(["ativa", "inadimplente", "cancelada", "pendente"]);
+const STATUS_OK = new Set(["ativa", "inadimplente", "cancelada", "pendente", "teste"]);
+/** Status que liberam o painel e a página. */
+const STATUS_COM_ACESSO = ["ativa", "inadimplente", "teste"];
+const DIAS_TESTE = 14;
+// Colunas do teste grátis: só vão no update quando informadas, para não quebrar
+// bancos em que a migration-teste-gratis.sql ainda não rodou.
+const CAMPOS_TESTE = ["teste_ate", "asaas_card_token", "cartao_bandeira", "cartao_ultimos", "documento_teste"];
 
 function normalizarEmail(email) {
   const e = String(email || "")
@@ -61,6 +67,9 @@ async function upsertAssinatura(userId, patch = {}) {
         : atual?.cancelamento_agendado === true,
     updated_at: agora
   };
+  for (const campo of CAMPOS_TESTE) {
+    if (patch[campo] !== undefined) registro[campo] = patch[campo];
+  }
 
   if (atual) {
     const { data, error } = await sb
@@ -88,15 +97,31 @@ async function upsertAssinatura(userId, patch = {}) {
   return data;
 }
 
-async function expirarSeVencido(assinatura) {
+async function expirarSeVencido(assinatura, hoje = dataIso()) {
   if (!assinatura) return assinatura;
-  if (!["ativa", "inadimplente"].includes(assinatura.status)) return assinatura;
-  const temPrazo = assinatura.plano === "anual" || assinatura.cancelamento_agendado === true;
+  if (!STATUS_COM_ACESSO.includes(assinatura.status)) return assinatura;
+  // No teste, o prazo é o fim do teste; a cobrança do dia seguinte troca o status para "ativa".
+  // Um teste só expira por aqui se foi cancelado: sem cancelamento, quem decide é a cobrança.
+  const emTeste = assinatura.status === "teste";
+  if (emTeste && assinatura.cancelamento_agendado !== true) return assinatura;
+  const temPrazo = emTeste || assinatura.plano === "anual" || assinatura.cancelamento_agendado === true;
   if (!temPrazo) return assinatura;
-  const limite = String(assinatura.proxima_cobranca || "").slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(limite) || limite >= dataIso()) return assinatura;
+  const limite = String((emTeste ? assinatura.teste_ate : assinatura.proxima_cobranca) || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(limite) || limite >= hoje) return assinatura;
   const atualizada = await upsertAssinatura(assinatura.user_id, { status: "cancelada" });
+  await desativarPaginaDoUsuario(assinatura.user_id);
   return atualizada || { ...assinatura, status: "cancelada" };
+}
+
+/** Tira a página do ar quando o acesso acaba (fim do período pago ou do teste cancelado). */
+async function desativarPaginaDoUsuario(userId) {
+  if (!userId || !supabaseConfigured()) return;
+  const { error } = await getSupabase()
+    .from("representantes")
+    .update({ ativo: false, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .neq("controle_manual", true);
+  if (error) console.error("desativarPaginaDoUsuario:", error.message);
 }
 
 async function listarAssinaturasLocais({ limit = 100 } = {}) {
@@ -233,6 +258,9 @@ async function associarUserIdPorEmail(email, userId) {
 }
 
 module.exports = {
+  STATUS_COM_ACESSO,
+  DIAS_TESTE,
+  desativarPaginaDoUsuario,
   obterAssinaturaPorUserId,
   upsertAssinatura,
   expirarSeVencido,

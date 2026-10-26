@@ -5818,3 +5818,32 @@ body.modo-assistente .toast-desfazer {
     bottom: 24px;
   }
 }
+
+/* Teste grátis: cartão no painel */
+.painel-teste {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1.5px solid var(--sinal);
+  border-radius: var(--raio);
+  background: color-mix(in srgb, var(--sinal) 6%, var(--branco));
+}
+
+.painel-teste__resumo {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+.painel-teste__linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.painel-teste .btn {
+  justify-self: start;
+  margin-top: 6px;
+}

@@ -436,7 +436,24 @@
   }
 
   function assinaturaLibera(assinatura) {
-    return assinatura && ["ativa", "inadimplente"].includes(assinatura.status);
+    return assinatura && ["ativa", "inadimplente", "teste"].includes(assinatura.status);
+  }
+
+  /** Dias que faltam até a data (0 = hoje). */
+  function diasAte(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+    if (!m) return null;
+    const alvo = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    const h = new Date();
+    const hoje = Date.UTC(h.getFullYear(), h.getMonth(), h.getDate());
+    return Math.round((alvo - hoje) / 86400000);
+  }
+
+  function textoPrazoTeste(assinatura) {
+    const dias = diasAte(assinatura?.teste_ate);
+    if (dias == null) return "";
+    if (dias <= 0) return "termina hoje";
+    return dias === 1 ? "falta 1 dia" : `faltam ${dias} dias`;
   }
 
   function nomePlano(plano) {
@@ -450,6 +467,11 @@
     if (!assinatura) return { texto: "Sem assinatura", status: "pendente" };
     if (assinatura.plano === "vitalicio" && assinatura.status === "ativa") {
       return { texto: "Vitalício", status: "ativa" };
+    }
+    if (assinatura.status === "teste") {
+      if (assinatura.cancelamento_agendado) return { texto: "Teste cancelado", status: "pendente" };
+      const prazo = textoPrazoTeste(assinatura);
+      return { texto: `Teste grátis${prazo ? ` · ${prazo}` : ""}`, status: "ativa" };
     }
     if (assinatura.cancelamento_agendado && assinatura.status === "ativa") {
       return { texto: "Cancelamento agendado", status: "pendente" };
@@ -2318,7 +2340,7 @@
         ? "Deixa sua página ser encontrada em buscas como “representante de autopeças na Bahia”. Desmarque se preferir que só quem tem o link a veja."
         : "Disponível com a assinatura ativa.";
     }
-    const assinaturaVigente = ass?.status === "ativa";
+    const assinaturaVigente = ass?.status === "ativa" || (ass?.status === "teste" && !ass.cancelamento_agendado);
 
     document.getElementById("link-assinatura-topo")?.toggleAttribute("hidden", !ass);
 
@@ -2454,9 +2476,17 @@
     badge.dataset.status = st.status;
 
     const assTexto = document.getElementById("assinatura-texto");
-    if (!assinatura) {
+    renderBotoesPlano();
+    if (data.testeDisponivel) {
+      assTexto.textContent =
+        "Teste grátis por 14 dias. Escolha o plano que vai valer depois e cadastre o cartão: hoje não cobramos nada, e você pode cancelar antes.";
+    } else if (!assinatura) {
       assTexto.textContent =
         "Escolha um plano para montar sua página. O pagamento é na Asaas, por PIX ou cartão.";
+    } else if (assinatura.status === "teste" && assinatura.cancelamento_agendado) {
+      assTexto.textContent = `Teste cancelado: nada será cobrado e sua página fica no ar até ${formatarDataPlano(
+        assinatura.teste_ate
+      )}. Para continuar depois disso, escolha um plano.`;
     } else if (assinatura.status === "pendente") {
       assTexto.textContent = `Plano ${nomePlano(assinatura.plano)} — conclua o pagamento na Asaas.`;
     } else if (assinatura.status === "ativa") {
@@ -3297,10 +3327,110 @@
     uf: document.getElementById("cobranca-uf")
   });
 
+  /* ---------- Teste grátis ---------- */
+
+  const TEXTO_PLANO_TESTE = {
+    mensal: "R$ 17,90 por mês no cartão",
+    anual: "R$ 130,80, em 12× de R$ 10,90 sem juros"
+  };
+  let planoTeste = "";
+
+  function dataDaquiDias(dias) {
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  function renderBotoesPlano() {
+    const teste = !!perfil?.testeDisponivel;
+    document.querySelectorAll("#painel-planos [data-checkout]").forEach((btn) => {
+      const plano = btn.getAttribute("data-checkout");
+      btn.textContent = teste ? "Começar 14 dias grátis" : plano === "anual" ? "Assinar anual" : "Assinar mensal";
+    });
+    if (!teste) document.getElementById("form-teste")?.setAttribute("hidden", "");
+  }
+
+  function escolherPlanoTeste(plano) {
+    planoTeste = plano;
+    document.querySelectorAll("[data-plano-card]").forEach((el) => {
+      el.classList.toggle("preco--sugerido", el.getAttribute("data-plano-card") === plano);
+    });
+    const form = document.getElementById("form-teste");
+    document.getElementById("teste-resumo").innerHTML =
+      `<strong>Hoje: R$ 0.</strong> Primeira cobrança em <strong>${dataDaquiDias(14)}</strong>: ` +
+      `${TEXTO_PLANO_TESTE[plano]} (plano ${plano === "anual" ? "anual" : "mensal"}). ` +
+      "Avisamos por e-mail 2 dias antes. Cancele até lá e nada é cobrado.";
+    form.hidden = false;
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("teste-cartao-titular")?.focus({ preventScroll: true });
+  }
+
+  window.MyRepMascaras?.ligarCartao({
+    numero: document.getElementById("teste-cartao-numero"),
+    validade: document.getElementById("teste-cartao-validade"),
+    cvv: document.getElementById("teste-cartao-cvv")
+  });
+
+  document.getElementById("form-teste")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const status = document.getElementById("checkout-status");
+    const btn = document.getElementById("btn-comecar-teste");
+    const formCobranca = document.getElementById("form-cobranca");
+    const cobranca = formCobranca && !formCobranca.hidden ? lerCobrancaForm() : {};
+    if (formCobranca && !formCobranca.hidden) {
+      const erroForm = cobrancaFormIncompleta(cobranca);
+      if (erroForm) {
+        setStatus(status, `Dados de cobrança: ${erroForm}`, "erro");
+        formCobranca.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+    const digitos = (id) => String(document.getElementById(id)?.value || "").replace(/\D/g, "");
+    const validade = digitos("teste-cartao-validade");
+    if (validade.length !== 4) {
+      setStatus(status, "Informe a validade do cartão no formato MM/AA.", "erro");
+      return;
+    }
+    btn.disabled = true;
+    setStatus(status, "Conferindo o cartão com a Asaas…", "info");
+    try {
+      const resp = await fetch("/api/painel/teste", {
+        method: "POST",
+        headers: await authHeaders(true),
+        body: JSON.stringify({
+          plano: planoTeste,
+          cobranca,
+          cartao: {
+            titular: document.getElementById("teste-cartao-titular")?.value || "",
+            numero: digitos("teste-cartao-numero"),
+            mes: validade.slice(0, 2),
+            ano: validade.slice(2),
+            cvv: digitos("teste-cartao-cvv")
+          }
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.erro || "Não foi possível começar o teste.");
+      ["teste-cartao-numero", "teste-cartao-cvv"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      setStatus(status, "Pronto! Seu teste começou. Vamos montar sua página…", "ok");
+      location.href = perfil?.pagina?.slug ? "/painel/" : "/painel/criar/";
+    } catch (erro) {
+      btn.disabled = false;
+      setStatus(status, erro.message, "erro");
+    }
+  });
+
   document.getElementById("painel-planos")?.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-checkout]");
     if (!btn || btn.disabled) return;
-    if (perfil?.assinatura?.status === "ativa") {
+    if (["ativa", "teste"].includes(perfil?.assinatura?.status) && !perfil?.assinatura?.cancelamento_agendado) {
+      return;
+    }
+    if (perfil?.testeDisponivel) {
+      escolherPlanoTeste(btn.getAttribute("data-checkout"));
       return;
     }
     const status = document.getElementById("checkout-status");

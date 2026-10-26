@@ -1,7 +1,7 @@
 # Supabase — My Rep
 
 1. Abra o projeto [Supabase](https://supabase.com/dashboard/project/raodkkzzxyhxucscuoct).
-2. **SQL Editor** → cole e execute [`schema.sql`](schema.sql). Projetos já existentes: execute também [`migration-self-service.sql`](migration-self-service.sql) [`migration-codigos-vitalicios.sql`](migration-codigos-vitalicios.sql) (ou `npm run migrate:codigos-vitalicios`) e [`migration-estatisticas.sql`](migration-estatisticas.sql) (visitas e cliques do painel).
+2. **SQL Editor** → cole e execute [`schema.sql`](schema.sql). Projetos já existentes: execute também [`migration-self-service.sql`](migration-self-service.sql) [`migration-codigos-vitalicios.sql`](migration-codigos-vitalicios.sql) (ou `npm run migrate:codigos-vitalicios`) , [`migration-estatisticas.sql`](migration-estatisticas.sql) (visitas e cliques do painel) e [`migration-teste-gratis.sql`](migration-teste-gratis.sql) (teste grátis de 14 dias — rodar antes do deploy).
 3. **Authentication → Providers**: habilite **Email** (email + senha).
 4. **Authentication → URL Configuration** ([link direto](https://supabase.com/dashboard/project/raodkkzzxyhxucscuoct/auth/url-configuration)):
 
