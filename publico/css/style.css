@@ -33,6 +33,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* hidden sempre vence o display definido nas classes. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
 body {
@@ -4945,9 +4948,9 @@ a.marca-chip:focus-visible {
   font-size: 0.92rem;
 }
 
-@media (min-width: 1080px) {
+@media (min-width: 900px) {
   .painel-editor-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
   }
 
   .painel-preview {
@@ -4956,17 +4959,47 @@ a.marca-chip:focus-visible {
   }
 }
 
-@media (max-width: 1079px) {
+@media (max-width: 899px) {
   .painel-editor-layout {
     grid-template-rows: auto 1fr;
   }
 
-  .painel-preview {
+  /* Prévia da página de marca: continua acima do editor. */
+  .painel-preview:not(#painel-preview) {
     order: -1;
   }
 
-  .painel-preview__viewport {
+  .painel-preview:not(#painel-preview) .painel-preview__viewport {
     max-height: min(52vh, 520px);
+  }
+
+  /* Prévia da página principal: sai do fluxo e abre em tela cheia pelo botão. */
+  #painel-preview {
+    display: none;
+  }
+
+  body.previa-aberta #painel-preview {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    border-radius: 0;
+    background: var(--papel);
+    padding: 12px;
+  }
+
+  body.previa-aberta #painel-preview .painel-preview__viewport {
+    flex: 1;
+    max-height: none;
+  }
+
+  body.previa-aberta {
+    overflow: hidden;
+  }
+
+  .previa-flutuante:not([hidden]) {
+    display: inline-flex;
   }
 }
 
@@ -5126,4 +5159,606 @@ a.marca-chip:focus-visible {
   width: 20px;
   height: 20px;
   accent-color: var(--sinal-escuro);
+}
+
+/* =========================================================
+   EDITOR — PASSO A PASSO, PRÉVIA E COMPONENTES
+   ========================================================= */
+
+.assistente-oculto {
+  display: none !important;
+}
+
+.previa-flutuante {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  box-shadow: var(--sombra);
+}
+
+/* No passo a passo, o botão de prévia fica dentro da barra de navegação. */
+.assistente-nav .previa-flutuante {
+  position: static;
+  box-shadow: none;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 900px) {
+  .assistente-nav .previa-flutuante {
+    display: none !important;
+  }
+}
+
+.painel-preview__fechar {
+  display: none;
+}
+
+body.previa-aberta .painel-preview__fechar {
+  display: inline-flex;
+  order: 2;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-pill);
+  background: var(--branco);
+  font-weight: 700;
+}
+
+.previa-destaque {
+  animation: previa-destaque 1.4s ease-out;
+}
+
+@keyframes previa-destaque {
+  0% { box-shadow: inset 0 0 0 3px var(--sinal); }
+  100% { box-shadow: inset 0 0 0 3px transparent; }
+}
+
+/* Passo a passo */
+
+.assistente {
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid var(--borda);
+  border-radius: 18px;
+  background: var(--branco);
+  box-shadow: var(--sombra);
+}
+
+.assistente__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.assistente__contador {
+  font-weight: 700;
+  color: var(--sinal-texto);
+}
+
+.assistente__sair {
+  display: inline-block;
+  padding: 6px 0;
+  color: var(--mutado);
+}
+
+.assistente__barra {
+  height: 8px;
+  margin: 10px 0 18px;
+  border-radius: var(--raio-pill);
+  background: var(--borda);
+  overflow: hidden;
+}
+
+.assistente__barra span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--sinal);
+  transition: width var(--transicao);
+}
+
+.assistente__titulo {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  font-size: clamp(24px, 6vw, 32px);
+  letter-spacing: -.03em;
+  line-height: 1.15;
+}
+
+.assistente__titulo:focus {
+  outline: none;
+}
+
+.assistente__texto {
+  margin-top: 10px;
+  font-size: 16px;
+  color: var(--texto);
+  max-width: 60ch;
+}
+
+.assistente__exemplo {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--sinal);
+  border-radius: 8px;
+  background: var(--papel);
+  font-size: 14px;
+  color: var(--texto);
+}
+
+.assistente__revisao {
+  margin-top: 18px;
+}
+
+.assistente__checklist {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.assistente__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+}
+
+.assistente__item--feito span:first-child {
+  color: var(--sucesso);
+  font-weight: 800;
+}
+
+.assistente__item .btn-link {
+  margin-left: auto;
+}
+
+.assistente__publicar {
+  width: 100%;
+  min-height: 56px;
+  font-size: 17px;
+}
+
+.assistente__festa {
+  margin-top: 8px;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.assistente__festa-selo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sucesso);
+  color: var(--branco);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.assistente__festa-titulo {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  font-size: 26px;
+}
+
+.assistente__festa-link a {
+  font-weight: 700;
+  color: var(--sinal-texto);
+  word-break: break-all;
+}
+
+.assistente-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--branco);
+  border-top: 1px solid var(--borda);
+  box-shadow: 0 -8px 24px rgba(10, 22, 32, .08);
+}
+
+.assistente-nav[hidden] {
+  display: none;
+}
+
+.assistente-nav .btn {
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.assistente-nav #btn-assistente-continuar {
+  margin-left: auto;
+  min-width: 128px;
+}
+
+@media (min-width: 900px) {
+  .assistente-nav {
+    justify-content: center;
+  }
+
+  .assistente-nav #btn-assistente-continuar {
+    margin-left: 0;
+  }
+}
+
+body.modo-assistente {
+  padding-bottom: 96px;
+}
+
+/* No passo a passo, o texto do topo já explica cada passo. */
+.modo-assistente .ajuda__botao,
+.modo-assistente .ajuda__painel,
+.modo-assistente .editor-so-normal,
+.modo-assistente .painel-editor .briefing-secao > legend,
+.modo-assistente .painel-editor .briefing-secao > .campo__ajuda,
+.modo-assistente .painel-editor .briefing-secao > .campo__cabeca,
+.modo-assistente #secao-url > .campo__cabeca {
+  display: none !important;
+}
+
+.modo-assistente .painel-editor .briefing-secao {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+/* Sugestões em chips */
+
+.sugestoes {
+  margin: 8px 0 12px;
+}
+
+.sugestoes__rotulo {
+  font-size: 13px;
+  color: var(--mutado);
+  margin-bottom: 6px;
+}
+
+.sugestoes__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sugestao-chip {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-pill);
+  background: var(--branco);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sugestao-chip:hover {
+  border-color: var(--ink);
+}
+
+.sugestao-chip[aria-pressed="true"] {
+  border-color: var(--sinal-escuro);
+  background: color-mix(in srgb, var(--sinal) 18%, #fff);
+}
+
+.sugestao-linha {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.sugestao-linha .btn-link {
+  display: inline-block;
+  padding: 6px 0;
+  text-align: left;
+}
+
+/* Foto: escolha do tipo em cartões */
+
+.campo--cartoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border: 0;
+  padding: 0;
+}
+
+.campo--cartoes > legend {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+
+.opcao-cartao {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1.5px solid var(--borda);
+  border-radius: 14px;
+  background: var(--branco);
+  cursor: pointer;
+}
+
+.opcao-cartao input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opcao-cartao:has(input:checked) {
+  border-color: var(--sinal-escuro);
+  background: color-mix(in srgb, var(--sinal) 12%, #fff);
+}
+
+.opcao-cartao:has(input:focus-visible) {
+  outline: 3px solid var(--sinal);
+  outline-offset: 2px;
+}
+
+.opcao-cartao__titulo {
+  font-weight: 700;
+}
+
+.opcao-cartao__texto {
+  font-size: 13px;
+  color: var(--mutado);
+}
+
+.foto-remover {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 0;
+}
+
+/* Estados por região */
+
+.ufs-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.ufs-regiao__cabeca {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.ufs-regiao__nome {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mutado);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.ufs-regiao__cabeca .btn-link {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.ufs-regiao__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.uf-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-pill);
+  background: var(--branco);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.uf-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.uf-chip:has(input:checked) {
+  border-color: var(--sinal-escuro);
+  background: var(--sinal);
+  color: var(--ink);
+}
+
+.uf-chip:has(input:focus-visible) {
+  outline: 3px solid var(--sinal);
+  outline-offset: 2px;
+}
+
+/* Medidor "sua página está X% pronta" */
+
+.painel-medidor {
+  margin: 8px 0 12px;
+}
+
+.painel-medidor__numero {
+  font-size: 15px;
+  color: var(--texto);
+}
+
+.painel-medidor__numero strong {
+  font-family: var(--fonte-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.painel-medidor__barra {
+  height: 10px;
+  margin-top: 6px;
+  border-radius: var(--raio-pill);
+  background: var(--borda);
+  overflow: hidden;
+}
+
+.painel-medidor__barra span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--sucesso);
+  border-radius: inherit;
+  transition: width var(--transicao);
+}
+
+.painel-trilha__assistente {
+  margin: 4px 0 14px;
+}
+
+/* Selos e grupos recolhíveis */
+
+.briefing-secao > legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.secao-selo {
+  padding: 2px 10px;
+  border-radius: var(--raio-pill);
+  font-family: var(--fonte-corpo);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  background: color-mix(in srgb, var(--sinal) 22%, #fff);
+  color: var(--sinal-texto);
+}
+
+.secao-selo[data-ok="1"] {
+  background: color-mix(in srgb, var(--sucesso) 16%, #fff);
+  color: #146b41;
+}
+
+.secao-toggle {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pill);
+  background: var(--branco);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--mutado);
+  cursor: pointer;
+}
+
+.briefing-secao--recolhida > :not(legend) {
+  display: none !important;
+}
+
+.briefing-secao--recolhida {
+  padding-bottom: 12px;
+}
+
+/* Status de salvamento sempre visível no editor */
+
+.painel-salvo {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  justify-self: start;
+  margin-top: 12px;
+}
+
+.painel-salvo:empty {
+  display: none;
+}
+
+/* Desfazer remoção */
+
+.toast-desfazer {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(calc(100% - 32px), 480px);
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: var(--raio);
+  background: var(--ink);
+  color: var(--branco);
+  font-size: 14px;
+  box-shadow: var(--sombra);
+}
+
+.toast-desfazer[hidden] {
+  display: none;
+}
+
+body.modo-assistente .toast-desfazer {
+  bottom: 96px;
+}
+
+.toast-desfazer__botao {
+  margin-left: auto;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--raio-pill);
+  background: var(--sinal);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.painel-lista__marca select {
+  min-height: 36px;
+  max-width: 160px;
+  font-size: 13px;
+}
+
+.aviso-suave {
+  color: var(--sinal-texto);
+}
+
+@media (max-width: 520px) {
+  .painel-lista__acoes .btn-link,
+  .painel-lista button[data-marca-up],
+  .painel-lista button[data-marca-down],
+  .painel-lista button[data-cat-up],
+  .painel-lista button[data-cat-down] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Sem botão flutuante embaixo (computador), o aviso de desfazer volta para o rodapé. */
+@media (min-width: 900px) {
+  body:not(.modo-assistente) .toast-desfazer {
+    bottom: 24px;
+  }
 }

@@ -288,6 +288,33 @@
 
     renderPagamentos(r.pagamentosRecentes || [], tbodyPagResumo);
     renderFunil(r.funil);
+    renderAssistente(r.funil?.assistente);
+  }
+
+  const PASSOS_ASSISTENTE = [
+    "1. Endereço",
+    "2. Nome",
+    "3. Foto ou logo",
+    "4. WhatsApp e contatos",
+    "5. O que vende e onde",
+    "6. Marcas",
+    "7. Catálogos",
+    "8. Apresentação e cor",
+    "9. Revisar e publicar"
+  ];
+
+  function renderAssistente(dados) {
+    const tbody = document.querySelector("#tabela-assistente tbody");
+    if (!tbody) return;
+    if (!dados) {
+      tbody.innerHTML = `<tr><td colspan="2">Indisponível (Supabase não configurado ou erro ao consultar).</td></tr>`;
+      return;
+    }
+    const linhas = PASSOS_ASSISTENTE.map(
+      (rotulo, i) => `<tr><th scope="row">${esc(rotulo)}</th><td>${dados.porPasso?.[i + 1] ?? 0}</td></tr>`
+    );
+    linhas.push(`<tr><th scope="row">Concluíram ou publicaram</th><td>${dados.concluidos ?? 0}</td></tr>`);
+    tbody.innerHTML = linhas.join("");
   }
 
   const ETAPAS_FUNIL = [

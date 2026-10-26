@@ -27,6 +27,7 @@
     { "source": "/recuperar-senha", "destination": "/recuperar-senha/" },
     { "source": "/painel", "destination": "/painel/" },
     { "source": "/painel/marca", "destination": "/painel/marca/" },
+    { "source": "/painel/criar", "destination": "/painel/criar/" },
     { "source": "/painel/assinatura", "destination": "/painel/assinatura/" },
     { "source": "/pagamento/ok", "destination": "/pagamento/ok/" },
     { "source": "/api/assinantes", "destination": "/api/admin" },
