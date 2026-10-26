@@ -54,7 +54,10 @@ const TIPOS = {
 
 function rodarBuild() {
   try {
-    const saida = execFileSync(process.execPath, [path.join(RAIZ, "build.js")], { encoding: "utf8" });
+    const saida = execFileSync(process.execPath, [path.join(RAIZ, "build.js")], {
+      encoding: "utf8",
+      env: { ...process.env, MYREP_SEM_MINIFICAR: "1" }
+    });
     process.stdout.write(saida);
   } catch (erro) {
     console.error("Erro no build:\n", erro.stdout || erro.message);

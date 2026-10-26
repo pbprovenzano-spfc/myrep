@@ -79,6 +79,7 @@
   let paginaDados = null;
   let saveTimer = null;
   let slugTimer = null;
+  let slugConsulta = 0;
   let marcaSaveTimer = null;
   let fotoLocalUrl = null;
   let marcaLogoLocalUrl = null;
@@ -2596,6 +2597,9 @@
   document.getElementById("input-slug")?.addEventListener("input", (ev) => {
     clearTimeout(slugTimer);
     const val = ev.target.value;
+    // Cada consulta ganha um número; só a mais recente pode escrever o resultado,
+    // para uma resposta lenta de "joa" não sobrescrever a de "joao-silva".
+    const consulta = ++slugConsulta;
     slugTimer = setTimeout(async () => {
       const status = document.getElementById("slug-status");
       if (!val || val.length < 3) {
@@ -2607,6 +2611,7 @@
           headers: await authHeaders()
         });
         const data = await resp.json();
+        if (consulta !== slugConsulta) return;
         if (data.disponivel) setStatus(status, `/${data.slug}/ está disponível`, "ok");
         else setStatus(status, data.motivo || "Indisponível", "erro");
       } catch {
