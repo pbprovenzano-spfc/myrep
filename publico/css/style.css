@@ -5699,7 +5699,7 @@ body.modo-assistente {
 .toast-desfazer {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: 96px;
   z-index: 90;
   display: flex;
   align-items: center;
@@ -5753,5 +5753,12 @@ body.modo-assistente .toast-desfazer {
   .painel-lista button[data-cat-down] {
     min-height: 44px;
     min-width: 44px;
+  }
+}
+
+/* Sem botão flutuante embaixo (computador), o aviso de desfazer volta para o rodapé. */
+@media (min-width: 900px) {
+  body:not(.modo-assistente) .toast-desfazer {
+    bottom: 24px;
   }
 }
