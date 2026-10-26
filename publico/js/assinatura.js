@@ -121,7 +121,8 @@
     ativa: "Adimplente",
     inadimplente: "Inadimplente",
     cancelada: "Cancelada",
-    pendente: "Pagamento pendente"
+    pendente: "Pagamento pendente",
+    teste: "Teste grátis"
   };
 
   function renderBadge(assinatura) {
@@ -133,6 +134,16 @@
     }
     if (assinatura.plano === "vitalicio" && assinatura.status === "ativa") {
       badge.textContent = "Vitalício";
+      badge.dataset.status = "ativa";
+      return;
+    }
+    if (assinatura.status === "teste" && assinatura.cancelamento_agendado) {
+      badge.textContent = "Teste cancelado";
+      badge.dataset.status = "pendente";
+      return;
+    }
+    if (assinatura.status === "teste") {
+      badge.textContent = "Teste grátis";
       badge.dataset.status = "ativa";
       return;
     }
@@ -162,6 +173,17 @@
     }`;
 
     const data = formatarData(assinatura.proxima_cobranca);
+    if (assinatura.status === "teste") {
+      const fim = formatarData(assinatura.teste_ate);
+      if (assinatura.cancelamento_agendado) {
+        prazo.textContent = fim ? `Sua página fica no ar até ${fim}.` : "";
+        setStatus(aviso, "Teste cancelado. Nada será cobrado.", "info");
+      } else {
+        prazo.textContent = fim ? `Teste grátis até ${fim}. A primeira cobrança é nesse dia.` : "Teste grátis.";
+        setStatus(aviso, "Não quer continuar? Cancele antes do fim do teste e nada é cobrado.", "info");
+      }
+      return;
+    }
     if (assinatura.plano === "vitalicio") {
       prazo.textContent = "Acesso permanente, sem cobranças.";
     } else if (assinatura.cancelamento_agendado && data) {
@@ -191,7 +213,8 @@
 
   function renderCartao(assinatura, cartao) {
     const secao = document.getElementById("secao-cartao");
-    const mostrar = !!assinatura?.recorrente && assinatura.status !== "cancelada";
+    const emTeste = assinatura?.status === "teste" && !assinatura.cancelamento_agendado;
+    const mostrar = emTeste || (!!assinatura?.recorrente && assinatura.status !== "cancelada");
     secao.hidden = !mostrar;
     if (!mostrar) return;
 
@@ -229,13 +252,21 @@
     const secao = document.getElementById("secao-cancelar");
     const podeCancelar =
       !!assinatura &&
-      ["ativa", "inadimplente"].includes(assinatura.status) &&
+      ["ativa", "inadimplente", "teste"].includes(assinatura.status) &&
       assinatura.plano !== "vitalicio" &&
       !assinatura.cancelamento_agendado;
     secao.hidden = !podeCancelar;
     document.getElementById("cancelar-confirma").hidden = true;
     if (!podeCancelar) return;
 
+    if (assinatura.status === "teste") {
+      const fim = formatarData(assinatura.teste_ate);
+      document.getElementById("cancelar-titulo").textContent = "Cancelar teste grátis";
+      document.getElementById("btn-cancelar").textContent = "Cancelar o teste";
+      document.getElementById("cancelar-texto").textContent = `Nada será cobrado. Sua página fica no ar até ${fim || "o fim do teste"}.`;
+      document.getElementById("cancelar-confirma-texto").textContent = "Confirma? Você não será cobrado.";
+      return;
+    }
     const data = formatarData(assinatura.proxima_cobranca);
     document.getElementById("cancelar-texto").textContent =
       assinatura.status === "ativa" && data
@@ -470,6 +501,7 @@
       renderCartao(data.assinatura, dados.cartao);
       renderTroca(data.assinatura);
       renderCancelar(data.assinatura);
+      setStatus(status, "", "");
       setStatus(document.getElementById("plano-aviso"), data.aviso, "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");

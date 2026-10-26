@@ -12,7 +12,7 @@ function acaoDe(req) {
   const partes = path.split("/").filter(Boolean);
   const ultimo = partes[partes.length - 1] || "";
   if (
-    ["checkout", "pagina", "slug", "suporte", "assinatura", "cobranca", "cartao", "estatisticas"].includes(ultimo)
+    ["checkout", "pagina", "slug", "suporte", "assinatura", "cobranca", "cartao", "estatisticas", "teste"].includes(ultimo)
   ) {
     return ultimo;
   }
@@ -30,6 +30,9 @@ module.exports = async function handler(req, res) {
   if (acao === "cobranca") {
     return require("./_lib/handlers/painel-cobranca")(req, res);
   }
+  if (acao === "teste") {
+    return require("./_lib/handlers/painel-teste")(req, res);
+  }
   if (acao === "cartao") {
     return require("./_lib/handlers/painel-cartao")(req, res);
   }
@@ -46,7 +49,7 @@ module.exports = async function handler(req, res) {
     return require("./_lib/handlers/painel-estatisticas")(req, res);
   }
   return json(res, 400, {
-    erro: "Ação inválida. Use checkout, assinatura, cobranca, cartao, pagina, slug, suporte ou estatisticas."
+    erro: "Ação inválida. Use checkout, assinatura, cobranca, cartao, teste, pagina, slug, suporte ou estatisticas."
   });
 };
 

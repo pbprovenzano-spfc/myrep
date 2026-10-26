@@ -37,12 +37,17 @@ create table if not exists public.assinaturas (
   user_id uuid not null references auth.users (id) on delete cascade,
   plano text not null,
   status text not null default 'ativa'
-    check (status in ('ativa', 'inadimplente', 'cancelada', 'pendente')),
+    check (status in ('ativa', 'inadimplente', 'cancelada', 'pendente', 'teste')),
   asaas_customer_id text,
   asaas_subscription_id text,
   asaas_payment_id text,
   proxima_cobranca date,
   cancelamento_agendado boolean not null default false,
+  teste_ate date,
+  asaas_card_token text,
+  cartao_bandeira text,
+  cartao_ultimos text,
+  documento_teste text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

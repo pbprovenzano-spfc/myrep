@@ -196,6 +196,12 @@ function somarUmAno(iso) {
   return `${y}-${m}-${d}`;
 }
 
+function somarDias(iso, dias) {
+  const [ano, mes, dia] = String(iso).split("-").map(Number);
+  const dt = new Date(Date.UTC(ano, (mes || 1) - 1, (dia || 1) + dias));
+  return dt.toISOString().slice(0, 10);
+}
+
 function proximaCobrancaDoPlano(planoId, atual, informada, statusNovo = "ativa") {
   if (planoId === "anual") {
     const limite = String(atual?.proxima_cobranca || "").slice(0, 10);
@@ -438,6 +444,7 @@ module.exports = {
   dataIso,
   dataFutura,
   somarUmAno,
+  somarDias,
   proximaCobrancaDoPlano,
   sitePublico,
   asaasPronta,

@@ -34,15 +34,20 @@ function resumoAssinatura(assinatura) {
     status: assinatura.status,
     proxima_cobranca: assinatura.proxima_cobranca,
     cancelamento_agendado: assinatura.cancelamento_agendado === true,
-    temAsaas: !!assinatura.asaas_subscription_id
+    temAsaas: !!assinatura.asaas_subscription_id,
+    teste_ate: assinatura.status === "teste" ? dataValida(assinatura.teste_ate) || null : null
   };
 }
 
-function resumoCartao(assinaturaAsaas) {
+function resumoCartao(assinaturaAsaas, assinatura) {
   const cc = assinaturaAsaas?.creditCard;
   const ultimos = String(cc?.creditCardNumber || "").replace(/\D/g, "").slice(-4);
-  if (!ultimos) return null;
-  return { bandeira: String(cc.creditCardBrand || "").toUpperCase(), ultimos };
+  if (ultimos) return { bandeira: String(cc.creditCardBrand || "").toUpperCase(), ultimos };
+  // No teste do anual não há recorrência na Asaas: o cartão vem do cadastro do teste.
+  if (assinatura?.status === "teste" && assinatura.cartao_ultimos) {
+    return { bandeira: assinatura.cartao_bandeira || "", ultimos: assinatura.cartao_ultimos };
+  }
+  return null;
 }
 
 function resumoPagamento(pagamento) {
@@ -110,7 +115,7 @@ async function responderResumo(res, user, assinatura) {
     email: String(user.email || "").toLowerCase(),
     nome: user.user_metadata?.nome || user.user_metadata?.full_name || null,
     assinatura: resumoAssinatura(atual),
-    cartao: resumoCartao(naAsaas),
+    cartao: resumoCartao(naAsaas, atual),
     cobranca: respostaCobranca(cobrancaDeUsuario(user)),
     historico: await buscarHistorico(atual)
   });
@@ -147,11 +152,28 @@ module.exports = async function handler(req, res) {
     if (assinatura.plano === "vitalicio") {
       return json(res, 400, { erro: "O plano vitalício não tem cobrança para cancelar." });
     }
-    if (!["ativa", "inadimplente"].includes(assinatura.status)) {
+    if (!["ativa", "inadimplente", "teste"].includes(assinatura.status)) {
       return json(res, 400, { erro: "Esta assinatura já não está vigente." });
     }
     if (assinatura.cancelamento_agendado === true) {
       return json(res, 409, { erro: "O cancelamento já está agendado." });
+    }
+
+    if (assinatura.status === "teste") {
+      // Cancelar no teste: nada é cobrado e a página fica no ar até o último dia do teste.
+      await cancelarNaAsaas(assinatura.asaas_subscription_id);
+      const ateTeste = dataValida(assinatura.teste_ate);
+      const atualizadaTeste = await upsertAssinatura(user.id, {
+        cancelamento_agendado: true,
+        asaas_subscription_id: null,
+        asaas_card_token: null
+      });
+      return json(res, 200, {
+        ok: true,
+        ate: ateTeste || null,
+        assinatura: resumoAssinatura(atualizadaTeste || { ...assinatura, cancelamento_agendado: true }),
+        aviso: "Teste cancelado. Nada será cobrado, e sua página fica no ar até o fim do teste."
+      });
     }
 
     await cancelarNaAsaas(assinatura.asaas_subscription_id);

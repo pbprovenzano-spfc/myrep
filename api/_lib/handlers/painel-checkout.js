@@ -51,6 +51,12 @@ module.exports = async function handler(req, res) {
 
     const assinaturaAtual = await obterAssinaturaPorUserId(user.id);
     const vigente = assinaturaAtual?.status === "ativa";
+    const emTeste = assinaturaAtual?.status === "teste";
+    if (emTeste && assinaturaAtual.cancelamento_agendado !== true) {
+      return json(res, 409, {
+        erro: "Seu teste grátis já está valendo. A cobrança começa sozinha no fim do teste."
+      });
+    }
     if (vigente) {
       if (body.troca !== true) {
         return json(res, 409, { erro: "Você já possui assinatura ativa." });
@@ -118,9 +124,10 @@ module.exports = async function handler(req, res) {
     }
 
     // Numa troca, o plano atual continua valendo até a Asaas confirmar o pagamento.
+    // Quem cancelou o teste e decide assinar continua com o acesso do teste até pagar.
     await upsertAssinatura(
       user.id,
-      vigente
+      vigente || emTeste
         ? { asaas_customer_id: customerId }
         : { plano: planoId, status: "pendente", asaas_customer_id: customerId }
     );

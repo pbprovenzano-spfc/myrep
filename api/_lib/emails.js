@@ -9,6 +9,8 @@ const EVENTO_EMAIL_ATRASO = "EMAIL_ATRASO_ENVIADO";
 const EVENTO_EMAIL_FALTA_PUBLICAR = "EMAIL_FALTA_PUBLICAR_ENVIADO";
 const EVENTO_EMAIL_SEM_ASSINATURA = "EMAIL_SEM_ASSINATURA_ENVIADO";
 const EVENTO_ALERTA_FALHA = "ALERTA_FALHA_ENVIADO";
+const EVENTO_EMAIL_FIM_TESTE = "EMAIL_FIM_TESTE_ENVIADO";
+const EVENTO_EMAIL_COBRANCA_RECUSADA = "EMAIL_COBRANCA_RECUSADA_ENVIADO";
 
 function suporte() {
   return process.env.SUPPORT_EMAIL || process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com";
@@ -58,13 +60,59 @@ function emailAtraso({ nome, valor, linkFatura }) {
   };
 }
 
+function dataBr(iso) {
+  const [a, m, d] = String(iso || "").slice(0, 10).split("-");
+  return a && m && d ? `${d}/${m}/${a}` : "";
+}
+
+/** Aviso 2 dias antes da 1ª cobrança do teste grátis. */
+function emailFimTeste({ nome, plano, data }) {
+  const valor =
+    plano === "anual" ? "R$ 130,80, em 12× de R$ 10,90 sem juros no cartão" : "R$ 17,90 por mês no cartão";
+  return {
+    assunto: `Seu teste grátis do My Rep termina em ${dataBr(data)}`,
+    linhas: [
+      saudacao(nome),
+      "",
+      `Seu teste grátis termina em ${dataBr(data)}. Nesse dia começa a cobrança do plano ${plano === "anual" ? "anual" : "mensal"}: ${valor}.`,
+      "",
+      "Não precisa fazer nada para continuar: sua página segue no ar.",
+      "",
+      `Se não quiser continuar, cancele antes dessa data e nada será cobrado: ${SITE}/painel/assinatura/`,
+      "",
+      `Dúvidas? Escreva para ${suporte()}.`,
+      "",
+      "— Equipe My Rep"
+    ]
+  };
+}
+
+/** A cobrança do fim do teste (anual) foi recusada pelo cartão. */
+function emailCobrancaRecusada({ nome }) {
+  return {
+    assunto: "Não conseguimos cobrar seu cartão no My Rep",
+    linhas: [
+      saudacao(nome),
+      "",
+      "Seu teste grátis terminou, mas o cartão cadastrado recusou a cobrança do plano.",
+      "Para manter sua página no ar, entre no painel e escolha como pagar:",
+      "",
+      `${SITE}/painel/`,
+      "",
+      `Dúvidas? Escreva para ${suporte()}.`,
+      "",
+      "— Equipe My Rep"
+    ]
+  };
+}
+
 function emailFaltaPublicar({ nome }) {
   return {
     assunto: "Sua página do My Rep ainda não está no ar",
     linhas: [
       saudacao(nome),
       "",
-      "Sua assinatura está ativa, mas a página ainda não foi publicada — seus clientes ainda não conseguem vê-la.",
+      "Seu painel está liberado, mas a página ainda não foi publicada — seus clientes ainda não conseguem vê-la.",
       "",
       "Leva poucos minutos:",
       "1. Escolha seu endereço (myrep.com.br/seu-nome).",
@@ -146,6 +194,10 @@ async function registrarFalha(contexto, erro, extra = {}) {
 }
 
 module.exports = {
+  EVENTO_EMAIL_FIM_TESTE,
+  EVENTO_EMAIL_COBRANCA_RECUSADA,
+  emailFimTeste,
+  emailCobrancaRecusada,
   EVENTO_EMAIL_ATRASO,
   EVENTO_EMAIL_FALTA_PUBLICAR,
   EVENTO_EMAIL_SEM_ASSINATURA,

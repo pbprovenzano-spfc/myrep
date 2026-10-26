@@ -26,7 +26,8 @@ async function carregarBase() {
   const sb = getSupabase();
   const [usuarios, ass, pags] = await Promise.all([
     listarTodosUsuarios(),
-    sb.from("assinaturas").select("user_id, plano, status, created_at, updated_at").limit(10000),
+    // "*" e não uma lista: funciona com ou sem as colunas do teste grátis.
+    sb.from("assinaturas").select("*").limit(10000),
     sb
       .from("representantes")
       .select("user_id, publicado, publicado_em, assistentePasso:dados->assistentePasso, assistenteConcluido:dados->assistenteConcluido")
@@ -42,20 +43,28 @@ async function carregarBase() {
   };
 }
 
-/** Chegou a pagar: qualquer status além de "pendente" (ativa, inadimplente, cancelada). */
+/** Passou do checkout: qualquer status além de "pendente" (teste, ativa, inadimplente, cancelada). */
 function pagou(assinatura) {
   return Boolean(assinatura && assinatura.status !== "pendente");
 }
 
+/** Pagou de fato: exclui quem está no teste ou cancelou o teste sem nunca pagar. */
+function pagouDeVerdade(assinatura) {
+  if (!pagou(assinatura) || assinatura.status === "teste") return false;
+  if (assinatura.teste_ate && !assinatura.asaas_payment_id) return false;
+  return true;
+}
+
 function contarFunil(base, desdeIso) {
-  const etapas = { contas: 0, confirmadas: 0, assinaram: 0, pagaram: 0, publicaram: 0 };
+  const etapas = { contas: 0, confirmadas: 0, assinaram: 0, testaram: 0, pagaram: 0, publicaram: 0 };
   for (const u of base.usuarios) {
     if (desdeIso && String(u.created_at || "") < desdeIso) continue;
     etapas.contas += 1;
     if (u.email_confirmed_at) etapas.confirmadas += 1;
     const ass = base.assinaturas.get(u.id);
     if (ass) etapas.assinaram += 1;
-    if (pagou(ass)) etapas.pagaram += 1;
+    if (ass?.teste_ate) etapas.testaram += 1;
+    if (pagouDeVerdade(ass)) etapas.pagaram += 1;
     if (base.paginas.get(u.id)?.publicado) etapas.publicaram += 1;
   }
   return etapas;
@@ -91,4 +100,4 @@ async function calcularFunil() {
   };
 }
 
-module.exports = { carregarBase, calcularFunil, contarAssistente, pagou };
+module.exports = { carregarBase, calcularFunil, contarAssistente, pagou, pagouDeVerdade };
