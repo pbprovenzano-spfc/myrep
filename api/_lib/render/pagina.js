@@ -8,6 +8,11 @@ const fs = require("fs");
 
 const PALETA_PADRAO = "ambar";
 
+// Versão por deploy nos links de /css, para não misturar HTML novo com CSS antigo em cache.
+const VERSAO_ASSETS = process.env.VERCEL_GIT_COMMIT_SHA
+  ? `?v=${process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8)}`
+  : "";
+
 const PALETAS = {
   ambar: {
     "--ink": "#0A1620",
@@ -553,7 +558,7 @@ function paginaErro({ codigo, titulo, texto }) {
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/style.css${VERSAO_ASSETS}">
 <link rel="icon" href="/img/favicon.png" type="image/png">
 </head>
 <body class="pagina-erro">

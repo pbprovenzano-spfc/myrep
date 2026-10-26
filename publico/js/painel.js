@@ -98,6 +98,7 @@
 
   const MIME_IMAGEM_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
   const EXT_IMAGEM_OK = /\.(jpe?g|png|webp)$/i;
+  const MAX_IMAGEM = 20 * 1024 * 1024;
   const CHAVE_TRILHA_OCULTA = "myrep-trilha-oculta";
 
   let trilhaOcultaEstado = (() => {
@@ -995,17 +996,56 @@
     return EXT_IMAGEM_OK.test(nome);
   }
 
-  function mensagemImagemInvalida() {
-    return "Use JPG, PNG ou WEBP.";
+  function formatarMb(bytes) {
+    return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+  }
+
+  // Diz por que a imagem foi recusada, ou "" se ela serve.
+  function motivoImagemRecusada(file) {
+    if (!arquivoImagemPermitido(file)) {
+      const ext = (String(file.name || "").match(/\.([a-z0-9]{1,5})$/i) || [])[1];
+      const tipo = ext ? `Este arquivo é .${ext.toUpperCase()}` : "Este arquivo não é uma imagem aceita";
+      const iphone = /^hei[cf]$/i.test(ext || "")
+        ? " No iPhone, abra a foto, toque em Compartilhar e salve como JPG, ou tire um print dela."
+        : "";
+      return `${tipo}, e a página aceita JPG, PNG ou WEBP.${iphone}`;
+    }
+    if (file.size > MAX_IMAGEM) {
+      return `Esta imagem tem ${formatarMb(file.size)} e o limite é ${formatarMb(MAX_IMAGEM).replace(",0", "")}. Diminua a imagem ou escolha outra.`;
+    }
+    return "";
+  }
+
+  // Alerta junto do campo de arquivo: o status do rodapé some com o próximo "Salvo".
+  function mostrarErroArquivo(input, msg) {
+    const campo = input?.closest(".campo-arquivo");
+    const zona = input?.closest(".campo-arquivo__zona");
+    if (!campo || !zona) return;
+    let alerta = campo.querySelector(".campo-arquivo__erro");
+    if (!alerta) {
+      alerta = document.createElement("p");
+      alerta.className = "campo-arquivo__erro";
+      alerta.setAttribute("role", "alert");
+      zona.insertAdjacentElement("afterend", alerta);
+    }
+    alerta.textContent = msg;
+    alerta.hidden = false;
+  }
+
+  function limparErroArquivo(input) {
+    const alerta = input?.closest(".campo-arquivo")?.querySelector(".campo-arquivo__erro");
+    if (alerta) alerta.hidden = true;
   }
 
   function rejeitarImagemCampo(input, file) {
     if (!file) return false;
     const campo = input?.closest(".campo-arquivo");
     if (campo?.dataset.tipo !== "imagem") return false;
-    if (arquivoImagemPermitido(file)) return false;
+    const motivo = motivoImagemRecusada(file);
+    if (!motivo) return false;
     limparArquivoCampo(input);
-    setStatus(statusParaCampoArquivo(input), mensagemImagemInvalida(), "erro");
+    mostrarErroArquivo(input, motivo);
+    setStatus(statusParaCampoArquivo(input), "Arquivo não aceito. Veja o aviso no campo.", "erro");
     return true;
   }
 
@@ -1320,10 +1360,6 @@
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
     const ctrl = file ? iniciarOperacaoArquivo() : null;
     try {
-      if (file && file.size > MAX_IMAGEM) {
-        setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
-        return;
-      }
       await aguardarSalvarTextoPendente();
       await antesMutacaoMidia();
       let arquivo = "";
@@ -1857,7 +1893,6 @@
     return data;
   }
 
-  const MAX_IMAGEM = 8 * 1024 * 1024;
   let operacaoArquivo = null;
 
   function cancelarOperacaoArquivo() {
@@ -2018,6 +2053,7 @@
           return;
         }
         if (rejeitarImagemCampo(input, file)) return;
+        limparErroArquivo(input);
         atualizarArquivoCampo(input, { file });
       });
 
@@ -3483,29 +3519,32 @@
     if (!file || file === input._logoAjustado) return;
     const status = document.getElementById("editor-status");
     if (rejeitarImagemCampo(input, file)) return;
-    if (file.size > MAX_IMAGEM) {
-      setStatus(status, "Imagem grande demais (máx. 8 MB).", "erro");
-      limparArquivoCampo(input);
-      return;
-    }
+    limparErroArquivo(input);
     const ehLogo = document.querySelector('input[name="fotoTipo"]:checked')?.value === "logo";
     let envio = file;
+    // Mostra o carregamento já na escolha: reduzir uma foto grande leva alguns segundos.
+    setCampoArquivoEnviando(input, true, ehLogo ? "Ajustando logo…" : "Preparando foto…");
+    setStatus(status, ehLogo ? "Ajustando logo…" : "Preparando foto…", "info");
     if (ehLogo) {
-      setCampoArquivoEnviando(input, true, "Ajustando logo…");
-      setStatus(status, "Ajustando logo…", "info");
       try {
         envio = await prepararLogoEnvio(input, file);
       } catch (erro) {
         setCampoArquivoEnviando(input, false);
         setStatus(status, erro.message, "erro");
         limparArquivoCampo(input);
+        mostrarErroArquivo(input, erro.message);
         return;
       }
     } else if (window.MyRepLogo?.prepararFoto) {
       try {
         envio = await window.MyRepLogo.prepararFoto(file);
       } catch {
-        envio = file;
+        setCampoArquivoEnviando(input, false);
+        const msg = "Não conseguimos abrir esta imagem. Ela pode estar corrompida; tente outra.";
+        setStatus(status, "Foto não enviada. Veja o aviso no campo.", "erro");
+        limparArquivoCampo(input);
+        mostrarErroArquivo(input, msg);
+        return;
       }
     }
     if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
@@ -3522,6 +3561,7 @@
         signal: ctrl.signal,
         onProgress: progressoEnvio(input, "Enviando…")
       });
+      setCampoArquivoAndamento(input, "Salvando…", 1);
       const data = await apiPagina("POST", {
         acao: "foto_set",
         arquivo,
@@ -3536,7 +3576,18 @@
       setStatus(status, "Foto atualizada.", "ok");
     } catch (erro) {
       if (erro?.cancelado) setStatus(status, "Envio cancelado.", "info");
-      else setStatus(status, erro.message, "erro");
+      else {
+        const motivo = String(erro.message || "falha de conexão").replace(/[.\s]+$/, "");
+        const msg = `A foto não foi enviada: ${motivo}. Tente de novo.`;
+        setStatus(status, "Foto não enviada. Veja o aviso no campo.", "erro");
+        mostrarErroArquivo(input, msg);
+      }
+      if (fotoLocalUrl) {
+        URL.revokeObjectURL(fotoLocalUrl);
+        fotoLocalUrl = null;
+        atualizarPreview({ perfil: true });
+      }
+      limparArquivoCampo(input);
     } finally {
       encerrarOperacaoArquivo(ctrl);
       setCampoArquivoEnviando(input, false);
@@ -3627,10 +3678,6 @@
     const nome = form.nome?.value?.trim() || "";
     const inputLogoPre = form.querySelector(".campo-arquivo__input");
     const file = arquivoLogoCampo(inputLogoPre);
-    if (file && file.size > MAX_IMAGEM) {
-      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
-      return;
-    }
     const inputLogo = form.querySelector(".campo-arquivo__input");
     const btn = form.querySelector('button[type="submit"]');
     if (file && rejeitarImagemCampo(inputLogo, file)) return;
@@ -3818,11 +3865,6 @@
     if (!file || file === input._logoAjustado) return;
     const status = document.getElementById("editor-status");
     if (rejeitarImagemCampo(input, file)) return;
-    if (file.size > MAX_IMAGEM) {
-      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
-      limparArquivoCampo(input);
-      return;
-    }
     try {
       setStatus(status, "Ajustando logo…", "info");
       await prepararLogoEnvio(input, file);
@@ -3841,11 +3883,6 @@
     if (!file || file === input._logoAjustado) return;
     const status = document.getElementById("marca-pagina-status");
     if (rejeitarImagemCampo(input, file)) return;
-    if (file.size > MAX_IMAGEM) {
-      setStatus(status, "Logo grande demais (máx. 8 MB).", "erro");
-      limparArquivoCampo(input);
-      return;
-    }
     let envio = file;
     setCampoArquivoEnviando(input, true, "Ajustando logo…");
     setStatus(status, "Ajustando logo…", "info");

@@ -5485,6 +5485,47 @@ body.modo-assistente {
   margin-bottom: 8px;
 }
 
+/* Os cartões ficam soltos, sem o fundo cinza dos outros campos. */
+fieldset.campo--cartoes {
+  margin-top: 12px;
+  background: none;
+  font-size: 15px;
+}
+
+@media (max-width: 380px) {
+  .campo--cartoes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campo-arquivo__erro {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #F4C7C3;
+  border-radius: 10px;
+  background: #FEF3F2;
+  color: #B42318;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.campo-arquivo__erro::before {
+  content: "!";
+  flex: 0 0 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #B42318;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
 .opcao-cartao {
   position: relative;
   display: grid;
@@ -5687,7 +5728,22 @@ body.modo-assistente {
   bottom: 12px;
   z-index: 5;
   justify-self: start;
+  max-width: min(100%, 420px);
   margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pill);
+  background: var(--branco);
+  box-shadow: 0 4px 16px rgba(10, 22, 32, .10);
+  font-size: 13px;
+}
+
+/* No celular, não passa por baixo do botão "Ver prévia". */
+@media (max-width: 899px) {
+  .painel-salvo {
+    max-width: calc(100% - 150px);
+    bottom: 20px;
+  }
 }
 
 .painel-salvo:empty {
