@@ -1717,7 +1717,7 @@ a.marca-chip:focus-visible {
 
 .mapa__legenda li {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--texto);
   padding-left: 16px;
   position: relative;

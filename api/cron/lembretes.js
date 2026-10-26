@@ -15,7 +15,8 @@ const {
   emailsConfigurados,
   enviarEmail,
   emailFaltaPublicar,
-  emailSemAssinatura
+  emailSemAssinatura,
+  registrarFalha
 } = require("../_lib/emails");
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -103,9 +104,12 @@ module.exports = async function handler(req, res) {
     }
 
     console.log("cron lembretes:", resultado);
+    if (resultado.falhas > 0) {
+      await registrarFalha("Lembretes diários por e-mail", `${resultado.falhas} envio(s) falharam`, resultado);
+    }
     return json(res, 200, { ok: true, ...resultado });
   } catch (erro) {
-    console.error("cron lembretes:", erro);
+    await registrarFalha("Lembretes diários por e-mail", erro);
     return json(res, 500, { erro: erro.message || "Falha nos lembretes." });
   }
 };

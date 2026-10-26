@@ -181,6 +181,42 @@ function robotsTxt() {
   ].join("\n");
 }
 
+/**
+ * Compacta CSS e JS do dist com esbuild (só espaços, comentários e nomes
+ * internos; nomes globais como window.MyRepQr ficam). O `npm run dev` pula
+ * esta etapa para facilitar a depuração.
+ */
+function minificarDist() {
+  if (process.env.MYREP_SEM_MINIFICAR) return;
+  let esbuild;
+  try {
+    esbuild = require("esbuild");
+  } catch {
+    console.log("  ! esbuild não instalado — CSS/JS sem compactar");
+    return;
+  }
+  let antes = 0;
+  let depois = 0;
+  const pastas = [
+    [path.join(DIST, "css"), "css"],
+    [path.join(DIST, "js"), "js"],
+    [path.join(DIST, "js", "vendor"), "js"]
+  ];
+  for (const [pasta, loader] of pastas) {
+    if (!fs.existsSync(pasta)) continue;
+    for (const nome of fs.readdirSync(pasta)) {
+      if (!nome.endsWith(`.${loader}`)) continue;
+      const arquivo = path.join(pasta, nome);
+      const codigo = fs.readFileSync(arquivo, "utf8");
+      const { code } = esbuild.transformSync(codigo, { loader, minify: true, target: "es2019", charset: "utf8" });
+      antes += Buffer.byteLength(codigo);
+      depois += Buffer.byteLength(code);
+      fs.writeFileSync(arquivo, code);
+    }
+  }
+  console.log(`  ✓ CSS/JS compactados: ${Math.round(antes / 1024)} KB → ${Math.round(depois / 1024)} KB`);
+}
+
 async function build() {
   const inicio = Date.now();
   console.log("\n▸ Gerando site…\n");
@@ -267,6 +303,8 @@ async function build() {
 
   fs.writeFileSync(path.join(DIST, "robots.txt"), robotsTxt());
   console.log("  ✓ /robots.txt (sitemap.xml é dinâmico: /api/sitemap)");
+
+  minificarDist();
 
   fs.writeFileSync(path.join(DIST, "404.html"), gerar404());
   console.log("  ✓ /404.html");

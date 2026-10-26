@@ -14,7 +14,13 @@ const {
   EVENTO_EMAIL_PAGAMENTO,
   jaRegistrouEvento
 } = require("../_lib/acessos");
-const { EVENTO_EMAIL_ATRASO, emailsConfigurados, enviarEmail, emailAtraso } = require("../_lib/emails");
+const {
+  EVENTO_EMAIL_ATRASO,
+  emailsConfigurados,
+  enviarEmail,
+  emailAtraso,
+  registrarFalha
+} = require("../_lib/emails");
 const {
   marcarAdimplentePorEmail,
   marcarInadimplentePorEmail
@@ -133,7 +139,7 @@ async function marcarAdimplenteNosEmails(emails) {
     try {
       await marcarAdimplentePorEmail(email);
     } catch (erroPaginas) {
-      console.error("Webhook reativar páginas:", erroPaginas.message || erroPaginas);
+      await registrarFalha("Webhook: reativar páginas", erroPaginas, { email });
     }
   }
 }
@@ -170,7 +176,7 @@ module.exports = async function handler(req, res) {
             .trim()
             .toLowerCase();
         } catch (erroCliente) {
-          console.error("Webhook checkout cliente:", erroCliente.message || erroCliente);
+          await registrarFalha("Webhook: buscar cliente do checkout", erroCliente, { customerId });
         }
       }
       if (planoCheckout && (userId || emailCheckout)) {
@@ -183,7 +189,10 @@ module.exports = async function handler(req, res) {
             paymentId: body.checkout.id || null
           });
         } catch (erroCheckout) {
-          console.error("Webhook checkout:", erroCheckout.message || erroCheckout);
+          await registrarFalha("Webhook: ativar assinatura do checkout", erroCheckout, {
+            email: emailCheckout,
+            userId
+          });
         }
         const emailsCheckout = await emailsParaAdimplencia(userId, emailCheckout);
         await marcarAdimplenteNosEmails(emailsCheckout);
@@ -231,7 +240,7 @@ module.exports = async function handler(req, res) {
               proximaCobranca: pagamento.nextDueDate || pagamento.dueDate || null
             });
           } catch (erroConta) {
-            console.error("Webhook conta:", erroConta.message || erroConta);
+            await registrarFalha("Webhook: ativar assinatura", erroConta, { email, pagamento: pagamento.id });
           }
 
           if (process.env.RESEND_API_KEY && pagamento.id) {
@@ -267,7 +276,7 @@ module.exports = async function handler(req, res) {
                   ].join("\n")
                 });
                 if (erroEnvio) {
-                  console.error("Webhook e-mail cliente:", erroEnvio.message || erroEnvio);
+                  await registrarFalha("E-mail de pagamento confirmado", erroEnvio, { email, pagamento: pagamento.id });
                 } else {
                   await registrarPagamentoEvento({
                     event: EVENTO_EMAIL_PAGAMENTO,
@@ -277,12 +286,18 @@ module.exports = async function handler(req, res) {
                 }
               }
             } catch (erroEmailCliente) {
-              console.error("Webhook e-mail cliente:", erroEmailCliente.message || erroEmailCliente);
+              await registrarFalha("E-mail de pagamento confirmado", erroEmailCliente, {
+                email,
+                pagamento: pagamento.id
+              });
             }
           }
         }
       } catch (erroCliente) {
-        console.error("Webhook cliente:", erroCliente.message || erroCliente);
+        await registrarFalha("Webhook: processar pagamento confirmado", erroCliente, {
+          pagamento: pagamento?.id,
+          cliente: pagamento?.customer
+        });
       }
     }
 
@@ -330,13 +345,19 @@ module.exports = async function handler(req, res) {
                   payload: { email: cliente.email }
                 });
               } else {
-                console.error("Webhook e-mail atraso:", envio.erro);
+                await registrarFalha("E-mail de pagamento em atraso", envio.erro, {
+                  email: cliente.email,
+                  pagamento: pagamento.id
+                });
               }
             }
           }
         }
       } catch (erroOverdue) {
-        console.error("Webhook overdue páginas:", erroOverdue.message || erroOverdue);
+        await registrarFalha("Webhook: marcar inadimplência", erroOverdue, {
+          pagamento: pagamento?.id,
+          cliente: pagamento?.customer
+        });
       }
     }
 
@@ -372,7 +393,7 @@ module.exports = async function handler(req, res) {
 
     return json(res, 200, { received: true });
   } catch (erro) {
-    console.error("webhook:", erro);
+    await registrarFalha("Webhook da Asaas", erro);
     return json(res, 200, { received: true, aviso: erro.message });
   }
 };

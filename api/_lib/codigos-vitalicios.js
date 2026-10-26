@@ -8,6 +8,9 @@ const { getSupabase, supabaseConfigured } = require("./supabase");
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const PREFIXO = "MYREP-";
 const COMPRIMENTO = 6;
+// Reserva de um cadastro que não terminou (e-mail digitado errado, desistência)
+// pode ser assumida por outro e-mail depois deste prazo.
+const RESERVA_EXPIRA_MS = 60 * 60 * 1000;
 
 function normalizarCodigo(raw) {
   const c = String(raw || "")
@@ -116,6 +119,14 @@ async function obterPorCodigo(codigo) {
   return data;
 }
 
+/** Reservado há mais de 1 h para um e-mail que nunca virou conta. */
+async function reservaAbandonada(row) {
+  const reservadoEm = Date.parse(row.reservado_em || "");
+  if (!Number.isFinite(reservadoEm) || Date.now() - reservadoEm < RESERVA_EXPIRA_MS) return false;
+  const { buscarUsuarioPorEmail } = require("./auth");
+  return !(await buscarUsuarioPorEmail(row.reservado_email));
+}
+
 async function reservarCodigo(codigo, email) {
   const c = normalizarCodigo(codigo);
   const e = normalizarEmail(email);
@@ -147,13 +158,27 @@ async function reservarCodigo(codigo, email) {
     erro.status = 409;
     throw erro;
   }
-  if (existente.reservado_email && existente.reservado_email !== e) {
-    const erro = new Error("Este código já está reservado para outro e-mail.");
-    erro.status = 409;
-    throw erro;
-  }
   if (existente.reservado_email === e) {
     return resumir(existente);
+  }
+  if (existente.reservado_email) {
+    if (!(await reservaAbandonada(existente))) {
+      const erro = new Error("Este código já está reservado para outro e-mail.");
+      erro.status = 409;
+      throw erro;
+    }
+    const { data: assumido } = await sb
+      .from("codigos_vitalicios")
+      .update({ reservado_email: e, reservado_em: new Date().toISOString() })
+      .eq("id", existente.id)
+      .is("usado_em", null)
+      .eq("reservado_email", existente.reservado_email)
+      .select("id, codigo, criado_em, reservado_email, reservado_em, usado_em, usado_por")
+      .maybeSingle();
+    if (assumido) return resumir(assumido);
+    const erro = new Error("Não foi possível reservar o código.");
+    erro.status = 409;
+    throw erro;
   }
 
   const agora = new Date().toISOString();

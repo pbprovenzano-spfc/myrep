@@ -8,6 +8,7 @@ const SITE = "https://www.myrep.com.br";
 const EVENTO_EMAIL_ATRASO = "EMAIL_ATRASO_ENVIADO";
 const EVENTO_EMAIL_FALTA_PUBLICAR = "EMAIL_FALTA_PUBLICAR_ENVIADO";
 const EVENTO_EMAIL_SEM_ASSINATURA = "EMAIL_SEM_ASSINATURA_ENVIADO";
+const EVENTO_ALERTA_FALHA = "ALERTA_FALHA_ENVIADO";
 
 function suporte() {
   return process.env.SUPPORT_EMAIL || process.env.BRIEFING_TO_EMAIL || "myrep.sup@gmail.com";
@@ -101,12 +102,56 @@ function emailSemAssinatura({ nome }) {
   };
 }
 
+function destinoAlertas() {
+  return process.env.ALERTA_EMAIL || process.env.BRIEFING_TO_EMAIL || suporte();
+}
+
+/**
+ * Registra a falha no log e avisa o admin por e-mail.
+ * No máximo um aviso por contexto por hora, para uma pane não lotar a caixa.
+ * Nunca lança: quem chama segue o fluxo normal.
+ */
+async function registrarFalha(contexto, erro, extra = {}) {
+  const mensagem = (erro && (erro.message || String(erro))) || "erro desconhecido";
+  console.error(`${contexto}:`, mensagem);
+  if (!emailsConfigurados()) return;
+  try {
+    const { jaRegistrouEvento, registrarPagamentoEvento } = require("./acessos");
+    const chave = `${contexto}|${new Date().toISOString().slice(0, 13)}`;
+    if (await jaRegistrouEvento(EVENTO_ALERTA_FALHA, chave)) return;
+    const detalhes = Object.entries(extra)
+      .filter(([, v]) => v != null && v !== "")
+      .map(([k, v]) => `${k}: ${v}`);
+    const envio = await enviarEmail({
+      para: destinoAlertas(),
+      assunto: `[My Rep] Falha: ${contexto}`,
+      linhas: [
+        `Contexto: ${contexto}`,
+        `Erro: ${mensagem}`,
+        ...detalhes,
+        `Quando: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`,
+        "",
+        "Outras falhas do mesmo tipo na próxima hora não geram novo aviso.",
+        "Logs completos: Vercel → projeto myrep → Logs."
+      ]
+    });
+    if (envio.ok) {
+      await registrarPagamentoEvento({ event: EVENTO_ALERTA_FALHA, paymentId: chave, payload: { mensagem, ...extra } });
+    } else {
+      console.error("alerta de falha não enviado:", envio.erro);
+    }
+  } catch (erroAlerta) {
+    console.error("alerta de falha:", erroAlerta.message || erroAlerta);
+  }
+}
+
 module.exports = {
   EVENTO_EMAIL_ATRASO,
   EVENTO_EMAIL_FALTA_PUBLICAR,
   EVENTO_EMAIL_SEM_ASSINATURA,
   emailsConfigurados,
   enviarEmail,
+  registrarFalha,
   emailAtraso,
   emailFaltaPublicar,
   emailSemAssinatura
