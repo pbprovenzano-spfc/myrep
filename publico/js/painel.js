@@ -74,6 +74,10 @@
     '<span class="link-btn__icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.15.16-.29.18-.53.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.68-1.18.2-.58.2-1.08.15-1.18-.06-.11-.23-.17-.48-.29Z"/></svg></span>';
 
   const modoMarca = /^\/painel\/marca\/?$/i.test(location.pathname);
+  const modoAssistente = /^\/painel\/criar\/?$/i.test(location.pathname);
+  const TOTAL_PASSOS = 9;
+  let passoAssistente = 1;
+  let assistenteConcluido = false;
 
   let perfil = null;
   let paginaDados = null;
@@ -168,57 +172,39 @@
     return !!(nome && zap);
   }
 
-  const PASSOS_TRILHA = [
-    {
-      id: "assinar",
-      titulo: "Assinar um plano",
-      texto: "Escolha mensal ou anual para liberar o editor.",
-      alvo: "secao-assinatura"
-    },
-    {
-      id: "url",
-      titulo: "Escolher o endereço",
-      texto: "Reserve o link definitivo da sua página.",
-      alvo: "secao-url"
-    },
-    {
-      id: "dados",
-      titulo: "Preencher seus dados",
-      texto: "Nome, foto e WhatsApp — o essencial para o cliente te achar.",
-      alvo: "secao-identidade"
-    },
-    {
-      id: "marcas",
-      titulo: "Adicionar marcas",
-      texto: "Coloque as empresas que você representa.",
-      alvo: "secao-marcas"
-    },
-    {
-      id: "atuacao",
-      titulo: "Marcar onde você atende",
-      texto: "Estados e cidades aparecem no mapa da página.",
-      alvo: "secao-atuacao"
-    },
-    {
-      id: "publicar",
-      titulo: "Publicar e compartilhar",
-      texto: "Deixe a página no ar e envie o link.",
-      alvo: "secao-pagina"
-    }
+  // Itens que medem o quanto a página está pronta. O mesmo conjunto alimenta o
+  // medidor do painel e a revisão do passo a passo (passo = número no assistente).
+  const ITENS_PAGINA = [
+    { id: "url", titulo: "Endereço reservado", texto: "Escolha o link da sua página.", passo: 1, alvo: "secao-url" },
+    { id: "nome", titulo: "Seu nome", texto: "Como os clientes te conhecem.", passo: 2, alvo: "secao-identidade" },
+    { id: "foto", titulo: "Foto ou logo", texto: "Páginas com foto passam mais confiança.", passo: 3, alvo: "secao-identidade" },
+    { id: "zap", titulo: "WhatsApp", texto: "Vira o botão principal da página.", passo: 4, alvo: "secao-whatsapp" },
+    { id: "regiao", titulo: "Onde você atende", texto: "Os estados pintam o mapa.", passo: 5, alvo: "secao-atuacao" },
+    { id: "marcas", titulo: "Marcas", texto: "Cada marca ganha uma página própria.", passo: 6, alvo: "secao-marcas" },
+    { id: "catalogos", titulo: "Catálogos", texto: "O que o cliente costuma pedir.", passo: 7, alvo: "secao-catalogos" },
+    { id: "apresentacao", titulo: "Apresentação", texto: "Um parágrafo sobre você.", passo: 8, alvo: "secao-identidade" },
+    { id: "publicar", titulo: "Página publicada", texto: "Deixe no ar e mande o link.", passo: 9, alvo: "secao-pagina" }
   ];
 
-  function trilhaConcluido(id) {
+  function itemPronto(id) {
+    const valor = (campo, dado) => document.getElementById(campo)?.value?.trim() || paginaDados?.[dado] || "";
     switch (id) {
-      case "assinar":
-        return assinaturaLibera(perfil?.assinatura);
       case "url":
         return !!perfil?.pagina?.slug;
-      case "dados":
-        return dadosEssenciaisPreenchidos();
+      case "nome":
+        return !!valor("campo-nome", "nome");
+      case "foto":
+        return !!(fotoLocalUrl || paginaDados?.foto);
+      case "zap":
+        return !!(montarWhatsapp() || paginaDados?.whatsapp);
+      case "regiao":
+        return ufsSelecionadas().length > 0 || (paginaDados?.estados || []).length > 0;
       case "marcas":
         return (paginaDados?.marcas || []).length > 0;
-      case "atuacao":
-        return (paginaDados?.estados || []).length > 0 || ufsSelecionadas().length > 0;
+      case "catalogos":
+        return (paginaDados?.catalogos || []).length > 0;
+      case "apresentacao":
+        return !!valor("campo-bio", "bio");
       case "publicar":
         return !!perfil?.pagina?.publicado;
       default:
@@ -226,46 +212,97 @@
     }
   }
 
+  // Compatibilidade com o restante do painel (assinatura e dados essenciais).
+  const PASSOS_TRILHA = ITENS_PAGINA;
+
+  function trilhaConcluido(id) {
+    if (id === "assinar") return assinaturaLibera(perfil?.assinatura);
+    if (id === "dados") return dadosEssenciaisPreenchidos();
+    return itemPronto(id);
+  }
+
+  function percentualPronto() {
+    const feitos = ITENS_PAGINA.filter((item) => itemPronto(item.id)).length;
+    return Math.round((feitos / ITENS_PAGINA.length) * 100);
+  }
+
   function renderTrilha() {
     const lista = document.getElementById("trilha-lista");
     const agoraEl = document.getElementById("trilha-agora");
     if (!lista || modoMarca) return;
+    renderSelosSecoes();
 
-    const estados = PASSOS_TRILHA.map((passo) => ({
-      ...passo,
-      feito: trilhaConcluido(passo.id)
-    }));
-    const atual = estados.find((passo) => !passo.feito) || null;
+    const libera = assinaturaLibera(perfil?.assinatura);
+    const pct = libera ? percentualPronto() : 0;
+    const pctEl = document.getElementById("medidor-pct");
+    const barra = document.getElementById("medidor-barra");
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (barra) barra.style.width = `${pct}%`;
+    document.getElementById("painel-medidor")?.toggleAttribute("hidden", !libera);
 
-    lista.innerHTML = estados
-      .map((passo, i) => {
-        const fase = passo.feito ? "feito" : atual && atual.id === passo.id ? "agora" : "depois";
-        const estadoTexto = fase === "feito" ? "Feito" : fase === "agora" ? "Agora" : "Depois";
-        const numero = fase === "feito" ? "✓" : String(i + 1);
-        const mostrarLink = fase !== "depois" && alvoVisivel(passo.alvo);
-        const current = fase === "agora" ? ' aria-current="step"' : "";
-        return `<li class="painel-trilha__passo painel-trilha__passo--${fase}"${current} tabindex="-1">
-          <span class="painel-trilha__indice" aria-hidden="true">${numero}</span>
+    const pendente = ITENS_PAGINA.find((item) => !itemPronto(item.id)) || null;
+    lista.innerHTML = libera
+      ? ITENS_PAGINA.map((item) => {
+          const feito = itemPronto(item.id);
+          const mostrarLink = !feito && alvoVisivel(item.alvo);
+          return `<li class="painel-trilha__passo painel-trilha__passo--${feito ? "feito" : "depois"}">
+          <span class="painel-trilha__indice" aria-hidden="true">${feito ? "✓" : "•"}</span>
           <div class="painel-trilha__corpo">
-            <h3>${esc(passo.titulo)}</h3>
-            <p>${esc(fase === "feito" ? "Concluído." : passo.texto)}</p>
+            <h3>${esc(item.titulo)}</h3>
+            ${feito ? "" : `<p>${esc(item.texto)}</p>`}
           </div>
           <div class="painel-trilha__lado">
-            <span class="painel-trilha__estado">${estadoTexto}</span>
-            ${
-              mostrarLink
-                ? `<a href="#${passo.alvo}">${fase === "feito" ? "Ver" : "Ir para este passo"}</a>`
-                : ""
-            }
+            <span class="painel-trilha__estado">${feito ? "Feito" : "Falta"}</span>
+            ${mostrarLink ? `<a href="#${item.alvo}">Fazer agora</a>` : ""}
           </div>
         </li>`;
-      })
-      .join("");
+        }).join("")
+      : "";
 
     if (agoraEl) {
-      agoraEl.textContent = atual
-        ? `Seu próximo passo: ${atual.titulo}. ${atual.texto}`
-        : "Tudo pronto. Sua página está no ar — compartilhe o link com seus clientes.";
+      agoraEl.textContent = !libera
+        ? "Assine um plano para montar sua página."
+        : pendente
+          ? `Próximo: ${pendente.titulo}. ${pendente.texto}`
+          : "Tudo pronto. Sua página está no ar — compartilhe o link com seus clientes.";
+    }
+
+    const blocoAssistente = document.getElementById("trilha-assistente");
+    if (blocoAssistente) {
+      const mostrar = libera && !assistenteConcluido && !perfil?.pagina?.publicado && !modoAssistente;
+      blocoAssistente.hidden = !mostrar;
+      const botao = document.getElementById("btn-assistente-abrir");
+      const passo = Number(paginaDados?.assistentePasso) || 1;
+      if (botao) {
+        botao.textContent = passo > 1 ? `Continuar o passo a passo (passo ${passo} de ${TOTAL_PASSOS})` : "Montar com o passo a passo";
+      }
+    }
+    if (modoAssistente) atualizarNavAssistente();
+  }
+
+  // Selo "Completo"/"Falta" em cada grupo do editor.
+  const SELOS_SECOES = {
+    "secao-identidade": () => itemPronto("nome") && itemPronto("foto"),
+    "secao-whatsapp": () => itemPronto("zap"),
+    "secao-atuacao": () => itemPronto("regiao"),
+    "secao-marcas": () => itemPronto("marcas"),
+    "secao-catalogos": () => itemPronto("catalogos"),
+    "secao-visual": () => true
+  };
+
+  function renderSelosSecoes() {
+    for (const [id, pronto] of Object.entries(SELOS_SECOES)) {
+      const legenda = document.querySelector(`#${id} > legend`);
+      if (!legenda) continue;
+      let selo = legenda.querySelector(".secao-selo");
+      if (!selo) {
+        selo = document.createElement("span");
+        selo.className = "secao-selo";
+        legenda.appendChild(selo);
+      }
+      const ok = pronto();
+      selo.textContent = ok ? "Completo" : "Falta";
+      selo.dataset.ok = ok ? "1" : "0";
     }
   }
 
@@ -656,15 +693,52 @@
     </div>`;
   }
 
+  const REGIOES = [
+    ["Norte", ["AC", "AP", "AM", "PA", "RO", "RR", "TO"]],
+    ["Nordeste", ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"]],
+    ["Centro-Oeste", ["DF", "GO", "MT", "MS"]],
+    ["Sudeste", ["ES", "MG", "RJ", "SP"]],
+    ["Sul", ["PR", "RS", "SC"]]
+  ];
+
+  const NOME_UF = {
+    AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
+    DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso",
+    MS: "Mato Grosso do Sul", MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná",
+    PE: "Pernambuco", PI: "Piauí", RJ: "Rio de Janeiro", RN: "Rio Grande do Norte",
+    RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo",
+    SE: "Sergipe", TO: "Tocantins"
+  };
+
   function renderUfsGrid(estados = []) {
     const grid = document.getElementById("ufs-grid");
     if (!grid) return;
-    grid.innerHTML = UFS.map(
-      (uf) =>
-        `<label class="uf-check"><input type="checkbox" value="${uf}" ${
-          estados.includes(uf) ? "checked" : ""
-        }> ${uf}</label>`
-    ).join("");
+    grid.innerHTML = REGIOES.map(([regiao, ufs]) => {
+      const todos = ufs.every((uf) => estados.includes(uf));
+      const chips = ufs
+        .map(
+          (uf) =>
+            `<label class="uf-chip" title="${esc(NOME_UF[uf])}"><input type="checkbox" value="${uf}" ${
+              estados.includes(uf) ? "checked" : ""
+            }><span aria-hidden="true">${uf}</span><span class="visually-hidden">${esc(NOME_UF[uf])}</span></label>`
+        )
+        .join("");
+      return `<div class="ufs-regiao" data-regiao="${esc(regiao)}">
+        <div class="ufs-regiao__cabeca">
+          <span class="ufs-regiao__nome">${esc(regiao)}</span>
+          <button type="button" class="btn-link" data-regiao-toda="${esc(regiao)}">${todos ? "Desmarcar todos" : "Marcar todos"}</button>
+        </div>
+        <div class="ufs-regiao__lista">${chips}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function atualizarBotoesRegiao() {
+    document.querySelectorAll("#ufs-grid .ufs-regiao").forEach((bloco) => {
+      const caixas = [...bloco.querySelectorAll("input[type=checkbox]")];
+      const botao = bloco.querySelector("[data-regiao-toda]");
+      if (botao) botao.textContent = caixas.every((c) => c.checked) ? "Desmarcar todos" : "Marcar todos";
+    });
   }
 
   async function buscarCidadesUf(uf) {
@@ -888,7 +962,7 @@
               </span>
               <span class="painel-lista__acoes">
                 <a class="btn btn--fantasma-ink btn--compacto" href="${esc(hrefPagina)}">Montar página da ${esc(m.nome)}</a>
-                <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}" aria-label="Remover ${esc(m.nome)}">Remover</button>
+                <button type="button" class="btn-link" data-rm-marca="${esc(m.id)}" data-rm-nome="${esc(m.nome)}" aria-label="Remover ${esc(m.nome)}">Remover</button>
               </span>
             </li>`;
             }
@@ -1330,11 +1404,21 @@
             const nomeHtml = editando
               ? `<input class="painel-lista__nome-input" data-cat-nome-input="${esc(c.id)}" type="text" maxlength="120" value="${esc(nome)}" aria-label="Nome do catálogo">`
               : esc(nome);
+            const opcoesMarca = [`<option value="">Sem marca</option>`]
+              .concat(
+                (marcas || []).map(
+                  (m) => `<option value="${esc(m.id)}"${m.id === c.marcaId ? " selected" : ""}>${esc(m.nome)}</option>`
+                )
+              )
+              .join("");
+            const seletorMarca = (marcas || []).length
+              ? `<label class="painel-lista__marca"><span class="visually-hidden">Marca de ${esc(nome)}</span><select data-cat-marca="${esc(c.id)}">${opcoesMarca}</select></label>`
+              : "";
             const acoesHtml = editando
               ? `<button type="button" class="btn-link" data-save-catalogo="${esc(c.id)}">Salvar</button>
               <button type="button" class="btn-link" data-cancel-catalogo="${esc(c.id)}">Cancelar</button>`
-              : `<button type="button" class="btn-link" data-edit-catalogo="${esc(c.id)}" aria-label="Editar nome de ${esc(nome)}">Editar nome</button>
-              <button type="button" class="btn-link" data-rm-catalogo="${esc(c.id)}">Remover</button>`;
+              : `${seletorMarca}<button type="button" class="btn-link" data-edit-catalogo="${esc(c.id)}" aria-label="Editar nome de ${esc(nome)}">Editar nome</button>
+              <button type="button" class="btn-link" data-rm-catalogo="${esc(c.id)}" data-rm-nome="${esc(nome)}">Remover</button>`;
             return `<li>
               <span class="painel-lista__corpo">
                 ${botoesOrdem(
@@ -1368,6 +1452,10 @@
     const zap = parseWhatsapp(paginaDados.whatsapp);
     document.getElementById("campo-whatsapp-ddd").value = zap.ddd;
     document.getElementById("campo-whatsapp-num").value = zap.num;
+    const tel = document.getElementById("campo-whatsapp-tel");
+    if (tel) tel.value = formatarTelefone(`${zap.ddd}${zap.num}`);
+    atualizarTesteZap();
+    assistenteConcluido = paginaDados.assistenteConcluido === true;
     document.getElementById("campo-instagram").value = extrairInstagramDeContatos(paginaDados.contatos);
     document.getElementById("campo-email").value = extrairEmailDeContatos(paginaDados.contatos);
 
@@ -1401,7 +1489,9 @@
     renderMarcas(paginaDados.marcas);
     renderCatalogos(paginaDados.catalogos, paginaDados.marcas);
     sincronizarFotoSalvaCampo();
+    atualizarBotaoRemoverFoto();
     atualizarPreview();
+    renderSugestoes();
     renderTrilha();
   }
 
@@ -1430,6 +1520,8 @@
       paleta: document.querySelector('input[name="paleta"]:checked')?.value || "ambar",
       fotoTipo: document.querySelector('input[name="fotoTipo"]:checked')?.value || "pessoa",
       indexar: document.getElementById("campo-indexar")?.checked ?? true,
+      assistenteConcluido,
+      ...(modoAssistente ? { assistentePasso: passoAssistente } : {}),
       estados,
       cidades: estados.length <= 1 && estados[0] ? cidades[estados[0]] || [] : cidades,
       contatos
@@ -1688,6 +1780,20 @@
     atualizarResumoPreview();
   }
 
+  function rolarPreviaPara(seletor) {
+    const root = document.getElementById("painel-preview-pagina");
+    const viewport = root?.closest(".painel-preview__viewport");
+    const alvo = seletor ? root?.querySelector(seletor) : null;
+    if (!viewport || !alvo) return;
+    viewport.scrollTo({
+      top: Math.max(0, alvo.offsetTop - 16),
+      behavior: prefersReducedMotion() ? "auto" : "smooth"
+    });
+    alvo.classList.remove("previa-destaque");
+    void alvo.offsetWidth;
+    alvo.classList.add("previa-destaque");
+  }
+
   function agendarPreview(tipo) {
     if (tipo === "blocos") {
       clearTimeout(previewBlocosTimer);
@@ -1730,6 +1836,8 @@
       }
     } else {
       atualizarPreview();
+      atualizarBotaoRemoverFoto();
+      renderSugestoes();
     }
     renderTrilha();
   }
@@ -2185,6 +2293,16 @@
     document.getElementById("secao-editor").hidden = !libera || !pag?.slug;
     document.getElementById("secao-suporte").hidden = !libera;
     document.getElementById("secao-pagina-marca")?.setAttribute("hidden", "");
+    document.getElementById("btn-previa-abrir")?.toggleAttribute("hidden", !libera || !pag?.slug);
+
+    if (modoAssistente) {
+      ["secao-trilha", "secao-manual", "secao-suporte", "secao-pagina", "secao-estatisticas", "painel-intro"].forEach((id) =>
+        document.getElementById(id)?.setAttribute("hidden", "")
+      );
+      document.getElementById("secao-assinatura")?.setAttribute("hidden", "");
+      document.getElementById("link-manual-topo")?.setAttribute("hidden", "");
+      aplicarVisibilidadePasso(passoAssistente);
+    }
 
     if (pag?.slug) {
       const href = urlAbsoluta(pag.url || `/${pag.slug}/`);
@@ -2384,6 +2502,614 @@
     }
   }
 
+
+  /* ---------------- telefone, sugestões e foto ---------------- */
+
+  function formatarTelefone(digitos) {
+    const d = String(digitos || "").replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d ? `(${d}` : "";
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+
+  function atualizarTesteZap() {
+    const link = document.getElementById("btn-testar-zap");
+    if (!link) return;
+    const numero = montarWhatsapp();
+    if (numero.length < 12) {
+      link.hidden = true;
+      return;
+    }
+    const msg = document.getElementById("campo-mensagem-zap")?.value?.trim();
+    link.href = `https://wa.me/${numero}${msg ? `?text=${encodeURIComponent(msg)}` : ""}`;
+    link.hidden = false;
+  }
+
+  document.getElementById("campo-whatsapp-tel")?.addEventListener("input", (ev) => {
+    const campo = ev.target;
+    const digitos = campo.value.replace(/\D/g, "").replace(/^55(?=\d{10,})/, "").slice(0, 11);
+    campo.value = formatarTelefone(digitos);
+    document.getElementById("campo-whatsapp-ddd").value = digitos.slice(0, 2);
+    document.getElementById("campo-whatsapp-num").value = digitos.slice(2);
+    atualizarTesteZap();
+    agendarPreview();
+    agendarSave();
+  });
+
+  document.getElementById("campo-mensagem-zap")?.addEventListener("input", atualizarTesteZap);
+
+  function slugDeTexto(texto) {
+    return String(texto || "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+  }
+
+  function sugestoesSlug() {
+    const nome = String(perfil?.user?.nome || perfil?.cobranca?.nome || "").trim();
+    const partes = nome.split(/\s+/).filter(Boolean);
+    const lista = [];
+    if (partes.length >= 2) lista.push(slugDeTexto(`${partes[0]} ${partes[partes.length - 1]}`));
+    if (nome) lista.push(slugDeTexto(nome));
+    if (partes.length) lista.push(`${slugDeTexto(partes.length >= 2 ? `${partes[0]} ${partes[partes.length - 1]}` : partes[0])}-rep`);
+    return [...new Set(lista)].filter((s) => s.length >= 3).slice(0, 3);
+  }
+
+  function renderSugestoesSlug() {
+    const caixa = document.getElementById("slug-sugestoes");
+    const lista = document.getElementById("slug-sugestoes-lista");
+    if (!caixa || !lista) return;
+    const opcoes = sugestoesSlug();
+    caixa.hidden = !opcoes.length;
+    lista.innerHTML = opcoes
+      .map((op) => `<button type="button" class="sugestao-chip" data-slug-sugestao="${esc(op)}">${esc(op)}</button>`)
+      .join("");
+  }
+
+  document.getElementById("slug-sugestoes-lista")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-slug-sugestao]");
+    if (!botao) return;
+    const input = document.getElementById("input-slug");
+    input.value = botao.getAttribute("data-slug-sugestao");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  });
+
+  const SEGMENTOS = [
+    "Autopeças", "Alimentos e bebidas", "EPI e segurança", "Ferramentas", "Agro",
+    "Materiais de construção", "Moda e calçados", "Farma e higiene", "Papelaria", "Eletroeletrônicos"
+  ];
+
+  function segmentosAtuais() {
+    return String(document.getElementById("campo-segmentos")?.value || "")
+      .split(/\s*[·,;]\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
+
+  function renderSegmentos() {
+    const lista = document.getElementById("segmentos-sugestoes-lista");
+    if (!lista) return;
+    const atuais = segmentosAtuais().map((p) => p.toLowerCase());
+    lista.innerHTML = SEGMENTOS.map((seg) => {
+      const ativo = atuais.includes(seg.toLowerCase());
+      return `<button type="button" class="sugestao-chip" aria-pressed="${ativo}" data-segmento="${esc(seg)}">${esc(seg)}</button>`;
+    }).join("");
+  }
+
+  document.getElementById("segmentos-sugestoes-lista")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-segmento]");
+    if (!botao) return;
+    const seg = botao.getAttribute("data-segmento");
+    const atuais = segmentosAtuais();
+    const idx = atuais.findIndex((p) => p.toLowerCase() === seg.toLowerCase());
+    if (idx >= 0) atuais.splice(idx, 1);
+    else atuais.push(seg);
+    const campo = document.getElementById("campo-segmentos");
+    campo.value = atuais.join(" · ");
+    campo.dispatchEvent(new Event("input", { bubbles: true }));
+    renderSegmentos();
+  });
+
+  function regiaoTexto(curta) {
+    const ufs = ufsSelecionadas();
+    if (!ufs.length) return "";
+    if (ufs.length > 4) return `${ufs.length} estados`;
+    const nomes = curta || ufs.length > 2 ? ufs : ufs.map((uf) => NOME_UF[uf] || uf);
+    return nomes.length === 1 ? nomes[0] : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+  }
+
+  function cargoSugerido() {
+    const seg = segmentosAtuais()[0];
+    const regiao = regiaoTexto(true);
+    const base = seg ? `Representante de ${seg.charAt(0).toLowerCase()}${seg.slice(1)}` : "Representante comercial";
+    return regiao ? `${base} · ${regiao}` : base;
+  }
+
+  function modelosBio() {
+    const marcas = (paginaDados?.marcas || []).map((m) => m.nome);
+    const listaMarcas = marcas.length
+      ? marcas.length === 1
+        ? marcas[0]
+        : `${marcas.slice(0, -1).join(", ")} e ${marcas[marcas.length - 1]}`
+      : "marcas de confiança";
+    const seg = (segmentosAtuais()[0] || "").toLowerCase() || "produtos para revenda";
+    const regiao = regiaoTexto(false) || "toda a região";
+    return [
+      {
+        rotulo: "Direto ao ponto",
+        texto: `Represento ${listaMarcas} em ${regiao}. Pedido pelo WhatsApp, tabela sempre atualizada e atendimento próximo.`
+      },
+      {
+        rotulo: "Experiência",
+        texto: `Trabalho com ${seg} e atendo revendas e empresas em ${regiao}. Conte comigo para escolher o mix certo e acompanhar cada pedido.`
+      },
+      {
+        rotulo: "Catálogos",
+        texto: `Aqui você encontra os catálogos de ${listaMarcas}. Atendo ${regiao} — fale comigo no WhatsApp para preços e condições.`
+      }
+    ];
+  }
+
+  function renderSugestoes() {
+    renderSegmentos();
+    const cargo = document.getElementById("campo-cargo");
+    const linha = document.getElementById("cargo-sugestao");
+    const botaoCargo = document.getElementById("btn-cargo-sugestao");
+    if (cargo && linha && botaoCargo) {
+      const sugestao = cargoSugerido();
+      linha.hidden = cargo.value.trim() === sugestao;
+      botaoCargo.textContent = `Usar: ${sugestao}`;
+      botaoCargo.dataset.valor = sugestao;
+    }
+    const lista = document.getElementById("bio-modelos-lista");
+    if (lista) {
+      lista.innerHTML = modelosBio()
+        .map((m, i) => `<button type="button" class="sugestao-chip" data-bio-modelo="${i}">${esc(m.rotulo)}</button>`)
+        .join("");
+    }
+  }
+
+  document.getElementById("btn-cargo-sugestao")?.addEventListener("click", (ev) => {
+    const cargo = document.getElementById("campo-cargo");
+    cargo.value = ev.currentTarget.dataset.valor || "";
+    cargo.dispatchEvent(new Event("input", { bubbles: true }));
+    renderSugestoes();
+  });
+
+  document.getElementById("bio-modelos-lista")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-bio-modelo]");
+    if (!botao) return;
+    const modelo = modelosBio()[Number(botao.getAttribute("data-bio-modelo"))];
+    const bio = document.getElementById("campo-bio");
+    if (!modelo || !bio) return;
+    if (bio.value.trim() && bio.value.trim() !== modelo.texto && !window.confirm("Trocar o texto atual pelo modelo?")) return;
+    bio.value = modelo.texto;
+    bio.dispatchEvent(new Event("input", { bubbles: true }));
+    bio.focus();
+  });
+
+  ["campo-cargo", "campo-segmentos", "campo-bio", "campo-nome"].forEach((id) =>
+    document.getElementById(id)?.addEventListener("input", () => {
+      if (id === "campo-cargo" || id === "campo-segmentos") renderSugestoes();
+      renderTrilha();
+    })
+  );
+
+  function atualizarBotaoRemoverFoto() {
+    const botao = document.getElementById("btn-foto-remover");
+    if (botao) botao.hidden = !paginaDados?.foto;
+  }
+
+  document.getElementById("btn-foto-remover")?.addEventListener("click", async (ev) => {
+    const botao = ev.currentTarget;
+    const status = document.getElementById("editor-status");
+    botao.disabled = true;
+    try {
+      await aguardarSalvarTextoPendente();
+      const data = await apiPagina("POST", { acao: "foto_remover" });
+      if (fotoLocalUrl) URL.revokeObjectURL(fotoLocalUrl);
+      fotoLocalUrl = null;
+      limparArquivoCampo(document.getElementById("input-foto"));
+      aplicarPagina(data.pagina);
+      atualizarBotaoRemoverFoto();
+      setStatus(status, "Foto removida.", "ok");
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+    } finally {
+      botao.disabled = false;
+    }
+  });
+
+  document.getElementById("marca-pagina-nome")?.addEventListener("input", (ev) => {
+    const aviso = document.getElementById("marca-nome-aviso");
+    if (aviso) aviso.hidden = !marcaAtual || ev.target.value.trim() === (marcaAtual.nome || "");
+  });
+
+  /* ---------------- remover com "Desfazer" ---------------- */
+
+  const remocoesPendentes = new Map();
+
+  function toastDesfazer() {
+    let toast = document.getElementById("toast-desfazer");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast-desfazer";
+      toast.className = "toast-desfazer";
+      toast.setAttribute("role", "status");
+      toast.innerHTML = `<span class="toast-desfazer__texto"></span><button type="button" class="toast-desfazer__botao">Desfazer</button>`;
+      document.body.appendChild(toast);
+    }
+    return toast;
+  }
+
+  async function enviarRemocao(acao, id, keepalive) {
+    const opts = {
+      method: "POST",
+      headers: await authHeaders(true),
+      body: JSON.stringify({ acao, id })
+    };
+    if (keepalive) opts.keepalive = true;
+    const resp = await fetch("/api/painel/pagina", opts);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.erro || "Falha ao remover.");
+    return data;
+  }
+
+  // A remoção só vai para o servidor depois de 6 s; até lá, "Desfazer" devolve o item.
+  function agendarRemocao({ acao, id, linha, aviso }) {
+    const chave = `${acao}:${id}`;
+    if (remocoesPendentes.has(chave)) return;
+    if (linha) linha.hidden = true;
+    const toast = toastDesfazer();
+    toast.querySelector(".toast-desfazer__texto").textContent = aviso;
+    toast.hidden = false;
+    const executar = async () => {
+      remocoesPendentes.delete(chave);
+      if (!remocoesPendentes.size) toast.hidden = true;
+      try {
+        const data = await enviarRemocao(acao, id, false);
+        aplicarPagina(data.pagina);
+      } catch (erro) {
+        if (linha) linha.hidden = false;
+        setStatus(document.getElementById("editor-status"), erro.message, "erro");
+      }
+    };
+    const timer = setTimeout(executar, 6000);
+    remocoesPendentes.set(chave, { timer, acao, id, linha });
+    toast.querySelector(".toast-desfazer__botao").onclick = () => {
+      for (const [k, item] of remocoesPendentes) {
+        clearTimeout(item.timer);
+        if (item.linha) item.linha.hidden = false;
+        remocoesPendentes.delete(k);
+      }
+      toast.hidden = true;
+    };
+  }
+
+  window.addEventListener("pagehide", () => {
+    for (const [k, item] of remocoesPendentes) {
+      clearTimeout(item.timer);
+      enviarRemocao(item.acao, item.id, true).catch(() => {});
+      remocoesPendentes.delete(k);
+    }
+  });
+
+  /* ---------------- prévia: celular e destaque ---------------- */
+
+  function abrirPrevia() {
+    document.body.classList.add("previa-aberta");
+    document.getElementById("btn-previa-abrir")?.setAttribute("aria-expanded", "true");
+    atualizarPreview();
+    document.getElementById("btn-previa-fechar")?.focus();
+  }
+
+  function fecharPrevia() {
+    document.body.classList.remove("previa-aberta");
+    const botao = document.getElementById("btn-previa-abrir");
+    botao?.setAttribute("aria-expanded", "false");
+    botao?.focus();
+  }
+
+  document.getElementById("btn-previa-abrir")?.addEventListener("click", abrirPrevia);
+  document.getElementById("btn-previa-fechar")?.addEventListener("click", fecharPrevia);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && document.body.classList.contains("previa-aberta")) fecharPrevia();
+  });
+
+  // Links dentro da prévia não tiram o rep do painel.
+  document.getElementById("painel-preview-pagina")?.addEventListener("click", (ev) => {
+    if (ev.target.closest("a")) ev.preventDefault();
+  });
+
+  document.getElementById("secao-editor")?.addEventListener("focusin", (ev) => {
+    const secao = ev.target.closest("[data-alvo-previa]");
+    if (secao) rolarPreviaPara(secao.getAttribute("data-alvo-previa"));
+  });
+
+  function initSecoesRecolhiveis() {
+    document.querySelectorAll(".painel-editor > .briefing-secao").forEach((secao) => {
+      const legenda = secao.querySelector(":scope > legend");
+      if (!legenda || legenda.querySelector(".secao-toggle")) return;
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "secao-toggle";
+      botao.setAttribute("aria-expanded", "true");
+      botao.textContent = "Recolher";
+      botao.addEventListener("click", () => {
+        const recolhida = secao.classList.toggle("briefing-secao--recolhida");
+        botao.setAttribute("aria-expanded", recolhida ? "false" : "true");
+        botao.textContent = recolhida ? "Abrir" : "Recolher";
+      });
+      legenda.appendChild(botao);
+    });
+  }
+
+  /* ---------------- passo a passo (/painel/criar/) ---------------- */
+
+  const PASSOS_ASSISTENTE = [
+    {
+      titulo: "Escolha o endereço da sua página",
+      texto: "É o link que você vai mandar para os clientes. Ele não muda depois, então escolha com calma.",
+      exemplo: "Exemplo: myrep.com.br/joao-silva",
+      obrigatorio: true,
+      pronto: () => itemPronto("url")
+    },
+    {
+      titulo: "Como você quer aparecer?",
+      texto: "Seu nome é o que os clientes procuram. Se você tem uma empresa de representação, coloque também.",
+      exemplo: "Exemplo: João Silva · Silva Representações",
+      obrigatorio: true,
+      pronto: () => itemPronto("nome")
+    },
+    {
+      titulo: "Coloque uma foto ou o logo",
+      texto: "Páginas com foto passam mais confiança. Use uma foto nítida, de frente, ou o logo em fundo simples.",
+      exemplo: "A imagem é ajustada sozinha para ficar leve e bem enquadrada.",
+      pronto: () => itemPronto("foto")
+    },
+    {
+      titulo: "Seu WhatsApp",
+      texto: "Vira o botão principal da página: o cliente toca e já abre a conversa com você.",
+      exemplo: "A mensagem pronta economiza o tempo do cliente. Ajuste se quiser e toque em “Testar no WhatsApp”.",
+      pronto: () => itemPronto("zap")
+    },
+    {
+      titulo: "O que você vende e onde atende",
+      texto: "Toque nas opções ou escreva com suas palavras. Os estados que você marcar pintam o mapa da sua página.",
+      exemplo: "Atende o estado inteiro? Não precisa marcar cidades.",
+      pronto: () => itemPronto("regiao")
+    },
+    {
+      titulo: "Quais marcas você representa?",
+      texto: "Coloque o nome e, se tiver, o logo de cada uma. Cada marca ganha uma página própria na sua página.",
+      exemplo: "Dica: logo em PNG com fundo transparente fica melhor.",
+      pronto: () => itemPronto("marcas")
+    },
+    {
+      titulo: "Seus catálogos",
+      texto: "Envie os PDFs que o cliente costuma pedir e diga de qual marca é cada um.",
+      exemplo: "Arquivos grandes são compactados automaticamente.",
+      pronto: () => itemPronto("catalogos")
+    },
+    {
+      titulo: "Apresentação e cores",
+      texto: "Use uma sugestão ou escreva do seu jeito, e escolha as cores da página.",
+      exemplo: "Você pode mudar tudo depois, quando quiser.",
+      pronto: () => itemPronto("apresentacao")
+    },
+    {
+      titulo: "Tudo pronto para publicar?",
+      texto: "Confira a prévia. Depois de publicar, você continua podendo mudar qualquer coisa no painel.",
+      exemplo: "",
+      pronto: () => itemPronto("publicar")
+    }
+  ];
+
+  function aplicarVisibilidadePasso(n) {
+    document.querySelectorAll("[data-passo]").forEach((el) => {
+      const passos = el.getAttribute("data-passo").split(/\s+/);
+      el.classList.toggle("assistente-oculto", modoAssistente && !passos.includes(String(n)));
+    });
+  }
+
+  function atualizarNavAssistente() {
+    if (!modoAssistente) return;
+    const passo = PASSOS_ASSISTENTE[passoAssistente - 1];
+    const voltar = document.getElementById("btn-assistente-voltar");
+    const pular = document.getElementById("btn-assistente-pular");
+    const continuar = document.getElementById("btn-assistente-continuar");
+    const primeiro = perfil?.pagina?.slug ? 2 : 1;
+    if (voltar) voltar.disabled = passoAssistente <= primeiro;
+    // Um botão só: "Pular por agora" enquanto o passo opcional está vazio, "Continuar" depois.
+    if (pular) pular.hidden = true;
+    if (continuar) {
+      const pronto = passo.pronto();
+      continuar.hidden = passoAssistente === TOTAL_PASSOS;
+      continuar.textContent =
+        passoAssistente === 1 ? "Reservar e continuar" : !passo.obrigatorio && !pronto ? "Pular por agora" : "Continuar";
+      continuar.classList.toggle("btn--primario", !!passo.obrigatorio || pronto || passoAssistente === 1);
+      continuar.classList.toggle("btn--fantasma-ink", !passo.obrigatorio && !pronto && passoAssistente !== 1);
+      continuar.disabled = passoAssistente > 1 && !!passo.obrigatorio && !pronto;
+    }
+  }
+
+  function renderRevisaoAssistente() {
+    const lista = document.getElementById("assistente-checklist");
+    if (!lista) return;
+    lista.innerHTML = ITENS_PAGINA.filter((item) => item.id !== "publicar" && item.id !== "url")
+      .map((item) => {
+        const feito = itemPronto(item.id);
+        return `<li class="assistente__item assistente__item--${feito ? "feito" : "falta"}">
+          <span aria-hidden="true">${feito ? "✓" : "•"}</span>
+          <span>${esc(item.titulo)}${feito ? "" : " — falta"}</span>
+          ${feito ? "" : `<button type="button" class="btn-link" data-ir-passo="${item.passo}">Completar</button>`}
+        </li>`;
+      })
+      .join("");
+  }
+
+  function mostrarFesta() {
+    const slug = perfil?.pagina?.slug || "";
+    const url = `https://www.myrep.com.br/${slug}/`;
+    document.getElementById("assistente-revisao").hidden = true;
+    document.getElementById("assistente-festa").hidden = false;
+    document.getElementById("assistente-texto").hidden = true;
+    document.getElementById("assistente-exemplo").hidden = true;
+    document.getElementById("assistente-titulo").textContent = "Pronto!";
+    const link = document.getElementById("festa-link");
+    link.href = url;
+    link.textContent = url.replace(/^https:\/\//, "");
+    const nome = document.getElementById("campo-nome")?.value?.trim();
+    const texto = `Olá! ${nome ? `Aqui é ${nome}. ` : ""}Agora tenho uma página com minhas marcas, catálogos e contato: ${url}`;
+    document.getElementById("festa-zap").href = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    document.getElementById("assistente-festa-titulo")?.focus();
+  }
+
+  function irParaPasso(n) {
+    const primeiro = perfil?.pagina?.slug ? 2 : 1;
+    passoAssistente = Math.min(TOTAL_PASSOS, Math.max(primeiro, n));
+    const passo = PASSOS_ASSISTENTE[passoAssistente - 1];
+    document.body.dataset.passo = String(passoAssistente);
+    aplicarVisibilidadePasso(passoAssistente);
+
+    document.getElementById("assistente-contador").textContent = `Passo ${passoAssistente} de ${TOTAL_PASSOS}`;
+    document.getElementById("assistente-barra").style.width = `${Math.round((passoAssistente / TOTAL_PASSOS) * 100)}%`;
+    const titulo = document.getElementById("assistente-titulo");
+    titulo.textContent = passo.titulo;
+    const texto = document.getElementById("assistente-texto");
+    texto.textContent = passo.texto;
+    texto.hidden = false;
+    const exemplo = document.getElementById("assistente-exemplo");
+    exemplo.textContent = passo.exemplo;
+    exemplo.hidden = !passo.exemplo;
+
+    const ultimo = passoAssistente === TOTAL_PASSOS;
+    document.getElementById("assistente-revisao").hidden = !ultimo;
+    document.getElementById("assistente-festa").hidden = true;
+    document.getElementById("btn-previa-abrir")?.toggleAttribute("hidden", passoAssistente === 1);
+
+    if (passoAssistente === 1) renderSugestoesSlug();
+    if (passoAssistente === 4) {
+      const msg = document.getElementById("campo-mensagem-zap");
+      if (msg && !msg.value.trim()) {
+        const nome = document.getElementById("campo-nome")?.value?.trim().split(/\s+/)[0];
+        msg.value = `Olá${nome ? `, ${nome}` : ""}! Vi sua página no My Rep e quero falar com você.`;
+        msg.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+    if (passoAssistente === 8) renderSugestoes();
+    if (ultimo) {
+      renderRevisaoAssistente();
+      if (perfil?.pagina?.publicado) mostrarFesta();
+    }
+
+    atualizarNavAssistente();
+    if (perfil?.pagina?.slug) agendarSave();
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    titulo.focus({ preventScroll: true });
+  }
+
+  function iniciarAssistente() {
+    if (!assinaturaLibera(perfil?.assinatura)) {
+      location.replace("/painel/");
+      return;
+    }
+    document.body.classList.add("modo-assistente");
+    document.getElementById("secao-assistente").hidden = false;
+    const nav = document.getElementById("assistente-nav");
+    nav.hidden = false;
+    const botaoPrevia = document.getElementById("btn-previa-abrir");
+    if (botaoPrevia) {
+      botaoPrevia.textContent = "Prévia";
+      botaoPrevia.classList.replace("btn--primario", "btn--fantasma-ink");
+      nav.insertBefore(botaoPrevia, document.getElementById("btn-assistente-continuar"));
+    }
+    if (!perfil?.pagina?.slug) {
+      irParaPasso(1);
+      return;
+    }
+    const salvo = Number(paginaDados?.assistentePasso) || 0;
+    const primeiroPendente = PASSOS_ASSISTENTE.findIndex((p, i) => i > 0 && !p.pronto()) + 1;
+    irParaPasso(salvo >= 2 ? salvo : primeiroPendente || 2);
+  }
+
+  document.getElementById("btn-assistente-voltar")?.addEventListener("click", () => irParaPasso(passoAssistente - 1));
+  document.getElementById("btn-assistente-pular")?.addEventListener("click", () => irParaPasso(passoAssistente + 1));
+  document.getElementById("btn-assistente-continuar")?.addEventListener("click", () => {
+    if (passoAssistente === 1 && !perfil?.pagina?.slug) {
+      const input = document.getElementById("input-slug");
+      if (!input?.value?.trim()) {
+        setStatus(document.getElementById("slug-status"), "Escolha uma sugestão ou escreva o endereço.", "erro");
+        input?.focus();
+        return;
+      }
+      document.getElementById("form-slug")?.requestSubmit();
+      return;
+    }
+    irParaPasso(passoAssistente + 1);
+  });
+
+  document.getElementById("assistente-checklist")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-ir-passo]");
+    if (botao) irParaPasso(Number(botao.getAttribute("data-ir-passo")));
+  });
+
+  document.getElementById("btn-assistente-publicar")?.addEventListener("click", async (ev) => {
+    const botao = ev.currentTarget;
+    const status = document.getElementById("assistente-publicar-status");
+    botao.disabled = true;
+    setStatus(status, "Publicando…", "info");
+    try {
+      await aguardarSalvarTextoPendente();
+      const fd = new FormData();
+      fd.append("acao", "publicar");
+      const data = await midiaRequest(fd);
+      perfil.pagina = data.pagina;
+      assistenteConcluido = true;
+      await apiPagina("PUT", payloadTexto());
+      setStatus(status, "", "");
+      renderVisibilidade();
+      mostrarFesta();
+    } catch (erro) {
+      setStatus(status, erro.message, "erro");
+    } finally {
+      botao.disabled = false;
+    }
+  });
+
+  document.getElementById("festa-copiar")?.addEventListener("click", async () => {
+    const status = document.getElementById("festa-status");
+    try {
+      await navigator.clipboard.writeText(document.getElementById("festa-link").href);
+      setStatus(status, "Link copiado.", "ok");
+    } catch {
+      setStatus(status, "Não foi possível copiar. Segure o link para copiar.", "erro");
+    }
+  });
+
+  document.getElementById("festa-qr")?.addEventListener("click", async () => {
+    const slug = perfil?.pagina?.slug;
+    if (!slug || !window.MyRepQr) return;
+    try {
+      await window.MyRepQr.baixarPng(`https://www.myrep.com.br/${slug}/`, `myrep-${slug}-qr`);
+    } catch (erro) {
+      setStatus(document.getElementById("festa-status"), erro.message, "erro");
+    }
+  });
+
+  // Qualquer edição reavalia se dá para continuar (passos obrigatórios).
+  document.addEventListener("input", () => {
+    if (modoAssistente) atualizarNavAssistente();
+  });
+  document.addEventListener("change", () => {
+    if (modoAssistente) atualizarNavAssistente();
+  });
+
   async function carregar() {
     try {
       await esperarAuth();
@@ -2394,9 +3120,15 @@
       }
       const data = await window.MyRepAuth.apiPerfil();
       await renderPerfil(data);
+      // Conta nova (assinatura ativa e ainda sem endereço): começa pelo passo a passo.
+      if (!modoAssistente && !modoMarca && assinaturaLibera(data.assinatura) && !data.pagina?.slug) {
+        location.replace("/painel/criar/");
+        return;
+      }
       carregando.hidden = true;
       conteudo.hidden = false;
       btnSair.hidden = false;
+      if (modoAssistente) iniciarAssistente();
       carregarSuporte();
       carregarEstatisticas();
       aguardarConfirmacaoPagamento();
@@ -2443,7 +3175,7 @@
       try {
         const data = await window.MyRepAuth.apiPerfil();
         if (assinaturaLibera(data?.assinatura)) {
-          location.replace(location.pathname);
+          location.replace(data?.pagina?.slug ? location.pathname : "/painel/criar/");
           return;
         }
       } catch {
@@ -2588,7 +3320,8 @@
       renderVisibilidade();
       preencherEditor(data.pagina.dados);
       setStatus(status, data.aviso, "ok");
-      focarProximoPassoTrilha();
+      if (modoAssistente) irParaPasso(2);
+      else focarProximoPassoTrilha();
     } catch (erro) {
       setStatus(status, erro.message, "erro");
     }
@@ -2681,8 +3414,21 @@
     });
   });
 
+  document.getElementById("ufs-grid")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-regiao-toda]");
+    if (!botao) return;
+    const caixas = [...botao.closest(".ufs-regiao").querySelectorAll("input[type=checkbox]")];
+    const marcar = !caixas.every((c) => c.checked);
+    caixas.forEach((c) => {
+      c.checked = marcar;
+    });
+    caixas[0]?.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   document.getElementById("ufs-grid")?.addEventListener("change", async (ev) => {
     if (ev.target.type !== "checkbox") return;
+    atualizarBotoesRegiao();
+    renderSugestoes();
     const estados = ufsSelecionadas();
     await renderCidadesEditor(estados, cidadesPorUf());
     agendarPreview("blocos");
@@ -2836,7 +3582,7 @@
         });
         setStatus(
           status,
-          `Reduzido de ${formatarMb(tamanhoOriginal)} para ${formatarMb(envio.size)}.`,
+          `Reduzido de ${formatarMb(tamanhoOriginal)} para ${formatarMb(envio.size)} para caber. O texto do PDF pode não ficar selecionável.`,
           "info"
         );
       }
@@ -3032,13 +3778,26 @@
     }
 
     if (!btn) return;
-    const fd = new FormData();
-    fd.append("acao", "catalogo_remover");
-    fd.append("id", btn.getAttribute("data-rm-catalogo"));
+    agendarRemocao({
+      acao: "catalogo_remover",
+      id: btn.getAttribute("data-rm-catalogo"),
+      linha: btn.closest("li"),
+      aviso: `Catálogo “${btn.getAttribute("data-rm-nome") || "sem nome"}” removido.`
+    });
+  });
+
+  document.getElementById("lista-catalogos")?.addEventListener("change", async (ev) => {
+    const seletor = ev.target.closest("[data-cat-marca]");
+    if (!seletor) return;
+    const status = document.getElementById("editor-status");
     try {
-      const data = await midiaRequest(fd);
+      const data = await apiPagina("POST", {
+        acao: "catalogo_editar",
+        id: seletor.getAttribute("data-cat-marca"),
+        marcaId: seletor.value || ""
+      });
       aplicarPagina(data.pagina);
-      setStatus(status, "Catálogo removido.", "ok");
+      setStatus(status, "Marca do catálogo atualizada.", "ok");
     } catch (erro) {
       setStatus(status, erro.message, "erro");
     }
@@ -3129,16 +3888,16 @@
     }
 
     if (!btn) return;
-    const fd = new FormData();
-    fd.append("acao", "marca_remover");
-    fd.append("id", btn.getAttribute("data-rm-marca"));
-    try {
-      const data = await midiaRequest(fd);
-      aplicarPagina(data.pagina);
-      setStatus(status, "Marca removida.", "ok");
-    } catch (erro) {
-      setStatus(status, erro.message, "erro");
-    }
+    const id = btn.getAttribute("data-rm-marca");
+    const nCats = (paginaDados?.catalogos || []).filter((c) => c.marcaId === id).length;
+    agendarRemocao({
+      acao: "marca_remover",
+      id,
+      linha: btn.closest("li"),
+      aviso: `Marca “${btn.getAttribute("data-rm-nome") || ""}” removida.${
+        nCats ? ` ${nCats === 1 ? "O catálogo dela vai" : `Os ${nCats} catálogos dela vão`} para “Outros”.` : ""
+      }`
+    });
   });
 
   document.getElementById("btn-publicar")?.addEventListener("click", async (ev) => {
@@ -3247,5 +4006,6 @@
     el.addEventListener("click", abrirTrilha);
   });
   initCamposArquivo();
+  initSecoesRecolhiveis();
   carregar();
 })();

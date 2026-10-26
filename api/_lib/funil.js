@@ -27,7 +27,11 @@ async function carregarBase() {
   const [usuarios, ass, pags] = await Promise.all([
     listarTodosUsuarios(),
     sb.from("assinaturas").select("user_id, plano, status, created_at, updated_at").limit(10000),
-    sb.from("representantes").select("user_id, publicado, publicado_em").not("user_id", "is", null).limit(10000)
+    sb
+      .from("representantes")
+      .select("user_id, publicado, publicado_em, assistentePasso:dados->assistentePasso, assistenteConcluido:dados->assistenteConcluido")
+      .not("user_id", "is", null)
+      .limit(10000)
   ]);
   if (ass.error) throw ass.error;
   if (pags.error) throw pags.error;
@@ -57,10 +61,34 @@ function contarFunil(base, desdeIso) {
   return etapas;
 }
 
+/**
+ * Onde o passo a passo para: entre quem pagou e ainda não publicou nem concluiu,
+ * quantos estão em cada passo (sem endereço reservado = passo 1).
+ */
+function contarAssistente(base) {
+  const porPasso = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, 0]));
+  let concluidos = 0;
+  for (const u of base.usuarios) {
+    if (!pagou(base.assinaturas.get(u.id))) continue;
+    const pagina = base.paginas.get(u.id);
+    if (pagina?.assistenteConcluido === true || pagina?.publicado) {
+      concluidos += 1;
+      continue;
+    }
+    const passo = Number(pagina?.assistentePasso) || 1;
+    porPasso[Math.min(9, Math.max(1, passo))] += 1;
+  }
+  return { porPasso, concluidos };
+}
+
 async function calcularFunil() {
   const base = await carregarBase();
   const desde30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  return { ultimos30: contarFunil(base, desde30), total: contarFunil(base, null) };
+  return {
+    ultimos30: contarFunil(base, desde30),
+    total: contarFunil(base, null),
+    assistente: contarAssistente(base)
+  };
 }
 
-module.exports = { carregarBase, calcularFunil, pagou };
+module.exports = { carregarBase, calcularFunil, contarAssistente, pagou };

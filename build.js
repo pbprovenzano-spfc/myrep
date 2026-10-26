@@ -251,6 +251,11 @@ async function build() {
   fs.writeFileSync(path.join(pastaPainelMarca, "index.html"), injetarSupabase(tplPainel));
   console.log("  ✓ /painel/marca/");
 
+  const pastaPainelCriar = path.join(DIST, "painel", "criar");
+  fs.mkdirSync(pastaPainelCriar, { recursive: true });
+  fs.writeFileSync(path.join(pastaPainelCriar, "index.html"), injetarSupabase(tplPainel));
+  console.log("  ✓ /painel/criar/ (passo a passo)");
+
   const tplAssinatura = fs.readFileSync(path.join(DIR_TEMPLATE, "assinatura.html"), "utf8");
   const pastaAssinatura = path.join(DIST, "painel", "assinatura");
   fs.mkdirSync(pastaAssinatura, { recursive: true });

@@ -27,7 +27,7 @@
   <p class="eyebrow">Meu painel</p>
   <div class="painel-topo__acoes">
     <a class="painel-topo__manual" href="/painel/assinatura/" id="link-assinatura-topo" hidden>Minha assinatura</a>
-    <a class="painel-topo__manual" href="#secao-manual" data-abrir-manual id="link-manual-topo">Manual de uso</a>
+    <a class="painel-topo__manual" href="#secao-manual" data-abrir-manual id="link-manual-topo">Ajuda</a>
     <button type="button" class="btn btn--fantasma-ink assinantes-sair" id="btn-sair" hidden>Sair</button>
   </div>
 </header>
@@ -46,12 +46,18 @@
 
     <section class="painel-card painel-trilha" id="secao-trilha" aria-labelledby="trilha-titulo">
       <div class="campo__cabeca">
-        <h2 class="painel-card__titulo" id="trilha-titulo" tabindex="-1">Primeiros passos</h2>
+        <h2 class="painel-card__titulo" id="trilha-titulo" tabindex="-1">Sua página</h2>
         <button type="button" class="painel-trilha__toggle" id="btn-trilha-toggle" aria-expanded="true" aria-controls="trilha-corpo">Ocultar</button>
       </div>
       <div id="trilha-corpo">
-        <p class="painel-card__texto" id="trilha-resumo">Siga a lista. O passo em destaque é o que falta agora.</p>
+        <div class="painel-medidor" id="painel-medidor">
+          <p class="painel-medidor__numero"><strong id="medidor-pct">0%</strong> pronta</p>
+          <div class="painel-medidor__barra" aria-hidden="true"><span id="medidor-barra"></span></div>
+        </div>
         <p class="painel-trilha__agora" id="trilha-agora"></p>
+        <p class="painel-trilha__assistente" id="trilha-assistente" hidden>
+          <a class="btn btn--primario" href="/painel/criar/" id="btn-assistente-abrir">Montar com o passo a passo</a>
+        </p>
         <ol class="painel-trilha__lista" id="trilha-lista"></ol>
         <p class="painel-trilha__manual">
           <a href="#secao-manual" data-abrir-manual>Abrir o manual de uso</a>
@@ -134,7 +140,39 @@
       <p class="briefing-status" id="checkout-status" role="status"></p>
     </section>
 
-    <section class="painel-card" id="secao-url" hidden>
+    <section class="assistente" id="secao-assistente" hidden aria-labelledby="assistente-titulo">
+      <div class="assistente__topo">
+        <p class="assistente__contador" id="assistente-contador">Passo 1 de 9</p>
+        <a class="assistente__sair" href="/painel/" id="assistente-sair">Sair do passo a passo</a>
+      </div>
+      <div class="assistente__barra" aria-hidden="true"><span id="assistente-barra"></span></div>
+      <h1 class="assistente__titulo" id="assistente-titulo" tabindex="-1"></h1>
+      <p class="assistente__texto" id="assistente-texto"></p>
+      <p class="assistente__exemplo" id="assistente-exemplo"></p>
+
+      <div class="assistente__revisao" id="assistente-revisao" hidden>
+        <ul class="assistente__checklist" id="assistente-checklist"></ul>
+        <button type="button" class="btn btn--primario assistente__publicar" id="btn-assistente-publicar">Publicar minha página</button>
+        <p class="briefing-status" id="assistente-publicar-status" role="status"></p>
+      </div>
+
+      <div class="assistente__festa" id="assistente-festa" hidden>
+        <p class="assistente__festa-selo" aria-hidden="true">✓</p>
+        <h2 class="assistente__festa-titulo" tabindex="-1" id="assistente-festa-titulo">Sua página está no ar!</h2>
+        <p class="assistente__festa-link"><a id="festa-link" href="#" target="_blank" rel="noopener"></a></p>
+        <p class="painel-card__texto">Agora é mandar para os clientes. Quanto antes você compartilhar, antes chegam os primeiros contatos.</p>
+        <div class="painel-acoes">
+          <a class="btn btn--primario" id="festa-zap" href="#" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+          <button type="button" class="btn btn--fantasma-ink" id="festa-copiar">Copiar link</button>
+          <button type="button" class="btn btn--fantasma-ink" id="festa-qr">Baixar QR code</button>
+        </div>
+        <p class="painel-card__meta">Dica: cole o link na bio do Instagram e na assinatura do seu e-mail.</p>
+        <p class="briefing-status" id="festa-status" role="status"></p>
+        <a class="btn btn--fantasma-ink" href="/painel/" id="festa-painel">Ir para o meu painel</a>
+      </div>
+    </section>
+
+    <section class="painel-card" id="secao-url" data-passo="1" hidden>
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo">Sua URL</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-url" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
@@ -145,6 +183,10 @@
         <p><strong>Exemplo:</strong> se você escreve <code>silva-protecao</code>, o link fica <code>myrep.com.br/silva-protecao/</code>.</p>
       </div>
       <p class="painel-card__texto">Escolha o endereço da sua página. <strong>Esta escolha é definitiva</strong> — depois de confirmar, não será possível alterar.</p>
+      <div class="sugestoes" id="slug-sugestoes" hidden>
+        <p class="sugestoes__rotulo">Sugestões para você:</p>
+        <div class="sugestoes__lista" id="slug-sugestoes-lista"></div>
+      </div>
       <form id="form-slug" class="painel-form-inline" novalidate>
         <label class="campo campo--largo">
           <span class="campo__rotulo" id="rotulo-slug">myrep.com.br/</span>
@@ -155,9 +197,356 @@
       </form>
     </section>
 
+    <div class="painel-editor-layout" id="secao-editor" hidden>
+      <section class="painel-card painel-editor" data-passo="2 3 4 5 6 7 8">
+      <h2 class="painel-card__titulo editor-so-normal">Editor da página</h2>
+      <p class="painel-card__texto editor-so-normal">Tudo que você preenche aparece na prévia e é salvo sozinho no seu link. Não precisa clicar em salvar.</p>
+
+      <fieldset class="briefing-secao" id="secao-identidade" data-passo="2 3 8" data-alvo-previa=".cartao__perfil">
+        <legend>Topo da página</legend>
+        <p class="campo__ajuda">Foto, nome e apresentação que o cliente vê primeiro.</p>
+        <fieldset class="campo campo--opcoes campo--cartoes" data-passo="3">
+          <legend class="campo__rotulo">Que imagem você vai usar?</legend>
+          <label class="opcao-cartao"><input type="radio" name="fotoTipo" value="pessoa" checked><span class="opcao-cartao__titulo">Uma foto minha</span><span class="opcao-cartao__texto">Fica num círculo, como um retrato.</span></label>
+          <label class="opcao-cartao"><input type="radio" name="fotoTipo" value="logo"><span class="opcao-cartao__titulo">O logo da empresa</span><span class="opcao-cartao__texto">Centralizado, sem cortar o símbolo.</span></label>
+        </fieldset>
+        <div class="campo campo-arquivo" data-tipo="imagem" data-passo="3">
+          <div class="campo__cabeca">
+            <span class="campo__rotulo" id="rotulo-foto">Foto ou logo principal</span>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-foto" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-foto" hidden>
+            <p>A imagem do topo da sua página, em um recorte redondo.</p>
+            <p><strong>Na página:</strong> fica acima do nome, como um retrato ou um logo.</p>
+            <p><strong>Dica:</strong> use uma foto nítida, de frente, ou um logo em fundo simples. JPG, PNG ou WEBP até 8 MB.</p>
+          </div>
+          <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-foto" aria-describedby="ajuda-foto foto-dica" id="zona-foto">
+            <input id="input-foto" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="campo-arquivo__input" tabindex="-1">
+            <div class="campo-arquivo__vazio">
+              <span class="campo-arquivo__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+              </span>
+              <p class="campo-arquivo__titulo">Toque para escolher a foto ou o logo</p>
+              <p class="campo-arquivo__dica" id="foto-dica">JPG, PNG ou WEBP · até 8 MB</p>
+            </div>
+            <div class="campo-arquivo__preenchido" hidden>
+              <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+              <div class="campo-arquivo__info">
+                <p class="campo-arquivo__nome"></p>
+                <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-link foto-remover" id="btn-foto-remover" hidden>Remover foto</button>
+        </div>
+        <div class="campo" data-passo="2">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-empresa">Nome da sua empresa <span class="campo__opcional">(opcional)</span></label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-empresa" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-empresa" hidden>
+            <p>O nome da <strong>sua</strong> empresa de representação, se você tiver uma. As marcas que você representa entram mais adiante, em “Marcas”.</p>
+            <p><strong>Na página:</strong> aparece no topo, junto do seu nome.</p>
+            <p><strong>Exemplo:</strong> Silva Representações</p>
+          </div>
+          <input id="campo-empresa" type="text" maxlength="120" aria-describedby="ajuda-empresa">
+        </div>
+        <div class="campo" data-passo="2">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-nome">Seu nome <span class="campo__req">obrigatório</span></label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-nome" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-nome" hidden>
+            <p>Como os clientes te conhecem e te chamam.</p>
+            <p><strong>Na página:</strong> aparece no topo, grande se o destaque for o seu nome.</p>
+            <p><strong>Exemplo:</strong> Ana Souza</p>
+          </div>
+          <input id="campo-nome" type="text" maxlength="120" required aria-describedby="ajuda-nome" aria-required="true">
+        </div>
+        <fieldset class="campo campo--opcoes" data-passo="2" id="campo-destaque">
+          <legend class="campo__rotulo">O que aparece em letras grandes</legend>
+          <div class="campo__cabeca">
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-destaque" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-destaque" hidden>
+            <p>Define qual nome fica <strong>grande no topo</strong> da sua página.</p>
+            <p>Escolha <strong>Meu nome</strong> se seus clientes te procuram pelo nome. Escolha <strong>Empresa</strong> se conhecem mais a marca que você representa.</p>
+          </div>
+          <label class="opcao"><input type="radio" name="destaque" value="pessoa" checked> Meu nome</label>
+          <label class="opcao"><input type="radio" name="destaque" value="empresa"> O nome da empresa</label>
+        </fieldset>
+        <div class="campo" data-passo="8">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-cargo">Linha abaixo do nome</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-cargo" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-cargo" hidden>
+            <p>Uma linha que descreve o que você faz e onde atende.</p>
+            <p><strong>Na página:</strong> aparece logo abaixo do nome, no topo.</p>
+            <p><strong>Exemplo:</strong> Representante comercial · Bahia e Sergipe</p>
+          </div>
+          <input id="campo-cargo" type="text" maxlength="160" aria-describedby="ajuda-cargo" placeholder="Ex.: Representante comercial · Bahia e Sergipe">
+          <p class="sugestao-linha" id="cargo-sugestao" hidden><button type="button" class="btn-link" id="btn-cargo-sugestao"></button></p>
+        </div>
+        <div class="campo" data-passo="8">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-bio">Apresentação</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-bio" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-bio" hidden>
+            <p>Um parágrafo curto sobre você e o que oferece.</p>
+            <p><strong>Na página:</strong> aparece abaixo do cargo, no topo.</p>
+            <p><strong>Exemplo:</strong> Represento linhas de EPI e ferramentas no Nordeste, com entrega rápida e suporte técnico.</p>
+          </div>
+          <div class="sugestoes" id="bio-modelos">
+            <p class="sugestoes__rotulo">Comece por um modelo e ajuste:</p>
+            <div class="sugestoes__lista" id="bio-modelos-lista"></div>
+          </div>
+          <textarea id="campo-bio" rows="4" maxlength="600" aria-describedby="ajuda-bio" placeholder="Conte em poucas linhas quem você é e o que representa."></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset class="briefing-secao" id="secao-whatsapp" data-passo="4" data-alvo-previa=".acoes">
+        <legend>WhatsApp e contatos</legend>
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" id="rotulo-whatsapp" for="campo-whatsapp-tel">WhatsApp com DDD <span class="campo__opcional">(recomendado)</span></label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-whatsapp" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-whatsapp" hidden>
+            <p>O número em que você atende clientes.</p>
+            <p><strong>Na página:</strong> vira o botão <strong>Falar no WhatsApp</strong>.</p>
+            <p><strong>Exemplo:</strong> DDD 71 e número 99999-9999.</p>
+          </div>
+          <div class="fone-linha">
+            <span class="fone-ddi" aria-hidden="true">+55</span>
+            <input id="campo-whatsapp-tel" type="tel" inputmode="numeric" maxlength="15" placeholder="(71) 99999-9999" aria-describedby="ajuda-whatsapp" autocomplete="tel-national">
+            <input id="campo-whatsapp-ddd" type="hidden">
+            <input id="campo-whatsapp-num" type="hidden">
+          </div>
+          <p class="sugestao-linha"><a class="btn-link" id="btn-testar-zap" href="#" target="_blank" rel="noopener" hidden>Testar no WhatsApp</a></p>
+        </div>
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-mensagem-zap">Mensagem padrão do WhatsApp (opcional)</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-mensagem-zap" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-mensagem-zap" hidden>
+            <p>Texto que já vem escrito quando o cliente abre a conversa no WhatsApp.</p>
+            <p><strong>Na página:</strong> não aparece escrito — só entra na conversa, pronto para enviar.</p>
+            <p><strong>Exemplo:</strong> Olá, vi sua página e quero falar sobre representação.</p>
+          </div>
+          <input id="campo-mensagem-zap" type="text" maxlength="200" aria-describedby="ajuda-mensagem-zap" placeholder="Olá, vi sua página e quero falar sobre representação.">
+        </div>
+
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-email">E-mail (opcional)</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-email" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-email" hidden>
+            <p>Um e-mail em que o cliente possa escrever para você.</p>
+            <p><strong>Na página:</strong> vira um botão de e-mail na área de contato. Ao clicar, abre o programa de e-mail do cliente.</p>
+            <p><strong>Exemplo:</strong> contato@suamarca.com.br</p>
+          </div>
+          <input id="campo-email" type="email" maxlength="160" placeholder="contato@suamarca.com.br" autocomplete="email" spellcheck="false" aria-describedby="ajuda-email">
+        </div>
+
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-instagram">Instagram (opcional)</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-instagram" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-instagram" hidden>
+            <p>Seu perfil no Instagram, se quiser mostrar.</p>
+            <p><strong>Na página:</strong> aparece na área de contato, com um link para o perfil.</p>
+            <p><strong>Exemplo:</strong> @seuusuario ou o link completo do Instagram.</p>
+          </div>
+          <input id="campo-instagram" type="text" maxlength="200" placeholder="@seuusuario" autocomplete="off" spellcheck="false" aria-describedby="ajuda-instagram">
+        </div>
+      </fieldset>
+
+      <fieldset class="briefing-secao" id="secao-marcas" data-passo="6" data-alvo-previa=".bloco--marcas">
+        <legend>Marcas que você representa</legend>
+        <div class="campo__cabeca">
+          <p class="campo__ajuda" id="marcas-ajuda">Cada marca vira um logo na sua página. Quem tocar abre uma página só dela, que você completa depois em “Montar página”.</p>
+          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-marcas" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+        </div>
+        <div class="ajuda__painel" id="ajuda-marcas" hidden>
+          <p>As empresas que você representa.</p>
+          <p><strong>Na página:</strong> os logos aparecem em grade. Um clique abre a página daquela marca.</p>
+          <p><strong>Exemplo:</strong> adicione “3M” com o logo. Depois use <strong>Montar página</strong> para escrever a apresentação e o site dela.</p>
+        </div>
+        <ul class="painel-lista" id="lista-marcas" aria-describedby="marcas-ajuda"></ul>
+        <form class="painel-form-inline" id="form-marca-add">
+          <div class="campo">
+            <label class="campo__rotulo" for="marca-add-nome">Nome da marca <span class="campo__req">obrigatório</span></label>
+            <input id="marca-add-nome" name="nome" type="text" maxlength="120" required placeholder="Ex.: 3M" aria-required="true">
+          </div>
+          <div class="campo campo-arquivo" data-tipo="imagem">
+            <span class="campo__rotulo" id="rotulo-logo-marca">Logo</span>
+            <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-logo-marca" aria-describedby="logo-marca-dica">
+              <input name="arquivo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="campo-arquivo__input" tabindex="-1">
+              <div class="campo-arquivo__vazio">
+                <span class="campo-arquivo__icone" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                </span>
+                <p class="campo-arquivo__titulo">Clique ou solte o logo da marca</p>
+                <p class="campo-arquivo__dica" id="logo-marca-dica">JPG, PNG ou WEBP · até 8 MB</p>
+              </div>
+              <div class="campo-arquivo__preenchido" hidden>
+                <img class="campo-arquivo__thumb" alt="" width="56" height="56">
+                <div class="campo-arquivo__info">
+                  <p class="campo-arquivo__nome"></p>
+                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn--primario" type="submit">Adicionar marca</button>
+        </form>
+      </fieldset>
+
+      <fieldset class="briefing-secao" id="secao-atuacao" data-passo="5" data-alvo-previa=".bloco--atuacao">
+        <legend>O que você vende e onde</legend>
+        <div class="campo">
+          <div class="campo__cabeca">
+            <label class="campo__rotulo" for="campo-segmentos">O que você vende?</label>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-segmentos" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-segmentos" hidden>
+            <p>Os segmentos em que você trabalha, em poucas palavras.</p>
+            <p><strong>Na página:</strong> o texto aparece abaixo do mapa.</p>
+            <p><strong>Exemplo:</strong> Agro, EPI, Autopeças</p>
+          </div>
+          <div class="sugestoes" id="segmentos-sugestoes">
+            <div class="sugestoes__lista" id="segmentos-sugestoes-lista"></div>
+          </div>
+          <input id="campo-segmentos" type="text" maxlength="300" placeholder="Ex.: Agro, EPI, Autopeças" aria-describedby="ajuda-segmentos">
+        </div>
+        <fieldset class="campo campo--ufs">
+          <legend class="campo__rotulo">Estados onde você atende</legend>
+          <div class="campo__cabeca">
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-ufs" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-ufs" hidden>
+            <p>Os estados em que você atende.</p>
+            <p><strong>Na página:</strong> eles pintam o mapa. Com um estado, o cliente já vê as cidades. Com dois ou mais, vê o Brasil e pode abrir cada estado.</p>
+            <p><strong>Exemplo:</strong> marque BA e SE se for a sua praça.</p>
+          </div>
+          <div class="ufs-grid" id="ufs-grid"></div>
+        </fieldset>
+        <div class="campo" id="campo-cidades-editor">
+          <div class="campo__cabeca">
+            <span class="campo__rotulo">Cidades <span class="campo__opcional">(opcional)</span></span>
+            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-cidades" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+          </div>
+          <div class="ajuda__painel" id="ajuda-cidades" hidden>
+            <p>Os municípios de cada estado que você escolheu.</p>
+            <p><strong>Na página:</strong> as cidades marcadas aparecem no mapa. Se não marcar nenhuma, o estado inteiro fica pintado — use isso se você atende o estado todo.</p>
+            <p><strong>Exemplo:</strong> em BA, busque Salvador e Feira de Santana e marque só essas.</p>
+          </div>
+          <p class="campo__ajuda" id="cidades-ajuda">Selecione os municípios em cada estado. Sem seleção, o estado inteiro aparece no mapa.</p>
+          <div id="cidades-por-uf-editor" class="cidades-por-uf" aria-describedby="cidades-ajuda"></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="briefing-secao" id="secao-catalogos" data-passo="7" data-alvo-previa=".bloco--links">
+        <legend>Catálogos</legend>
+        <div class="campo__cabeca">
+          <p class="campo__ajuda" id="catalogos-ajuda">PDFs que o cliente baixa na sua página. Se vincular a uma marca, o arquivo fica agrupado nela.</p>
+          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-catalogos" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+        </div>
+        <div class="ajuda__painel" id="ajuda-catalogos" hidden>
+          <p>Os catálogos, tabelas ou listas de produto que você quer disponibilizar.</p>
+          <p><strong>Na página:</strong> cada PDF vira um botão para abrir ou baixar. Vinculado a uma marca, ele aparece no grupo dessa marca e também na página dela.</p>
+          <p><strong>Exemplo:</strong> título “Catálogo 2026”, marca “3M”, arquivo em PDF. Até {{UPLOAD_MAX_MB}} MB; se for maior, o painel compacta automaticamente.</p>
+        </div>
+        <ul class="painel-lista" id="lista-catalogos" aria-describedby="catalogos-ajuda"></ul>
+        <form class="painel-form-inline" id="form-catalogo-add">
+          <div class="campo">
+            <label class="campo__rotulo" for="catalogo-add-titulo">Nome exibido <span class="campo__req">obrigatório</span></label>
+            <input id="catalogo-add-titulo" name="titulo" type="text" maxlength="120" required placeholder="Catálogo 2026" aria-required="true">
+          </div>
+          <div class="campo">
+            <div class="campo__cabeca">
+              <label class="campo__rotulo" for="select-marca-catalogo">De qual marca é este catálogo?</label>
+              <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-marca-catalogo" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+            </div>
+            <div class="ajuda__painel" id="ajuda-marca-catalogo" hidden>
+              <p>Opcional. Liga o PDF a uma marca que você já cadastrou.</p>
+              <p><strong>Na página:</strong> o catálogo entra no grupo dessa marca. Sem vínculo, ele fica em “Outros”.</p>
+              <p>Se ainda não adicionou a marca, volte ao bloco <strong>Marcas representadas</strong>.</p>
+            </div>
+            <select name="marcaId" id="select-marca-catalogo" aria-describedby="ajuda-marca-catalogo">
+              <option value="">Nenhuma / vários</option>
+            </select>
+          </div>
+          <div class="campo campo-arquivo" data-tipo="pdf">
+            <span class="campo__rotulo" id="rotulo-catalogo-pdf">Arquivo PDF (até {{UPLOAD_MAX_MB}} MB) <span class="campo__req">obrigatório</span></span>
+            <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-catalogo-pdf" aria-describedby="catalogo-pdf-dica">
+              <input name="arquivo" type="file" accept="application/pdf,.pdf" required class="campo-arquivo__input" tabindex="-1">
+              <div class="campo-arquivo__vazio">
+                <span class="campo-arquivo__icone" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+                </span>
+                <p class="campo-arquivo__titulo">Clique ou solte o PDF do catálogo</p>
+                <p class="campo-arquivo__dica" id="catalogo-pdf-dica">Somente PDF · até {{UPLOAD_MAX_MB}} MB. Arquivos maiores são compactados automaticamente.</p>
+              </div>
+              <div class="campo-arquivo__preenchido" hidden>
+                <span class="campo-arquivo__badge" aria-hidden="true">PDF</span>
+                <div class="campo-arquivo__info">
+                  <p class="campo-arquivo__nome"></p>
+                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn--primario" type="submit">Adicionar catálogo</button>
+        </form>
+      </fieldset>
+
+      <fieldset class="briefing-secao" id="secao-visual" data-passo="8">
+        <legend>Cores da página</legend>
+        <div class="campo__cabeca">
+          <p class="campo__ajuda" id="paleta-ajuda">As cores de toda a sua página. A prévia ao lado muda na hora.</p>
+          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-paleta" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
+        </div>
+        <div class="ajuda__painel" id="ajuda-paleta" hidden>
+          <p>A paleta de cores do seu cartão.</p>
+          <p><strong>Na página:</strong> muda o fundo, os botões e o destaque do mapa.</p>
+          <p><strong>Dica:</strong> escolha a que combina com as marcas que você representa. Não existe opção errada — veja na prévia.</p>
+        </div>
+        <div class="paletas" role="radiogroup" aria-label="Paleta de cores da página" aria-describedby="paleta-ajuda">
+          <label class="paleta"><input type="radio" name="paleta" value="ambar" checked><span class="paleta__swatches" style="--p1:#0A1620;--p2:#F0A202;--p3:#F2F5F7"></span><span class="paleta__nome">Âmbar</span></label>
+          <label class="paleta"><input type="radio" name="paleta" value="oceano"><span class="paleta__swatches" style="--p1:#0A1F2E;--p2:#1AA6B8;--p3:#EEF4F7"></span><span class="paleta__nome">Oceano</span></label>
+          <label class="paleta"><input type="radio" name="paleta" value="floresta"><span class="paleta__swatches" style="--p1:#0F1F14;--p2:#2F9E5B;--p3:#F0F5F1"></span><span class="paleta__nome">Floresta</span></label>
+          <label class="paleta"><input type="radio" name="paleta" value="rubi"><span class="paleta__swatches" style="--p1:#1A1214;--p2:#C44B3A;--p3:#F6F1F2"></span><span class="paleta__nome">Rubi</span></label>
+          <label class="paleta"><input type="radio" name="paleta" value="ardosia"><span class="paleta__swatches" style="--p1:#1C1F24;--p2:#C47A3A;--p3:#F3F3F5"></span><span class="paleta__nome">Ardósia</span></label>
+        </div>
+      </fieldset>
+
+      <p class="briefing-status painel-salvo" id="editor-status" role="status"></p>
+      </section>
+
+      <aside class="painel-preview" id="painel-preview" aria-label="Pré-visualização da página">
+        <div class="painel-preview__barra">
+          <button type="button" class="painel-preview__fechar" id="btn-previa-fechar" aria-label="Fechar prévia">Fechar</button>
+          <div>
+            <h2 class="painel-preview__titulo">Pré-visualização</h2>
+            <p class="painel-preview__dica">Como a página aparece no celular, enquanto você edita.</p>
+            <p class="painel-preview__resumo" id="painel-preview-resumo" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="painel-preview__viewport">
+          <div class="painel-preview__pagina" id="painel-preview-pagina"></div>
+        </div>
+      </aside>
+    </div>
+
     <section class="painel-card" id="secao-pagina" hidden>
       <div class="campo__cabeca">
-        <h2 class="painel-card__titulo">Sua página</h2>
+        <h2 class="painel-card__titulo">Publicar e compartilhar</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-pagina" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
       </div>
       <div class="ajuda__painel" id="ajuda-pagina" hidden>
@@ -222,356 +611,7 @@
       <p class="briefing-status" id="stats-status" role="status"></p>
     </section>
 
-    <div class="painel-editor-layout" id="secao-editor" hidden>
-      <section class="painel-card">
-      <h2 class="painel-card__titulo">Editor da página</h2>
-      <p class="painel-card__texto">Tudo que você preenche aparece na prévia e é salvo sozinho no seu link. Não precisa clicar em salvar.</p>
-
-      <fieldset class="briefing-secao" id="secao-identidade">
-        <legend>Identidade</legend>
-        <p class="campo__ajuda">Foto, nome e apresentação que o cliente vê no topo da sua página.</p>
-        <div class="campo campo-arquivo" data-tipo="imagem">
-          <div class="campo__cabeca">
-            <span class="campo__rotulo" id="rotulo-foto">Foto ou logo principal</span>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-foto" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-foto" hidden>
-            <p>A imagem do topo da sua página, em um recorte redondo.</p>
-            <p><strong>Na página:</strong> fica acima do nome, como um retrato ou um logo.</p>
-            <p><strong>Dica:</strong> use uma foto nítida, de frente, ou um logo em fundo simples. JPG, PNG ou WEBP até 8 MB.</p>
-          </div>
-          <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-foto" aria-describedby="ajuda-foto foto-dica">
-            <input id="input-foto" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="campo-arquivo__input" tabindex="-1">
-            <div class="campo-arquivo__vazio">
-              <span class="campo-arquivo__icone" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-              </span>
-              <p class="campo-arquivo__titulo">Clique ou solte a foto ou logo aqui</p>
-              <p class="campo-arquivo__dica" id="foto-dica">JPG, PNG ou WEBP · até 8 MB</p>
-            </div>
-            <div class="campo-arquivo__preenchido" hidden>
-              <img class="campo-arquivo__thumb" alt="" width="56" height="56">
-              <div class="campo-arquivo__info">
-                <p class="campo-arquivo__nome"></p>
-                <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <fieldset class="campo campo--opcoes">
-          <legend class="campo__rotulo">Tipo da imagem</legend>
-          <div class="campo__cabeca">
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-foto-tipo" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-foto-tipo" hidden>
-            <p>Ajusta o recorte redondo para o tipo de imagem.</p>
-            <p><strong>Foto de pessoa:</strong> preenche o círculo com o seu retrato.</p>
-            <p><strong>Logo da empresa:</strong> centraliza a marca sem cortar o símbolo.</p>
-          </div>
-          <label class="opcao"><input type="radio" name="fotoTipo" value="pessoa" checked> Foto de pessoa</label>
-          <label class="opcao"><input type="radio" name="fotoTipo" value="logo"> Logo da empresa</label>
-        </fieldset>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-empresa">Nome da representada / empresa</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-empresa" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-empresa" hidden>
-            <p>O nome da empresa que você representa — ou o nome fantasia do seu negócio.</p>
-            <p><strong>Na página:</strong> aparece no topo. Fica grande se você escolher destacá-la; senão, fica menor abaixo do seu nome.</p>
-            <p><strong>Exemplo:</strong> Silva Proteção ou 3M</p>
-          </div>
-          <input id="campo-empresa" type="text" maxlength="120" aria-describedby="ajuda-empresa">
-        </div>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-nome">Seu nome completo <span class="campo__req">obrigatório</span></label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-nome" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-nome" hidden>
-            <p>Como os clientes te conhecem e te chamam.</p>
-            <p><strong>Na página:</strong> aparece no topo, grande se o destaque for o seu nome.</p>
-            <p><strong>Exemplo:</strong> Ana Souza</p>
-          </div>
-          <input id="campo-nome" type="text" maxlength="120" required aria-describedby="ajuda-nome" aria-required="true">
-        </div>
-        <fieldset class="campo campo--opcoes">
-          <legend class="campo__rotulo">Destaque na página</legend>
-          <div class="campo__cabeca">
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-destaque" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-destaque" hidden>
-            <p>Define qual nome fica <strong>grande no topo</strong> da sua página.</p>
-            <p>Escolha <strong>Meu nome</strong> se seus clientes te procuram pelo nome. Escolha <strong>Empresa</strong> se conhecem mais a marca que você representa.</p>
-          </div>
-          <label class="opcao"><input type="radio" name="destaque" value="empresa"> Empresa</label>
-          <label class="opcao"><input type="radio" name="destaque" value="pessoa" checked> Meu nome</label>
-        </fieldset>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-cargo">Cargo / região</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-cargo" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-cargo" hidden>
-            <p>Uma linha que descreve o que você faz e onde atende.</p>
-            <p><strong>Na página:</strong> aparece logo abaixo do nome, no topo.</p>
-            <p><strong>Exemplo:</strong> Representante comercial · Bahia e Sergipe</p>
-          </div>
-          <input id="campo-cargo" type="text" maxlength="160" aria-describedby="ajuda-cargo" placeholder="Ex.: Representante comercial · Bahia e Sergipe">
-        </div>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-bio">Bio / apresentação</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-bio" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-bio" hidden>
-            <p>Um parágrafo curto sobre você e o que oferece.</p>
-            <p><strong>Na página:</strong> aparece abaixo do cargo, no topo.</p>
-            <p><strong>Exemplo:</strong> Represento linhas de EPI e ferramentas no Nordeste, com entrega rápida e suporte técnico.</p>
-          </div>
-          <textarea id="campo-bio" rows="3" maxlength="600" aria-describedby="ajuda-bio" placeholder="Conte em poucas linhas quem você é e o que representa."></textarea>
-        </div>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-whatsapp">
-        <legend>WhatsApp</legend>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <span class="campo__rotulo" id="rotulo-whatsapp">Número (com DDD) <span class="campo__req">obrigatório</span></span>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-whatsapp" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-whatsapp" hidden>
-            <p>O número em que você atende clientes.</p>
-            <p><strong>Na página:</strong> vira o botão <strong>Falar no WhatsApp</strong>.</p>
-            <p><strong>Exemplo:</strong> DDD 71 e número 99999-9999.</p>
-          </div>
-          <div class="fone-linha">
-            <span class="fone-ddi" aria-hidden="true">+55</span>
-            <label class="visually-hidden" for="campo-whatsapp-ddd">DDD</label>
-            <input id="campo-whatsapp-ddd" type="tel" inputmode="numeric" maxlength="2" placeholder="DDD" aria-describedby="ajuda-whatsapp" autocomplete="tel-area-code">
-            <label class="visually-hidden" for="campo-whatsapp-num">Número do WhatsApp</label>
-            <input id="campo-whatsapp-num" type="tel" inputmode="numeric" maxlength="9" placeholder="Número" aria-describedby="ajuda-whatsapp" autocomplete="tel-national">
-          </div>
-        </div>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-mensagem-zap">Mensagem padrão do WhatsApp (opcional)</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-mensagem-zap" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-mensagem-zap" hidden>
-            <p>Texto que já vem escrito quando o cliente abre a conversa no WhatsApp.</p>
-            <p><strong>Na página:</strong> não aparece escrito — só entra na conversa, pronto para enviar.</p>
-            <p><strong>Exemplo:</strong> Olá, vi sua página e quero falar sobre representação.</p>
-          </div>
-          <input id="campo-mensagem-zap" type="text" maxlength="200" aria-describedby="ajuda-mensagem-zap" placeholder="Olá, vi sua página e quero falar sobre representação.">
-        </div>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-email">
-        <legend>E-mail</legend>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-email">E-mail (opcional)</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-email" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-email" hidden>
-            <p>Um e-mail em que o cliente possa escrever para você.</p>
-            <p><strong>Na página:</strong> vira um botão de e-mail na área de contato. Ao clicar, abre o programa de e-mail do cliente.</p>
-            <p><strong>Exemplo:</strong> contato@suamarca.com.br</p>
-          </div>
-          <input id="campo-email" type="email" maxlength="160" placeholder="contato@suamarca.com.br" autocomplete="email" spellcheck="false" aria-describedby="ajuda-email">
-        </div>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-instagram">
-        <legend>Instagram</legend>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-instagram">Instagram (opcional)</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-instagram" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-instagram" hidden>
-            <p>Seu perfil no Instagram, se quiser mostrar.</p>
-            <p><strong>Na página:</strong> aparece na área de contato, com um link para o perfil.</p>
-            <p><strong>Exemplo:</strong> @seuusuario ou o link completo do Instagram.</p>
-          </div>
-          <input id="campo-instagram" type="text" maxlength="200" placeholder="@seuusuario" autocomplete="off" spellcheck="false" aria-describedby="ajuda-instagram">
-        </div>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-marcas">
-        <legend>Marcas representadas</legend>
-        <div class="campo__cabeca">
-          <p class="campo__ajuda" id="marcas-ajuda">Cada marca vira um logo na sua página. Quem clicar abre uma página só dela — você monta essa página no botão “Montar página”.</p>
-          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-marcas" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-        </div>
-        <div class="ajuda__painel" id="ajuda-marcas" hidden>
-          <p>As empresas que você representa.</p>
-          <p><strong>Na página:</strong> os logos aparecem em grade. Um clique abre a página daquela marca.</p>
-          <p><strong>Exemplo:</strong> adicione “3M” com o logo. Depois use <strong>Montar página</strong> para escrever a apresentação e o site dela.</p>
-        </div>
-        <ul class="painel-lista" id="lista-marcas" aria-describedby="marcas-ajuda"></ul>
-        <form class="painel-form-inline" id="form-marca-add">
-          <div class="campo">
-            <label class="campo__rotulo" for="marca-add-nome">Nome da marca <span class="campo__req">obrigatório</span></label>
-            <input id="marca-add-nome" name="nome" type="text" maxlength="120" required placeholder="Ex.: 3M" aria-required="true">
-          </div>
-          <div class="campo campo-arquivo" data-tipo="imagem">
-            <span class="campo__rotulo" id="rotulo-logo-marca">Logo</span>
-            <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-logo-marca" aria-describedby="logo-marca-dica">
-              <input name="arquivo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="campo-arquivo__input" tabindex="-1">
-              <div class="campo-arquivo__vazio">
-                <span class="campo-arquivo__icone" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-                </span>
-                <p class="campo-arquivo__titulo">Clique ou solte o logo da marca</p>
-                <p class="campo-arquivo__dica" id="logo-marca-dica">JPG, PNG ou WEBP · até 8 MB</p>
-              </div>
-              <div class="campo-arquivo__preenchido" hidden>
-                <img class="campo-arquivo__thumb" alt="" width="56" height="56">
-                <div class="campo-arquivo__info">
-                  <p class="campo-arquivo__nome"></p>
-                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button class="btn btn--primario" type="submit">Adicionar marca</button>
-        </form>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-atuacao">
-        <legend>Área de atuação</legend>
-        <fieldset class="campo campo--ufs">
-          <legend class="campo__rotulo">Estados (UFs)</legend>
-          <div class="campo__cabeca">
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-ufs" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-ufs" hidden>
-            <p>Os estados em que você atende.</p>
-            <p><strong>Na página:</strong> eles pintam o mapa. Com um estado, o cliente já vê as cidades. Com dois ou mais, vê o Brasil e pode abrir cada estado.</p>
-            <p><strong>Exemplo:</strong> marque BA e SE se for a sua praça.</p>
-          </div>
-          <div class="ufs-grid" id="ufs-grid"></div>
-        </fieldset>
-        <div class="campo" id="campo-cidades-editor">
-          <div class="campo__cabeca">
-            <span class="campo__rotulo">Cidades atendidas</span>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-cidades" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-cidades" hidden>
-            <p>Os municípios de cada estado que você escolheu.</p>
-            <p><strong>Na página:</strong> as cidades marcadas aparecem no mapa. Se não marcar nenhuma, o estado inteiro fica pintado — use isso se você atende o estado todo.</p>
-            <p><strong>Exemplo:</strong> em BA, busque Salvador e Feira de Santana e marque só essas.</p>
-          </div>
-          <p class="campo__ajuda" id="cidades-ajuda">Selecione os municípios em cada estado. Sem seleção, o estado inteiro aparece no mapa.</p>
-          <div id="cidades-por-uf-editor" class="cidades-por-uf" aria-describedby="cidades-ajuda"></div>
-        </div>
-        <div class="campo">
-          <div class="campo__cabeca">
-            <label class="campo__rotulo" for="campo-segmentos">Que tipo de produto você representa?</label>
-            <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-segmentos" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-          </div>
-          <div class="ajuda__painel" id="ajuda-segmentos" hidden>
-            <p>Os segmentos em que você trabalha, em poucas palavras.</p>
-            <p><strong>Na página:</strong> o texto aparece abaixo do mapa.</p>
-            <p><strong>Exemplo:</strong> Agro, EPI, Autopeças</p>
-          </div>
-          <input id="campo-segmentos" type="text" maxlength="300" placeholder="Ex.: Agro, EPI, Autopeças" aria-describedby="ajuda-segmentos">
-        </div>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-catalogos">
-        <legend>Catálogos</legend>
-        <div class="campo__cabeca">
-          <p class="campo__ajuda" id="catalogos-ajuda">PDFs que o cliente baixa na sua página. Se vincular a uma marca, o arquivo fica agrupado nela.</p>
-          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-catalogos" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-        </div>
-        <div class="ajuda__painel" id="ajuda-catalogos" hidden>
-          <p>Os catálogos, tabelas ou listas de produto que você quer disponibilizar.</p>
-          <p><strong>Na página:</strong> cada PDF vira um botão para abrir ou baixar. Vinculado a uma marca, ele aparece no grupo dessa marca e também na página dela.</p>
-          <p><strong>Exemplo:</strong> título “Catálogo 2026”, marca “3M”, arquivo em PDF. Até {{UPLOAD_MAX_MB}} MB; se for maior, o painel compacta automaticamente.</p>
-        </div>
-        <ul class="painel-lista" id="lista-catalogos" aria-describedby="catalogos-ajuda"></ul>
-        <form class="painel-form-inline" id="form-catalogo-add">
-          <div class="campo">
-            <label class="campo__rotulo" for="catalogo-add-titulo">Nome exibido <span class="campo__req">obrigatório</span></label>
-            <input id="catalogo-add-titulo" name="titulo" type="text" maxlength="120" required placeholder="Catálogo 2026" aria-required="true">
-          </div>
-          <div class="campo">
-            <div class="campo__cabeca">
-              <label class="campo__rotulo" for="select-marca-catalogo">Marca vinculada</label>
-              <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-marca-catalogo" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-            </div>
-            <div class="ajuda__painel" id="ajuda-marca-catalogo" hidden>
-              <p>Opcional. Liga o PDF a uma marca que você já cadastrou.</p>
-              <p><strong>Na página:</strong> o catálogo entra no grupo dessa marca. Sem vínculo, ele fica em “Outros”.</p>
-              <p>Se ainda não adicionou a marca, volte ao bloco <strong>Marcas representadas</strong>.</p>
-            </div>
-            <select name="marcaId" id="select-marca-catalogo" aria-describedby="ajuda-marca-catalogo">
-              <option value="">Nenhuma</option>
-            </select>
-          </div>
-          <div class="campo campo-arquivo" data-tipo="pdf">
-            <span class="campo__rotulo" id="rotulo-catalogo-pdf">Arquivo PDF (até {{UPLOAD_MAX_MB}} MB) <span class="campo__req">obrigatório</span></span>
-            <div class="campo-arquivo__zona" tabindex="0" role="button" aria-labelledby="rotulo-catalogo-pdf" aria-describedby="catalogo-pdf-dica">
-              <input name="arquivo" type="file" accept="application/pdf,.pdf" required class="campo-arquivo__input" tabindex="-1">
-              <div class="campo-arquivo__vazio">
-                <span class="campo-arquivo__icone" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
-                </span>
-                <p class="campo-arquivo__titulo">Clique ou solte o PDF do catálogo</p>
-                <p class="campo-arquivo__dica" id="catalogo-pdf-dica">Somente PDF · até {{UPLOAD_MAX_MB}} MB. Arquivos maiores são compactados automaticamente.</p>
-              </div>
-              <div class="campo-arquivo__preenchido" hidden>
-                <span class="campo-arquivo__badge" aria-hidden="true">PDF</span>
-                <div class="campo-arquivo__info">
-                  <p class="campo-arquivo__nome"></p>
-                  <button type="button" class="campo-arquivo__trocar">Trocar arquivo</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button class="btn btn--primario" type="submit">Adicionar catálogo</button>
-        </form>
-      </fieldset>
-
-      <fieldset class="briefing-secao" id="secao-visual">
-        <legend>Visual</legend>
-        <div class="campo__cabeca">
-          <p class="campo__ajuda" id="paleta-ajuda">As cores de toda a sua página. A prévia ao lado muda na hora.</p>
-          <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-paleta" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
-        </div>
-        <div class="ajuda__painel" id="ajuda-paleta" hidden>
-          <p>A paleta de cores do seu cartão.</p>
-          <p><strong>Na página:</strong> muda o fundo, os botões e o destaque do mapa.</p>
-          <p><strong>Dica:</strong> escolha a que combina com as marcas que você representa. Não existe opção errada — veja na prévia.</p>
-        </div>
-        <div class="paletas" role="radiogroup" aria-label="Paleta de cores da página" aria-describedby="paleta-ajuda">
-          <label class="paleta"><input type="radio" name="paleta" value="ambar" checked><span class="paleta__swatches" style="--p1:#0A1620;--p2:#F0A202;--p3:#F2F5F7"></span><span class="paleta__nome">Âmbar</span></label>
-          <label class="paleta"><input type="radio" name="paleta" value="oceano"><span class="paleta__swatches" style="--p1:#0A1F2E;--p2:#1AA6B8;--p3:#EEF4F7"></span><span class="paleta__nome">Oceano</span></label>
-          <label class="paleta"><input type="radio" name="paleta" value="floresta"><span class="paleta__swatches" style="--p1:#0F1F14;--p2:#2F9E5B;--p3:#F0F5F1"></span><span class="paleta__nome">Floresta</span></label>
-          <label class="paleta"><input type="radio" name="paleta" value="rubi"><span class="paleta__swatches" style="--p1:#1A1214;--p2:#C44B3A;--p3:#F6F1F2"></span><span class="paleta__nome">Rubi</span></label>
-          <label class="paleta"><input type="radio" name="paleta" value="ardosia"><span class="paleta__swatches" style="--p1:#1C1F24;--p2:#C47A3A;--p3:#F3F3F5"></span><span class="paleta__nome">Ardósia</span></label>
-        </div>
-      </fieldset>
-
-      <p class="briefing-status" id="editor-status" role="status"></p>
-      </section>
-
-      <aside class="painel-preview" aria-label="Pré-visualização da página">
-        <div class="painel-preview__barra">
-          <div>
-            <h2 class="painel-preview__titulo">Pré-visualização</h2>
-            <p class="painel-preview__dica">Como a página aparece no celular, enquanto você edita.</p>
-            <p class="painel-preview__resumo" id="painel-preview-resumo" aria-live="polite"></p>
-          </div>
-        </div>
-        <div class="painel-preview__viewport">
-          <div class="painel-preview__pagina" id="painel-preview-pagina"></div>
-        </div>
-      </aside>
-    </div>
+    <button type="button" class="btn btn--primario previa-flutuante" id="btn-previa-abrir" aria-controls="painel-preview" hidden>Ver prévia</button>
 
     <div class="painel-editor-layout" id="secao-pagina-marca" hidden>
       <section class="painel-card painel-card--marca">
@@ -580,7 +620,7 @@
         </nav>
         <h1 class="painel-marca-titulo" id="marca-pagina-titulo" tabindex="-1">Página da marca</h1>
         <p class="painel-card__texto" id="marca-pagina-contexto"></p>
-        <p class="campo__ajuda" id="marca-pagina-explicacao">Esta é a página que o cliente vê quando clica no logo da marca na sua página principal. As alterações aparecem na prévia e são salvas ao clicar em Salvar — o logo salva assim que você envia o arquivo.</p>
+        <p class="campo__ajuda" id="marca-pagina-explicacao">Esta é a página que o cliente vê quando clica no logo da marca na sua página principal. As alterações aparecem na prévia e são salvas enquanto você edita — o logo salva assim que você envia o arquivo.</p>
 
         <div class="painel-marca-erro" id="marca-pagina-erro" hidden>
           <p class="painel-card__texto">Marca não encontrada ou endereço inválido.</p>
@@ -603,7 +643,8 @@
             </div>
             <div class="campo">
               <label class="campo__rotulo" for="marca-pagina-nome">Nome da marca <span class="campo__req">obrigatório</span></label>
-              <input name="nome" id="marca-pagina-nome" type="text" maxlength="120" required aria-describedby="marca-identidade-ajuda" aria-required="true">
+              <input name="nome" id="marca-pagina-nome" type="text" maxlength="120" required aria-describedby="marca-identidade-ajuda marca-nome-aviso" aria-required="true">
+              <p class="campo__ajuda aviso-suave" id="marca-nome-aviso" hidden>Ao mudar o nome, o endereço da página desta marca também muda. Links antigos dela deixam de funcionar.</p>
             </div>
             <div class="campo campo-arquivo" data-tipo="imagem">
               <span class="campo__rotulo" id="rotulo-marca-logo">Logo</span>
@@ -750,7 +791,7 @@
 
     <section class="painel-card painel-manual" id="secao-manual" aria-labelledby="manual-titulo">
       <h2 class="painel-card__titulo" id="manual-titulo" tabindex="-1">Manual de uso</h2>
-      <p class="painel-card__texto">Guia do painel. Abra o assunto que você precisa — ou volte à <a href="#secao-trilha" data-abrir-trilha>lista de primeiros passos</a>.</p>
+      <p class="painel-card__texto">Guia do painel. Abra o assunto que você precisa — ou volte ao <a href="#secao-trilha" data-abrir-trilha>resumo da sua página</a>.</p>
 
       <details class="painel-manual__bloco">
         <summary>Como funciona a My Rep em 1 minuto</summary>
@@ -824,6 +865,11 @@
       </details>
     </section>
   </div>
+  <nav class="assistente-nav" id="assistente-nav" aria-label="Navegação do passo a passo" hidden>
+    <button type="button" class="btn btn--fantasma-ink" id="btn-assistente-voltar">Voltar</button>
+    <button type="button" class="btn-link assistente-nav__pular" id="btn-assistente-pular">Pular por agora</button>
+    <button type="button" class="btn btn--primario" id="btn-assistente-continuar">Continuar</button>
+  </nav>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>

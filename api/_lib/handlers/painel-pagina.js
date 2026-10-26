@@ -72,6 +72,14 @@ function aplicarCamposTexto(dados, campos) {
   if (campos.indexar !== undefined) {
     out.indexar = campos.indexar !== false && campos.indexar !== "false";
   }
+  // Onde o rep está no passo a passo (/painel/criar/) e se já concluiu.
+  if (campos.assistentePasso !== undefined) {
+    const passo = parseInt(campos.assistentePasso, 10);
+    if (Number.isFinite(passo)) out.assistentePasso = Math.min(9, Math.max(1, passo));
+  }
+  if (campos.assistenteConcluido !== undefined) {
+    out.assistenteConcluido = campos.assistenteConcluido === true || campos.assistenteConcluido === "true";
+  }
   return out;
 }
 
@@ -239,6 +247,14 @@ module.exports = async function handler(req, res) {
         if (dados.foto && dados.foto !== nomeArq) await removerAsset(slugAtual, dados.foto);
       };
       mutator = (dados) => ({ ...dados, foto: nomeArq, fotoTipo });
+    } else if (acao === "foto_remover") {
+      beforeAttempt = async (dados, slugAtual) => {
+        if (dados.foto) await removerAsset(slugAtual, dados.foto);
+      };
+      mutator = (dados) => {
+        const { foto, ...resto } = dados;
+        return resto;
+      };
     } else if (acao === "marca_add" || acao === "marca_editar") {
       const nomeMarca = String(campos.nome || "").trim().slice(0, 120);
       if (!nomeMarca) return json(res, 400, { erro: "Informe o nome da marca." });
@@ -271,6 +287,13 @@ module.exports = async function handler(req, res) {
         const idx = idAlvo
           ? marcas.findIndex((m) => m.id === idAlvo)
           : marcas.findIndex((m) => String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase());
+        // Nome repetido: antes a nova marca substituía a antiga sem aviso.
+        const mesmoNome = marcas.findIndex(
+          (m, i) => i !== idx && String(m.nome || "").toLowerCase() === nomeMarca.toLowerCase()
+        );
+        if ((!idAlvo && idx >= 0) || mesmoNome >= 0) {
+          throw Object.assign(new Error(`Você já tem uma marca chamada “${nomeMarca}”.`), { status: 409 });
+        }
         const existente = idx >= 0 ? marcas[idx] : null;
         const entrada = {
           id: existente?.id || novoId("m"),
@@ -312,7 +335,7 @@ module.exports = async function handler(req, res) {
       if (file) {
         if (file.data.length > MAX_ANEXO) {
           return json(res, 413, {
-            erro: "Arquivo grande demais (máx. 3,5 MB por este caminho). Envie pelo painel atualizado."
+            erro: "Arquivo grande demais para este envio. Recarregue a página e tente de novo."
           });
         }
         const ext = (file.filename.split(".").pop() || "pdf").toLowerCase();
