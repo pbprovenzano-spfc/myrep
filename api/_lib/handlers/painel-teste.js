@@ -123,7 +123,8 @@ module.exports = async function handler(req, res) {
         })
       });
     } catch (erro) {
-      throw erroHttp(400, `Cartão não aceito: ${erro.message || "confira os dados"}.`);
+      const motivo = String(erro.message || "confira os dados").replace(/[.\s]+$/, "");
+      throw erroHttp(400, `Cartão não aceito: ${motivo}.`);
     }
     const token = tokenizado?.creditCardToken;
     if (!token) throw erroHttp(502, "A Asaas não confirmou o cartão. Tente de novo.");
