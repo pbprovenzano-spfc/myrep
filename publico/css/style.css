@@ -2256,8 +2256,8 @@ a.marca-chip:focus-visible {
   margin-bottom: 14px;
 }
 
-.campo--opcoes,
-.campo--ufs {
+fieldset.campo--opcoes,
+fieldset.campo--ufs {
   border: 0;
   padding: 0;
   margin: 0 0 14px;
@@ -2282,23 +2282,6 @@ a.marca-chip:focus-visible {
 .campo__cabeca > :not(button) {
   flex: 1 1 0;
   min-width: 0;
-}
-
-/* Grupo de opções com legenda + "?": legenda dentro da caixa, "?" na mesma linha.
-   O float tira a legenda de cima da borda e a torna um item do grid. */
-fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  padding: 12px 14px;
-}
-
-fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) > legend {
-  float: left;
-  padding: 0;
-}
-
-fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) > :not(legend, .campo__cabeca) {
-  grid-column: 1 / -1;
 }
 
 .campo__rotulo {
@@ -5947,5 +5930,429 @@ body.modo-assistente .toast-desfazer {
   .painel-salvo {
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     max-width: calc(100% - 150px);
+  }
+}
+
+/* =========================================================
+   PAINEL NO CELULAR — app com abas no rodapé
+   Só vale com body.painel-com-abas (painel normal, ≤ 899 px).
+   Desktop, passo a passo e página de marca não mudam.
+   ========================================================= */
+
+body.pagina-painel {
+  overflow-x: clip;
+}
+
+.painel-shell {
+  overflow-wrap: anywhere;
+}
+
+.painel-abas,
+.painel-conta {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  body.painel-com-abas {
+    background: var(--papel);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Uma aba por vez */
+  body.painel-com-abas[data-aba="inicio"] #painel-conteudo [data-aba]:not([data-aba="inicio"]),
+  body.painel-com-abas[data-aba="editar"] #painel-conteudo [data-aba]:not([data-aba="editar"]),
+  body.painel-com-abas[data-aba="conta"] #painel-conteudo [data-aba]:not([data-aba="conta"]) {
+    display: none !important;
+  }
+
+  /* Barra de abas */
+  body.painel-com-abas .painel-abas:not([hidden]) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 4px max(8px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(8px, env(safe-area-inset-left, 0px));
+    background: var(--branco);
+    border-top: 1px solid var(--borda);
+    box-shadow: 0 -6px 20px rgba(10, 22, 32, .06);
+  }
+
+  .painel-abas__item {
+    position: relative;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border: 0;
+    background: none;
+    color: var(--mutado);
+    font: 600 12px/1 var(--fonte-corpo);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .painel-abas__item svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .painel-abas__item[aria-current="page"] {
+    color: var(--sinal-texto);
+    font-weight: 800;
+  }
+
+  .painel-abas__item[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 30%;
+    right: 30%;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--sinal);
+  }
+
+  .painel-abas__item[aria-current="page"] svg {
+    fill: color-mix(in srgb, var(--sinal) 22%, transparent);
+  }
+
+  .painel-abas__item:disabled {
+    opacity: .38;
+    cursor: default;
+  }
+
+  .painel-abas__item:focus-visible {
+    outline: 3px solid var(--sinal);
+    outline-offset: -3px;
+    border-radius: 12px;
+  }
+
+  /* Cabeçalho compacto e fixo */
+  body.painel-com-abas .painel-topo {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    margin: 0;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+    gap: 10px;
+    background: rgba(255, 255, 255, .97);
+    border-bottom: 1px solid var(--borda);
+  }
+
+  body.painel-com-abas .painel-topo .marca img {
+    width: 30px;
+    height: 30px;
+  }
+
+  body.painel-com-abas .painel-topo .eyebrow {
+    margin: 0 auto 0 0;
+  }
+
+  body.painel-com-abas #link-assinatura-topo,
+  body.painel-com-abas #btn-sair {
+    display: none !important;
+  }
+
+  /* Conteúdo: margem de 16 px, sem cartão dentro de cartão */
+  body.painel-com-abas .painel-shell {
+    width: auto;
+    margin: 0;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  body.painel-com-abas .painel-intro {
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  body.painel-com-abas .painel-intro__titulo {
+    font-size: 26px;
+    margin-bottom: 2px;
+  }
+
+  body.painel-com-abas .painel-card {
+    margin-bottom: 14px;
+    padding: 18px 16px;
+    border-radius: 18px;
+    background: var(--branco);
+    box-shadow: 0 1px 2px rgba(10, 22, 32, .04);
+  }
+
+  body.painel-com-abas .painel-card__titulo {
+    font-size: 20px;
+  }
+
+  body.painel-com-abas .painel-acoes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  body.painel-com-abas .painel-acoes .btn {
+    width: 100%;
+  }
+
+  /* Início: trilha como lista com divisórias */
+  body.painel-com-abas .painel-trilha__lista {
+    gap: 0;
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  body.painel-com-abas .painel-trilha__passo {
+    align-items: center;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  body.painel-com-abas .painel-trilha__passo + .painel-trilha__passo {
+    border-top: 1px solid var(--borda);
+  }
+
+  body.painel-com-abas .painel-trilha__passo--depois {
+    opacity: 1;
+    background: color-mix(in srgb, var(--sinal) 7%, var(--branco));
+  }
+
+  body.painel-com-abas .painel-trilha__indice {
+    width: 28px;
+    height: 28px;
+  }
+
+  body.painel-com-abas .painel-trilha__corpo h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  body.painel-com-abas .painel-trilha__corpo p {
+    margin-top: 2px;
+    font-size: 14px;
+  }
+
+  body.painel-com-abas .painel-trilha__lado {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  body.painel-com-abas .painel-trilha__passo--depois .painel-trilha__estado {
+    display: none;
+  }
+
+  body.painel-com-abas .painel-trilha__estado {
+    font-size: 11px;
+    color: var(--mutado);
+  }
+
+  body.painel-com-abas .painel-qr__corpo {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+  }
+
+  /* Editar: título da aba + seções em sanfona */
+  body.painel-com-abas .painel-editor.painel-card {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  body.painel-com-abas .painel-editor > .painel-card__titulo {
+    font-size: 26px;
+    margin: 0 0 4px;
+  }
+
+  body.painel-com-abas .painel-editor > .painel-card__texto {
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  body.painel-com-abas .painel-editor > .briefing-secao {
+    position: relative;
+    margin: 0 0 12px;
+    padding: 0 16px 6px;
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+    background: var(--branco);
+  }
+
+  body.painel-com-abas .painel-editor > .briefing-secao + .briefing-secao {
+    margin-top: 0;
+  }
+
+  body.painel-com-abas .painel-editor > .briefing-secao > legend {
+    position: relative;
+    min-height: 60px;
+    margin: 0;
+    padding: 14px 32px 14px 0;
+    flex-wrap: nowrap;
+    font-size: 18px;
+  }
+
+  body.painel-com-abas .painel-editor > .briefing-secao:not(.briefing-secao--recolhida) > legend {
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--borda);
+  }
+
+  body.painel-com-abas .painel-editor > .briefing-secao > legend .secao-selo {
+    flex: none;
+  }
+
+  /* O botão Abrir/Recolher cobre a linha inteira; no lugar do texto, uma seta. */
+  body.painel-com-abas .secao-toggle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: transparent;
+    font-size: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body.painel-com-abas .secao-toggle::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: -7px;
+    border-right: 2.5px solid var(--mutado);
+    border-bottom: 2.5px solid var(--mutado);
+    transform: rotate(45deg);
+    transition: transform var(--transicao);
+  }
+
+  body.painel-com-abas .secao-toggle[aria-expanded="true"]::after {
+    margin-top: -2px;
+    transform: rotate(-135deg);
+  }
+
+  body.painel-com-abas .secao-toggle:focus-visible {
+    outline: 3px solid var(--sinal);
+    outline-offset: 2px;
+    border-radius: 12px;
+  }
+
+  /* Campos sem caixa cinza: rótulo, campo e um divisor fino */
+  body.painel-com-abas .painel-editor .briefing-secao .campo:not(fieldset) {
+    margin: 0;
+    padding: 14px 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  body.painel-com-abas .painel-editor .briefing-secao .campo:not(fieldset) + .campo:not(fieldset) {
+    border-top: 1px solid color-mix(in srgb, var(--borda) 70%, transparent);
+  }
+
+  body.painel-com-abas .painel-editor .campo__rotulo {
+    font-size: 15px;
+  }
+
+  body.painel-com-abas .painel-editor .campo input[type="text"],
+  body.painel-com-abas .painel-editor .campo input[type="email"],
+  body.painel-com-abas .painel-editor .campo input[type="tel"],
+  body.painel-com-abas .painel-editor .campo input[type="search"],
+  body.painel-com-abas .painel-editor .campo select,
+  body.painel-com-abas .painel-editor .campo textarea {
+    min-height: 50px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  body.painel-com-abas .painel-editor .opcao {
+    min-height: 44px;
+    margin: 0;
+    font-size: 16px;
+  }
+
+  body.painel-com-abas .painel-editor .btn {
+    width: 100%;
+  }
+
+  body.painel-com-abas .ajuda__botao {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Status de salvamento: aviso pequeno logo acima das abas */
+  body.painel-com-abas .painel-salvo {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    z-index: 55;
+    max-width: calc(100% - 32px);
+    margin: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+
+  body.painel-com-abas .painel-salvo:empty {
+    display: none;
+  }
+
+  /* A aba Prévia substitui o botão flutuante */
+  body.painel-com-abas .previa-flutuante {
+    display: none !important;
+  }
+
+  body.painel-com-abas.previa-aberta #painel-preview {
+    z-index: 70;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.previa-aberta .painel-preview__fechar {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .painel-topo .eyebrow {
+    white-space: nowrap;
+  }
+
+  /* Conta */
+  body.painel-com-abas .painel-conta:not([hidden]) {
+    display: block;
+  }
+
+  .painel-conta__email {
+    margin: 4px 0 14px;
+    color: var(--mutado);
+  }
+
+  .painel-conta__acoes {
+    display: grid;
+    gap: 10px;
+  }
+
+  .painel-conta__acoes .btn[hidden] {
+    display: none;
   }
 }
