@@ -133,7 +133,8 @@
   function alvoVisivel(id) {
     const el = document.getElementById(id);
     if (!el) return false;
-    return !el.closest("[hidden]");
+    // #painel-conteudo só aparece no fim do carregamento, depois da primeira renderização da trilha.
+    return !el.closest("[hidden]:not(#painel-conteudo)");
   }
 
   function setAjudaAberta(botao, aberto) {
@@ -162,6 +163,10 @@
     if (!secao || secao.hidden) return;
     const primeiro = secao.querySelector("details");
     if (primeiro) primeiro.open = true;
+    if (mostrarNoPainel(secao)) {
+      document.getElementById("manual-titulo")?.focus({ preventScroll: true });
+      return;
+    }
     secao.scrollIntoView({
       behavior: prefersReducedMotion() ? "auto" : "smooth",
       block: "start"
@@ -341,6 +346,10 @@
     const secao = document.getElementById("secao-trilha");
     if (!secao || secao.hidden) return;
     definirTrilhaOculta(false);
+    if (mostrarNoPainel(secao)) {
+      document.getElementById("trilha-titulo")?.focus({ preventScroll: true });
+      return;
+    }
     secao.scrollIntoView({
       behavior: prefersReducedMotion() ? "auto" : "smooth",
       block: "start"
@@ -2392,8 +2401,10 @@
     }
     renderQr(pag);
     document.getElementById("secao-estatisticas")?.toggleAttribute("hidden", !pag?.publicado);
+    document.getElementById("conta-link-assinatura")?.toggleAttribute("hidden", !ass);
 
     renderTrilha();
+    atualizarAbas();
   }
 
   function dataCurta(iso) {
@@ -2483,6 +2494,8 @@
 
     document.getElementById("painel-nome-saudacao").textContent = user.nome ? `, ${user.nome}` : "";
     document.getElementById("painel-email").textContent = user.email || "";
+    const contaEmail = document.getElementById("conta-email");
+    if (contaEmail) contaEmail.textContent = user.email || "";
     preencherCobranca(data.cobranca);
 
     const st = labelStatus(assinatura);
@@ -2885,6 +2898,7 @@
   function abrirPrevia() {
     document.body.classList.add("previa-aberta");
     document.getElementById("btn-previa-abrir")?.setAttribute("aria-expanded", "true");
+    document.querySelector('#painel-abas [data-ir-aba="previa"]')?.setAttribute("aria-expanded", "true");
     atualizarPreview();
     document.getElementById("btn-previa-fechar")?.focus();
   }
@@ -2893,7 +2907,9 @@
     document.body.classList.remove("previa-aberta");
     const botao = document.getElementById("btn-previa-abrir");
     botao?.setAttribute("aria-expanded", "false");
-    botao?.focus();
+    const botaoAba = document.querySelector('#painel-abas [data-ir-aba="previa"]');
+    botaoAba?.setAttribute("aria-expanded", "false");
+    (abasAtivas() ? botaoAba : botao)?.focus();
   }
 
   document.getElementById("btn-previa-abrir")?.addEventListener("click", abrirPrevia);
@@ -2917,8 +2933,20 @@
     if (previewSuja && previaVisivel()) atualizarPreview();
   });
 
+  function secoesEditor() {
+    return [...document.querySelectorAll(".painel-editor > .briefing-secao")];
+  }
+
+  function definirSecaoRecolhida(secao, recolhida) {
+    secao.classList.toggle("briefing-secao--recolhida", recolhida);
+    const botao = secao.querySelector(":scope > legend .secao-toggle");
+    if (!botao) return;
+    botao.setAttribute("aria-expanded", recolhida ? "false" : "true");
+    botao.textContent = recolhida ? "Abrir" : "Recolher";
+  }
+
   function initSecoesRecolhiveis() {
-    document.querySelectorAll(".painel-editor > .briefing-secao").forEach((secao) => {
+    secoesEditor().forEach((secao) => {
       const legenda = secao.querySelector(":scope > legend");
       if (!legenda || legenda.querySelector(".secao-toggle")) return;
       const botao = document.createElement("button");
@@ -2927,13 +2955,134 @@
       botao.setAttribute("aria-expanded", "true");
       botao.textContent = "Recolher";
       botao.addEventListener("click", () => {
-        const recolhida = secao.classList.toggle("briefing-secao--recolhida");
-        botao.setAttribute("aria-expanded", recolhida ? "false" : "true");
-        botao.textContent = recolhida ? "Abrir" : "Recolher";
+        const recolher = !secao.classList.contains("briefing-secao--recolhida");
+        definirSecaoRecolhida(secao, recolher);
+        // No celular a edição é em sanfona: abrir uma seção fecha as outras.
+        if (!recolher && abasAtivas()) {
+          secoesEditor().forEach((outra) => {
+            if (outra !== secao) definirSecaoRecolhida(outra, true);
+          });
+          secao.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        }
       });
       legenda.appendChild(botao);
     });
   }
+
+  /* ---------------- abas no celular ---------------- */
+
+  // No celular o painel vira um app com abas no rodapé (Início, Editar, Prévia, Conta).
+  // No computador, no passo a passo e na página de marca tudo continua numa página só.
+  const mqCelular = window.matchMedia("(max-width: 899px)");
+  const CHAVE_ABA = "myrep-painel-aba";
+  const ABAS = ["inicio", "editar", "conta"];
+  let sanfonaIniciada = false;
+
+  function abasAtivas() {
+    return mqCelular.matches && !modoAssistente && !modoMarca;
+  }
+
+  function abaTemConteudo(aba) {
+    // #painel-conteudo só aparece no fim do carregamento; o que conta é a seção em si.
+    return [...document.querySelectorAll(`#painel-conteudo [data-aba="${aba}"]`)].some(
+      (el) => !el.closest("[hidden]:not(#painel-conteudo)")
+    );
+  }
+
+  function lerAbaGuardada() {
+    try {
+      return sessionStorage.getItem(CHAVE_ABA);
+    } catch {
+      return null;
+    }
+  }
+
+  function irParaAba(aba, opts = {}) {
+    if (!ABAS.includes(aba) || !abaTemConteudo(aba)) aba = "inicio";
+    document.body.dataset.aba = aba;
+    document.querySelectorAll("#painel-abas [data-ir-aba]").forEach((botao) => {
+      if (botao.dataset.irAba === aba) botao.setAttribute("aria-current", "page");
+      else botao.removeAttribute("aria-current");
+    });
+    try {
+      sessionStorage.setItem(CHAVE_ABA, aba);
+    } catch {
+      /* ignore */
+    }
+    if (opts.alvo) {
+      opts.alvo.scrollIntoView({ block: "start", behavior: "auto" });
+    } else if (!opts.manterRolagem) {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  function iniciarSanfona() {
+    if (sanfonaIniciada) return;
+    const secoes = secoesEditor();
+    if (!secoes.length || document.getElementById("secao-editor")?.hidden) return;
+    sanfonaIniciada = true;
+    const pendente = secoes.find((secao) => secao.querySelector(".secao-selo")?.dataset.ok === "0") || secoes[0];
+    secoes.forEach((secao) => definirSecaoRecolhida(secao, secao !== pendente));
+  }
+
+  function atualizarAbas() {
+    const nav = document.getElementById("painel-abas");
+    const conta = document.getElementById("secao-conta");
+    const ativas = abasAtivas();
+    document.body.classList.toggle("painel-com-abas", ativas);
+    if (nav) nav.hidden = !ativas;
+    if (conta) conta.hidden = !ativas;
+    if (!ativas) {
+      delete document.body.dataset.aba;
+      return;
+    }
+    const editorVisivel = !document.getElementById("secao-editor")?.hidden;
+    const previaLiberada = !document.getElementById("btn-previa-abrir")?.hidden;
+    nav.querySelector('[data-ir-aba="editar"]').disabled = !editorVisivel;
+    nav.querySelector('[data-ir-aba="previa"]').disabled = !previaLiberada;
+    iniciarSanfona();
+    const atual = document.body.dataset.aba;
+    if (atual && abaTemConteudo(atual)) {
+      irParaAba(atual, { manterRolagem: true });
+      return;
+    }
+    const guardada = lerAbaGuardada();
+    irParaAba(guardada && abaTemConteudo(guardada) ? guardada : editorVisivel ? "editar" : "inicio");
+  }
+
+  // Leva até um elemento do painel, trocando de aba e abrindo a seção do editor se for preciso.
+  function mostrarNoPainel(alvo) {
+    if (!alvo || !abasAtivas()) return false;
+    const aba = alvo.closest("[data-aba]")?.dataset.aba;
+    if (!aba) return false;
+    const secao = alvo.closest(".painel-editor > .briefing-secao");
+    if (secao) {
+      secoesEditor().forEach((outra) => definirSecaoRecolhida(outra, outra !== secao));
+    }
+    irParaAba(aba, { alvo });
+    return true;
+  }
+
+  document.getElementById("painel-abas")?.addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-ir-aba]");
+    if (!botao || botao.disabled) return;
+    if (botao.dataset.irAba === "previa") {
+      abrirPrevia();
+      return;
+    }
+    irParaAba(botao.dataset.irAba);
+  });
+
+  // Links internos (ex.: "Fazer agora" da trilha) apontam para seções de outras abas.
+  document.addEventListener("click", (ev) => {
+    const link = ev.target.closest('a[href^="#secao-"]');
+    if (!link || link.hasAttribute("data-abrir-manual") || link.hasAttribute("data-abrir-trilha")) return;
+    const alvo = document.getElementById(link.getAttribute("href").slice(1));
+    if (mostrarNoPainel(alvo)) ev.preventDefault();
+  });
+
+  document.getElementById("conta-sair")?.addEventListener("click", () => btnSair?.click());
+  mqCelular.addEventListener("change", atualizarAbas);
 
   /* ---------------- passo a passo (/painel/criar/) ---------------- */
 

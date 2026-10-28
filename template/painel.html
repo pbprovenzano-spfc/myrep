@@ -36,7 +36,7 @@
   <p class="briefing-status" id="painel-carregando" role="status">Carregando…</p>
 
   <div id="painel-conteudo" hidden>
-    <header class="painel-intro" id="painel-intro">
+    <header class="painel-intro" id="painel-intro" data-aba="inicio">
       <div>
         <h1 class="painel-intro__titulo">Olá<span id="painel-nome-saudacao"></span></h1>
         <p class="painel-intro__email" id="painel-email"></p>
@@ -44,7 +44,7 @@
       <p class="painel-badge" id="painel-badge-assinatura" data-status="">—</p>
     </header>
 
-    <section class="painel-card painel-trilha" id="secao-trilha" aria-labelledby="trilha-titulo">
+    <section class="painel-card painel-trilha" id="secao-trilha" aria-labelledby="trilha-titulo" data-aba="inicio">
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo" id="trilha-titulo" tabindex="-1">Sua página</h2>
         <button type="button" class="painel-trilha__toggle" id="btn-trilha-toggle" aria-expanded="true" aria-controls="trilha-corpo">Ocultar</button>
@@ -65,7 +65,7 @@
       </div>
     </section>
 
-    <section class="painel-card" id="secao-assinatura">
+    <section class="painel-card" id="secao-assinatura" data-aba="inicio">
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo">Assinatura</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-assinatura" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
@@ -197,7 +197,7 @@
       </div>
     </section>
 
-    <section class="painel-card" id="secao-url" data-passo="1" hidden>
+    <section class="painel-card" id="secao-url" data-passo="1" data-aba="inicio" hidden>
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo">Sua URL</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-url" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
@@ -222,7 +222,7 @@
       </form>
     </section>
 
-    <div class="painel-editor-layout" id="secao-editor" hidden>
+    <div class="painel-editor-layout" id="secao-editor" data-aba="editar" hidden>
       <section class="painel-card painel-editor" data-passo="2 3 4 5 6 7 8">
       <h2 class="painel-card__titulo editor-so-normal">Editor da página</h2>
       <p class="painel-card__texto editor-so-normal">Tudo que você preenche aparece na prévia e é salvo sozinho no seu link. Não precisa clicar em salvar.</p>
@@ -288,9 +288,9 @@
           </div>
           <input id="campo-nome" type="text" maxlength="120" required aria-describedby="ajuda-nome" aria-required="true">
         </div>
-        <fieldset class="campo campo--opcoes" data-passo="2" id="campo-destaque">
-          <legend class="campo__rotulo">O que aparece em letras grandes</legend>
+        <div class="campo campo--opcoes" data-passo="2" id="campo-destaque" role="radiogroup" aria-labelledby="rotulo-destaque">
           <div class="campo__cabeca">
+            <span class="campo__rotulo" id="rotulo-destaque">O que aparece em letras grandes</span>
             <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-destaque" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
           </div>
           <div class="ajuda__painel" id="ajuda-destaque" hidden>
@@ -299,7 +299,7 @@
           </div>
           <label class="opcao"><input type="radio" name="destaque" value="pessoa" checked> Meu nome</label>
           <label class="opcao"><input type="radio" name="destaque" value="empresa"> O nome da empresa</label>
-        </fieldset>
+        </div>
         <div class="campo" data-passo="8">
           <div class="campo__cabeca">
             <label class="campo__rotulo" for="campo-cargo">Linha abaixo do nome</label>
@@ -449,9 +449,9 @@
           </div>
           <input id="campo-segmentos" type="text" maxlength="300" placeholder="Ex.: Agro, EPI, Autopeças" aria-describedby="ajuda-segmentos">
         </div>
-        <fieldset class="campo campo--ufs">
-          <legend class="campo__rotulo">Estados onde você atende</legend>
+        <div class="campo campo--ufs" role="group" aria-labelledby="rotulo-ufs">
           <div class="campo__cabeca">
+            <span class="campo__rotulo" id="rotulo-ufs">Estados onde você atende</span>
             <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-ufs" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
           </div>
           <div class="ajuda__painel" id="ajuda-ufs" hidden>
@@ -460,7 +460,7 @@
             <p><strong>Exemplo:</strong> marque BA e SE se for a sua praça.</p>
           </div>
           <div class="ufs-grid" id="ufs-grid"></div>
-        </fieldset>
+        </div>
         <div class="campo" id="campo-cidades-editor">
           <div class="campo__cabeca">
             <span class="campo__rotulo">Cidades <span class="campo__opcional">(opcional)</span></span>
@@ -569,7 +569,7 @@
       </aside>
     </div>
 
-    <section class="painel-card" id="secao-pagina" hidden>
+    <section class="painel-card" id="secao-pagina" data-aba="inicio" hidden>
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo">Publicar e compartilhar</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-pagina" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
@@ -617,7 +617,7 @@
       </div>
     </section>
 
-    <section class="painel-card" id="secao-estatisticas" aria-labelledby="estatisticas-titulo" hidden>
+    <section class="painel-card" id="secao-estatisticas" aria-labelledby="estatisticas-titulo" data-aba="inicio" hidden>
       <h2 class="painel-card__titulo" id="estatisticas-titulo">Estatísticas</h2>
       <p class="painel-card__texto">Quantas vezes sua página foi aberta e quantos toques o botão do WhatsApp recebeu. Contamos só os totais: não identificamos quem visitou.</p>
       <div class="painel-stats__numeros">
@@ -628,11 +628,13 @@
       <h3 class="painel-stats__subtitulo">Últimos 30 dias</h3>
       <div class="painel-stats__grafico" id="stats-grafico" aria-hidden="true"></div>
       <p class="painel-stats__legenda" aria-hidden="true"><span class="painel-stats__chave painel-stats__chave--visitas"></span>Visitas <span class="painel-stats__chave painel-stats__chave--cliques"></span>WhatsApp</p>
-      <table class="visually-hidden" id="stats-tabela">
+      <div class="visually-hidden">
+      <table id="stats-tabela">
         <caption>Visitas e toques no WhatsApp por dia, últimos 30 dias</caption>
         <thead><tr><th scope="col">Dia</th><th scope="col">Visitas</th><th scope="col">WhatsApp</th></tr></thead>
         <tbody></tbody>
       </table>
+      </div>
       <p class="briefing-status" id="stats-status" role="status"></p>
     </section>
 
@@ -764,7 +766,16 @@
       </aside>
     </div>
 
-    <section class="painel-card" id="secao-suporte" hidden>
+    <section class="painel-card painel-conta" id="secao-conta" data-aba="conta" aria-labelledby="conta-titulo" hidden>
+      <h2 class="painel-card__titulo" id="conta-titulo">Sua conta</h2>
+      <p class="painel-conta__email" id="conta-email"></p>
+      <div class="painel-conta__acoes">
+        <a class="btn btn--fantasma-ink" href="/painel/assinatura/" id="conta-link-assinatura" hidden>Minha assinatura</a>
+        <button type="button" class="btn btn--fantasma-ink" id="conta-sair">Sair</button>
+      </div>
+    </section>
+
+    <section class="painel-card" id="secao-suporte" data-aba="conta" hidden>
       <div class="campo__cabeca">
         <h2 class="painel-card__titulo">Suporte</h2>
         <button type="button" class="ajuda__botao" data-ajuda-toggle aria-expanded="false" aria-controls="ajuda-suporte" aria-label="O que é isso?"><span aria-hidden="true">?</span></button>
@@ -814,7 +825,7 @@
       </div>
     </section>
 
-    <section class="painel-card painel-manual" id="secao-manual" aria-labelledby="manual-titulo">
+    <section class="painel-card painel-manual" id="secao-manual" aria-labelledby="manual-titulo" data-aba="conta">
       <h2 class="painel-card__titulo" id="manual-titulo" tabindex="-1">Manual de uso</h2>
       <p class="painel-card__texto">Guia do painel. Abra o assunto que você precisa — ou volte ao <a href="#secao-trilha" data-abrir-trilha>resumo da sua página</a>.</p>
 
@@ -894,6 +905,24 @@
     <button type="button" class="btn btn--fantasma-ink" id="btn-assistente-voltar">Voltar</button>
     <button type="button" class="btn-link assistente-nav__pular" id="btn-assistente-pular">Pular por agora</button>
     <button type="button" class="btn btn--primario" id="btn-assistente-continuar">Continuar</button>
+  </nav>
+  <nav class="painel-abas" id="painel-abas" aria-label="Seções do painel" hidden>
+    <button type="button" class="painel-abas__item" data-ir-aba="inicio">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>
+      <span>Início</span>
+    </button>
+    <button type="button" class="painel-abas__item" data-ir-aba="editar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+      <span>Editar</span>
+    </button>
+    <button type="button" class="painel-abas__item" data-ir-aba="previa" aria-controls="painel-preview" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>
+      <span>Prévia</span>
+    </button>
+    <button type="button" class="painel-abas__item" data-ir-aba="conta">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>
+      <span>Conta</span>
+    </button>
   </nav>
 </main>
 
