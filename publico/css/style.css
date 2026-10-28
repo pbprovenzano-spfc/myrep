@@ -2237,6 +2237,9 @@ a.marca-chip:focus-visible {
   background: rgba(255, 255, 255, .72);
   border-radius: var(--raio);
   padding: 20px 18px 8px;
+  /* fieldset cresce até o min-content do conteúdo e estoura a tela no celular. */
+  min-inline-size: 0;
+  min-width: 0;
 }
 
 .briefing-secao > legend {
@@ -2273,6 +2276,29 @@ a.marca-chip:focus-visible {
 .campo__cabeca .campo__ajuda,
 .campo__cabeca .painel-card__titulo {
   margin: 0;
+}
+
+/* O texto quebra linha antes de empurrar o "?" para baixo. */
+.campo__cabeca > :not(button) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Grupo de opções com legenda + "?": legenda dentro da caixa, "?" na mesma linha.
+   O float tira a legenda de cima da borda e a torna um item do grid. */
+fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 12px 14px;
+}
+
+fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) > legend {
+  float: left;
+  padding: 0;
+}
+
+fieldset.campo:not(.campo--cartoes):has(> legend + .campo__cabeca) > :not(legend, .campo__cabeca) {
+  grid-column: 1 / -1;
 }
 
 .campo__rotulo {
@@ -5490,6 +5516,8 @@ fieldset.campo--cartoes {
   margin-top: 12px;
   background: none;
   font-size: 15px;
+  min-inline-size: 0;
+  min-width: 0;
 }
 
 @media (max-width: 380px) {
@@ -5676,11 +5704,44 @@ fieldset.campo--cartoes {
 
 /* Selos e grupos recolhíveis */
 
-.briefing-secao > legend {
+/* A legenda vira o cabeçalho da seção, dentro do cartão: título, selo e o botão à direita.
+   float + width tiram a legenda de cima da borda do fieldset. */
+.painel-editor > .briefing-secao {
+  padding-top: 16px;
+}
+
+.painel-editor > .briefing-secao > legend {
+  float: left;
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   flex-wrap: wrap;
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.painel-editor > .briefing-secao > legend + * {
+  clear: both;
+}
+
+.painel-editor > .briefing-secao + .briefing-secao {
+  margin-top: 16px;
+}
+
+.painel-editor > .briefing-secao > legend .secao-selo {
+  order: 1;
+}
+
+.painel-editor > .briefing-secao > legend .secao-toggle {
+  order: 2;
+  margin-left: auto;
+}
+
+.briefing-secao--recolhida > legend {
+  margin-bottom: 0;
 }
 
 .secao-selo {
@@ -5846,4 +5907,45 @@ body.modo-assistente .toast-desfazer {
 .painel-teste .btn {
   justify-self: start;
   margin-top: 6px;
+}
+
+/* =========================================================
+   PAINEL NO CELULAR — mais largura útil e rolagem leve
+   ========================================================= */
+
+@media (max-width: 899px) {
+  /* backdrop-filter num cartão do tamanho do editor é recalculado a cada quadro da rolagem no iOS. */
+  .painel-card,
+  .painel-preview {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, .92);
+  }
+
+  body.previa-aberta #painel-preview {
+    background: var(--papel);
+  }
+
+  .painel-editor.painel-card {
+    padding: 18px 12px 96px;
+  }
+
+  .painel-editor > .briefing-secao {
+    padding: 14px 12px 4px;
+  }
+
+  .briefing-secao .campo:not(fieldset) {
+    padding: 12px 14px;
+  }
+
+  .previa-flutuante {
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Status de salvamento à esquerda, sem encostar no botão "Ver prévia". */
+  .painel-salvo {
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 150px);
+  }
 }

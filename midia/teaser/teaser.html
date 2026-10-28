@@ -1,0 +1,579 @@
+<title>Teaser My Rep</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*FONTES*/
+
+/* Palco 1080×1920 (9:16), 30 s em sete cenas. Texto na faixa 260–620 px, visual até ~1600 px
+   (fora das áreas cobertas pela interface do Reels/TikTok). */
+:root {
+  --ink: #0A1620;
+  --ink-soft: #1A3040;
+  --fundo: #06101A;
+  --papel: #F2F5F7;
+  --branco: #FFFFFF;
+  --mutado: #5C7382;
+  --mutado-claro: #8FA6B3;
+  --sinal: #F0A202;
+  --sinal-rgb: 240, 162, 2;
+  --borda: #D5E0E6;
+  --sucesso: #1FAF6A;
+  --pdf: #E5484D;
+  --balao-eu: #23453A;
+  --balao-ele: #24394A;
+  --fonte-display: "Bricolage Grotesque", "Arial Black", sans-serif;
+  --fonte-corpo: "Figtree", "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--fundo);
+  color: var(--papel);
+  font-family: var(--fonte-corpo);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ---------- moldura e controles ---------- */
+.moldura {
+  position: relative;
+  height: min(calc(100% - 64px), 1920px);
+  aspect-ratio: 9 / 16;
+  max-width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(143, 166, 179, .18), 0 30px 80px rgba(0, 0, 0, .5);
+}
+.controles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 560px);
+  font-size: 14px;
+  color: var(--mutado-claro);
+  font-variant-numeric: tabular-nums;
+}
+.controles button {
+  flex: none;
+  height: 40px;
+  min-width: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(143, 166, 179, .3);
+  background: var(--ink-soft);
+  color: var(--papel);
+  font: 600 14px/1 var(--fonte-corpo);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.controles button:hover { border-color: var(--sinal); }
+.controles button[aria-pressed="true"] { border-color: var(--sinal); color: var(--sinal); }
+.controles button:focus-visible, .controles input:focus-visible { outline: 3px solid var(--sinal); outline-offset: 2px; }
+.controles input[type="range"] { flex: 1; min-width: 0; accent-color: var(--sinal); }
+.controles svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* ---------- palco ---------- */
+.palco {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  transform-origin: 0 0;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 700px at 0% 0%, rgba(var(--sinal-rgb), .15), transparent 60%),
+    radial-gradient(900px 900px at 100% 100%, rgba(26, 48, 64, .9), transparent 60%),
+    var(--ink);
+  color: var(--papel);
+  font-family: var(--fonte-corpo);
+}
+.palco * { box-sizing: border-box; }
+.palco h2, .palco h3, .palco p { margin: 0; }
+.abs { position: absolute; }
+.display {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-wrap: balance;
+}
+.chave { color: var(--sinal); }
+
+/* Animações pausadas; o relógio em JS define currentTime. Entradas com fill both,
+   saídas com fill forwards e sempre depois na lista. */
+@keyframes sobe { from { opacity: 0; translate: 0 60px; } to { opacity: 1; translate: 0 0; } }
+@keyframes some-sobe { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -50px; } }
+@keyframes some { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .9; } }
+@keyframes estoura {
+  0% { opacity: 0; scale: .5; }
+  60% { opacity: 1; scale: 1.07; }
+  100% { opacity: 1; scale: 1; }
+}
+.entra { animation: sobe .5s cubic-bezier(.2,.7,.3,1) var(--in) both, some-sobe .4s ease-in var(--out, 999s) forwards; }
+.pop { animation: estoura .5s cubic-bezier(.2,.7,.3,1) var(--in) both, some .4s ease-in var(--out, 999s) forwards; }
+
+/* ---------- legendas (faixa de texto) ---------- */
+.legenda { left: 70px; right: 70px; top: 260px; text-align: center; }
+.legenda h2 { font-size: 100px; }
+.legenda--esq { text-align: left; }
+
+/* Cena 2: três frases empilhadas */
+.problemas { left: 80px; right: 80px; top: 230px; display: flex; flex-direction: column; gap: 22px; }
+.problemas h2 { font-size: 88px; }
+
+/* ---------- cenas 1–2: conversa com PDFs ---------- */
+.chat {
+  left: 110px; right: 110px; top: 700px;
+  height: 880px;
+  border-radius: 48px;
+  background: #0F2231;
+  box-shadow: 0 0 0 2px rgba(143, 166, 179, .14), 0 40px 100px rgba(0, 0, 0, .45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.chat.anim { animation: sobe .5s cubic-bezier(.2,.7,.3,1) 0s both, some .4s ease-in 8.5s forwards; }
+.chat__topo { display: flex; align-items: center; gap: 20px; padding: 26px 34px; background: rgba(6, 16, 26, .6); }
+.avatar {
+  flex: none;
+  width: 76px; height: 76px; border-radius: 999px;
+  display: grid; place-items: center;
+  font: 800 30px/1 var(--fonte-display);
+  color: var(--papel);
+  background: #2F5D6B;
+}
+.chat__topo strong { display: block; font-size: 32px; }
+.chat__topo span { font-size: 22px; color: var(--mutado-claro); font-weight: 600; }
+.chat__corpo { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; padding: 26px 30px 30px; }
+.arquivo {
+  position: relative;
+  align-self: flex-end;
+  width: 600px;
+  display: flex; align-items: center; gap: 20px;
+  padding: 16px 20px;
+  border-radius: 26px 26px 8px 26px;
+  background: var(--balao-eu);
+}
+.arquivo.anim { animation: sobe .4s cubic-bezier(.2,.8,.3,1.1) var(--in) both; }
+.pdf-tag {
+  flex: none;
+  width: 66px; height: 66px; border-radius: 14px;
+  background: var(--pdf); color: var(--branco);
+  font: 800 20px/66px var(--fonte-display); text-align: center;
+}
+.arquivo b { display: block; font-size: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arquivo small { font-size: 22px; color: var(--mutado-claro); }
+.arquivo > div { min-width: 0; }
+.alerta {
+  position: absolute;
+  right: -16px; top: -18px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--pdf); color: var(--branco);
+  font: 800 24px/1 var(--fonte-display);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+}
+.alerta.anim { animation: estoura .45s cubic-bezier(.2,.7,.3,1) var(--in) both; }
+.pergunta {
+  align-self: flex-start;
+  max-width: 560px;
+  padding: 18px 24px;
+  border-radius: 26px 26px 26px 8px;
+  background: var(--balao-ele);
+  font-size: 30px; line-height: 1.3;
+}
+.pergunta.anim { animation: sobe .4s cubic-bezier(.2,.7,.3,1) 7.45s both; }
+
+/* ---------- cena 3: um link só ---------- */
+.link {
+  left: 0; right: 0; top: 880px;
+  display: flex; justify-content: center;
+}
+.link__pill {
+  display: flex; align-items: center; gap: 22px;
+  padding: 36px 54px;
+  border-radius: 999px;
+  background: var(--sinal); color: var(--ink);
+  font: 700 50px/1 var(--fonte-corpo);
+  box-shadow: 0 0 0 16px rgba(var(--sinal-rgb), .18), 0 30px 80px rgba(var(--sinal-rgb), .28);
+}
+.link__pill svg { width: 54px; height: 54px; }
+.onda {
+  left: 50%; top: 950px;
+  width: 300px; height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 999px;
+  border: 6px solid rgba(var(--sinal-rgb), .8);
+  opacity: 0;
+}
+@keyframes onda { from { opacity: 1; scale: .4; } to { opacity: 0; scale: 4; } }
+.onda.anim { animation: onda .9s cubic-bezier(.1,.6,.3,1) 9s forwards; }
+
+/* ---------- cenas 4–5: celular com a página ---------- */
+.celular {
+  left: 240px; top: 600px;
+  width: 600px; height: 1180px;
+  transform: scale(.84);
+  transform-origin: 50% 0;
+  border-radius: 84px;
+  background: #030A10;
+  padding: 18px;
+  box-shadow: 0 0 0 3px #22384A, 0 50px 120px rgba(0, 0, 0, .55);
+}
+@keyframes celular-entra { from { translate: 0 1400px; } to { translate: 0 0; } }
+@keyframes celular-sai { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 200px; } }
+.celular.anim { animation: celular-entra .8s cubic-bezier(.2,.8,.25,1) 11.75s both, celular-sai .5s ease-in 19.7s forwards; }
+.tela {
+  position: relative;
+  width: 100%; height: 100%;
+  border-radius: 68px;
+  overflow: hidden;
+  background:
+    radial-gradient(500px 360px at 0% 0%, rgba(var(--sinal-rgb), .16), transparent 60%),
+    linear-gradient(180deg, #E8EEF1, var(--papel) 45%);
+  color: var(--ink);
+  padding: 80px 30px 30px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.tela__ilha { position: absolute; top: 20px; left: 50%; translate: -50% 0; width: 170px; height: 44px; border-radius: 999px; background: #030A10; }
+.endereco { align-self: center; padding: 10px 22px; border-radius: 999px; background: rgba(10, 22, 32, .07); font-size: 22px; color: var(--mutado); font-weight: 600; }
+.perfil { display: flex; align-items: center; gap: 22px; padding: 4px 6px; }
+.perfil .avatar { width: 120px; height: 120px; font-size: 46px; background: var(--ink); color: var(--sinal); }
+.perfil h3 { font: 800 44px/1.05 var(--fonte-display); letter-spacing: -0.02em; }
+.perfil p { font-size: 25px; color: var(--mutado); font-weight: 600; margin-top: 6px; }
+.cartao { background: var(--branco); padding: 20px 22px; border-radius: 26px; border: 1px solid var(--borda); }
+.cartao.anim { animation: sobe .45s cubic-bezier(.2,.7,.3,1) var(--in) both, destaque 1.3s ease-out calc(var(--in) + .35s) both; }
+@keyframes destaque {
+  0% { box-shadow: 0 0 0 0 rgba(var(--sinal-rgb), 0); }
+  25% { box-shadow: 0 0 0 6px rgba(var(--sinal-rgb), .9); }
+  100% { box-shadow: 0 0 0 6px rgba(var(--sinal-rgb), 0); }
+}
+.rotulo { font-size: 19px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--mutado); margin-bottom: 12px; }
+.catalogos { display: flex; flex-direction: column; gap: 10px; }
+.catalogo { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 18px; background: var(--papel); border: 1px solid var(--borda); font-size: 27px; font-weight: 700; }
+.catalogo .pdf-tag { width: 50px; height: 50px; border-radius: 12px; font-size: 16px; line-height: 50px; }
+.catalogo small { margin-left: auto; font-size: 21px; color: var(--mutado); font-weight: 600; }
+.catalogo.anim { animation: sobe .4s cubic-bezier(.2,.7,.3,1) var(--in) both; }
+.marcas { display: flex; gap: 14px; }
+.marca {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-size: 19px; font-weight: 700; color: var(--ink-soft); text-align: center;
+}
+.marca i {
+  width: 76px; height: 76px;
+  display: grid; place-items: center;
+  font: 800 34px/1 var(--fonte-display); font-style: normal; color: var(--branco);
+}
+.marca--a i { background: #3B6E8F; border-radius: 18px; }
+.marca--b i { background: #6B4E9B; border-radius: 999px; }
+.marca--g i { background: #2E8A6E; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.marca.anim { animation: estoura .4s cubic-bezier(.2,.7,.3,1) var(--in) both; }
+.regiao { display: flex; flex-wrap: wrap; gap: 10px; }
+.uf { padding: 11px 18px; border-radius: 999px; background: var(--ink); color: var(--sinal); font: 800 26px/1 var(--fonte-display); }
+.cidade { padding: 11px 18px; border-radius: 999px; background: rgba(var(--sinal-rgb), .16); color: #8A5A00; font-size: 25px; font-weight: 700; }
+.cidade.anim { animation: estoura .4s cubic-bezier(.2,.7,.3,1) var(--in) both; }
+.whats {
+  margin-top: auto;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  height: 100px; border-radius: 999px;
+  background: var(--sucesso); color: var(--branco);
+  font: 800 34px/1 var(--fonte-display);
+}
+.whats svg { width: 40px; height: 40px; fill: currentColor; }
+.whats.anim { animation: estoura .5s cubic-bezier(.2,.7,.3,1) 18.0s both, pulso 1.1s ease-out 18.5s 1 forwards; }
+@keyframes pulso { from { box-shadow: 0 0 0 0 rgba(31, 175, 106, .6); } to { box-shadow: 0 0 0 34px rgba(31, 175, 106, 0); } }
+
+/* ---------- cena 6: mande uma vez ---------- */
+.envio { left: 0; right: 0; top: 680px; display: flex; flex-direction: column; align-items: center; gap: 36px; }
+.envio .link__pill { padding: 26px 40px; font-size: 40px; }
+.envio .link__pill svg { width: 42px; height: 42px; }
+.contato {
+  width: 860px;
+  display: flex; align-items: center; gap: 22px;
+  padding: 32px 34px;
+  border-radius: 36px;
+  background: #0F2231;
+  box-shadow: 0 0 0 2px rgba(143, 166, 179, .14), 0 24px 60px rgba(0, 0, 0, .35);
+}
+.contato > div { flex: 1; min-width: 0; }
+.contato .avatar { width: 92px; height: 92px; font-size: 36px; }
+.contato strong { display: block; font-size: 38px; }
+.contato span { font-size: 28px; color: var(--mutado-claro); }
+.contato .status {
+  flex: none;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(31, 175, 106, .16);
+  color: var(--sucesso);
+  font-size: 27px; font-weight: 700;
+}
+.contato .status.anim { animation: estoura .4s cubic-bezier(.2,.7,.3,1) var(--in) both; }
+
+/* ---------- cena 7: assinatura ---------- */
+.fim { left: 0; right: 0; top: 520px; display: flex; flex-direction: column; align-items: center; gap: 34px; text-align: center; }
+.fim img { width: 230px; height: 230px; border-radius: 52px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 2px rgba(143, 166, 179, .18); }
+.fim h2 { font-size: 170px; margin-top: 10px; }
+.fim p { font-size: 56px; line-height: 1.2; font-weight: 600; color: var(--mutado-claro); max-width: 860px; text-wrap: balance; }
+.fim .gratis { margin-top: 26px; padding: 28px 52px; border-radius: 999px; background: var(--sinal); color: var(--ink); font: 800 54px/1 var(--fonte-display); }
+.fim .dominio { font: 700 60px/1 var(--fonte-corpo); color: var(--branco); }
+
+/* Modo de exportação: só o palco, em tamanho real. */
+.render body { margin: 0; padding: 0; display: block; }
+.render .moldura { height: 1920px; width: 1080px; border-radius: 0; box-shadow: none; }
+.render .controles { display: none; }
+</style>
+
+<div class="moldura" id="moldura">
+  <div class="palco" id="palco" role="img" aria-label="Teaser animado de 30 segundos do My Rep. Um representante envia cinco PDFs ao cliente: arquivo pesado, catálogo desatualizado, cliente perdido. Tudo vira um link só, com catálogos, marcas, região e WhatsApp numa página. Mande uma vez, funciona sempre. My Rep, o cartão digital do representante, teste grátis por 14 dias em myrep.com.br.">
+
+    <!-- 1 · Gancho · 0–4 s -->
+    <div class="abs legenda entra" style="--in:.15s;--out:3.85s">
+      <h2 class="display">Ainda manda <span class="chave">PDF</span> por <span class="chave">PDF</span> pro cliente?</h2>
+    </div>
+
+    <div class="abs chat anim">
+      <div class="chat__topo">
+        <span class="avatar">LC</span>
+        <div><strong>Loja do Cliente</strong><span>online</span></div>
+      </div>
+      <div class="chat__corpo">
+        <div class="arquivo anim" style="--in:.5s">
+          <span class="pdf-tag">PDF</span><div><b>catalogo-alfa-2026.pdf</b><small>18 MB</small></div>
+          <span class="alerta anim" style="--in:4.4s">18 MB</span>
+        </div>
+        <div class="arquivo anim" style="--in:1.0s">
+          <span class="pdf-tag">PDF</span><div><b>tabela-precos-v4-final.pdf</b><small>2 MB</small></div>
+        </div>
+        <div class="arquivo anim" style="--in:1.5s">
+          <span class="pdf-tag">PDF</span><div><b>catalogo-beta-2024.pdf</b><small>11 MB</small></div>
+          <span class="alerta anim" style="--in:5.95s">versão antiga</span>
+        </div>
+        <div class="arquivo anim" style="--in:2.0s">
+          <span class="pdf-tag">PDF</span><div><b>linha-gama.pdf</b><small>9 MB</small></div>
+        </div>
+        <div class="arquivo anim" style="--in:2.5s">
+          <span class="pdf-tag">PDF</span><div><b>contatos-e-regiao.pdf</b><small>600 KB</small></div>
+        </div>
+        <div class="pergunta anim">Oi! Qual desses é o catálogo atual?</div>
+      </div>
+    </div>
+
+    <!-- 2 · Problema · 4–9 s -->
+    <div class="abs problemas">
+      <h2 class="display entra" style="--in:4.05s;--out:8.5s"><span class="chave">Arquivo</span> pesado.</h2>
+      <h2 class="display entra" style="--in:5.65s;--out:8.5s"><span class="chave">Catálogo</span> desatualizado.</h2>
+      <h2 class="display entra" style="--in:7.25s;--out:8.5s"><span class="chave">Cliente</span> perdido.</h2>
+    </div>
+
+    <!-- 3 · Virada · 9–12 s (drop da música em 9 s) -->
+    <span class="abs onda anim"></span>
+    <div class="abs legenda entra" style="--in:9.1s;--out:11.7s">
+      <h2 class="display">E se fosse <span class="chave">1 link só</span>?</h2>
+    </div>
+    <div class="abs link">
+      <div class="link__pill pop" style="--in:9s;--out:11.7s">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2a1 1 0 0 1 1.4 1.4l-2 2a1 1 0 1 0 1.4 1.4l3.5-3.5a1 1 0 0 1 1.4 0Z"/></svg>
+        myrep.com.br/rafael-souza
+      </div>
+    </div>
+
+    <!-- 4–5 · Solução · 12–20 s -->
+    <div class="abs legenda entra" style="--in:12.1s;--out:15.75s">
+      <h2 class="display">Todos os seus <span class="chave">catálogos</span> num só lugar</h2>
+    </div>
+    <div class="abs legenda entra" style="--in:16.1s;--out:19.7s">
+      <h2 class="display">Suas <span class="chave">marcas</span>, sua <span class="chave">região</span>, seu <span class="chave">WhatsApp</span></h2>
+    </div>
+
+    <div class="abs celular anim">
+      <div class="tela">
+        <span class="tela__ilha"></span>
+        <div class="endereco">myrep.com.br/rafael-souza</div>
+        <div class="perfil">
+          <span class="avatar">RS</span>
+          <div><h3>Rafael Souza</h3><p>Representante comercial · MG</p></div>
+        </div>
+        <div class="cartao anim" style="--in:12.5s">
+          <div class="rotulo">Catálogos</div>
+          <div class="catalogos">
+            <div class="catalogo anim" style="--in:12.8s"><span class="pdf-tag">PDF</span>Catálogo Alfa 2026<small>Abrir</small></div>
+            <div class="catalogo anim" style="--in:13.1s"><span class="pdf-tag">PDF</span>Linha Beta Químicos<small>Abrir</small></div>
+            <div class="catalogo anim" style="--in:13.4s"><span class="pdf-tag">PDF</span>Embalagens Gama<small>Abrir</small></div>
+          </div>
+        </div>
+        <div class="cartao anim" style="--in:16.4s">
+          <div class="rotulo">Marcas</div>
+          <div class="marcas">
+            <span class="marca marca--a anim" style="--in:16.6s"><i>A</i>Alfa Ferramentas</span>
+            <span class="marca marca--b anim" style="--in:16.8s"><i>B</i>Beta Químicos</span>
+            <span class="marca marca--g anim" style="--in:17.0s"><i>G</i>Gama Embalagens</span>
+          </div>
+        </div>
+        <div class="cartao anim" style="--in:17.2s">
+          <div class="rotulo">Região</div>
+          <div class="regiao">
+            <span class="uf">MG</span>
+            <span class="cidade anim" style="--in:17.45s">Belo Horizonte</span>
+            <span class="cidade anim" style="--in:17.6s">Contagem</span>
+            <span class="cidade anim" style="--in:17.75s">Betim</span>
+          </div>
+        </div>
+        <div class="whats anim">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+          Chamar no WhatsApp
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 · Benefício · 20–24 s -->
+    <div class="abs legenda entra" style="--in:20.1s;--out:23.75s">
+      <h2 class="display"><span class="chave">Mande uma vez.</span> Funciona <span class="chave">sempre.</span></h2>
+    </div>
+    <div class="abs envio">
+      <div class="link__pill pop" style="--in:20.3s;--out:23.75s">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2a1 1 0 0 1 1.4 1.4l-2 2a1 1 0 1 0 1.4 1.4l3.5-3.5a1 1 0 0 1 1.4 0Z"/></svg>
+        myrep.com.br/rafael-souza
+      </div>
+      <div class="contato entra" style="--in:20.7s;--out:23.75s">
+        <span class="avatar">A</span><div><strong>Loja A</strong><span>Link enviado ✓✓</span></div>
+        <span class="status anim" style="--in:21.9s">Página aberta</span>
+      </div>
+      <div class="contato entra" style="--in:21.0s;--out:23.75s">
+        <span class="avatar" style="background:#5B4A86">B</span><div><strong>Loja B</strong><span>Link enviado ✓✓</span></div>
+        <span class="status anim" style="--in:22.2s">Página aberta</span>
+      </div>
+      <div class="contato entra" style="--in:21.3s;--out:23.75s">
+        <span class="avatar" style="background:#2E7A62">C</span><div><strong>Loja C</strong><span>Link enviado ✓✓</span></div>
+        <span class="status anim" style="--in:22.5s">Página aberta</span>
+      </div>
+    </div>
+
+    <!-- 7 · CTA · 24–30 s -->
+    <div class="abs fim">
+      <img class="pop" style="--in:24.05s" src="{{LOGO_MR}}" alt="">
+      <h2 class="display entra" style="--in:24.3s">My Rep</h2>
+      <p class="entra" style="--in:24.55s">O cartão digital do representante</p>
+      <span class="gratis pop" style="--in:24.8s">Teste grátis por 14 dias</span>
+      <span class="dominio entra" style="--in:25.0s">myrep.com.br</span>
+    </div>
+  </div>
+</div>
+
+<div class="controles">
+  <button type="button" id="tocar" aria-label="Pausar"></button>
+  <button type="button" id="som" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Z"/></svg>Som</button>
+  <input type="range" id="linha" min="0" max="30" step="0.01" value="0" aria-label="Posição no teaser">
+  <span id="tempo">0,0 / 30 s</span>
+</div>
+<audio id="musica" preload="auto" src="{{MUSICA}}"></audio>
+
+<script>
+(() => {
+  const DURACAO = 30;
+  const render = window.__teaserRender === true || /[?&]render\b/.test(location.search);
+  if (render) document.documentElement.classList.add('render');
+
+  const moldura = document.getElementById('moldura');
+  const palco = document.getElementById('palco');
+  const botao = document.getElementById('tocar');
+  const botaoSom = document.getElementById('som');
+  const linha = document.getElementById('linha');
+  const tempo = document.getElementById('tempo');
+  const musica = document.getElementById('musica');
+  const ICONE_PAUSA = '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+  const ICONE_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+
+  let t = 0;
+  let tocando = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let comSom = false;
+  let ultimo = null;
+
+  function ajustar() {
+    palco.style.transform = `scale(${moldura.clientWidth / 1080})`;
+  }
+  new ResizeObserver(ajustar).observe(moldura);
+  ajustar();
+
+  function posicionar(segundos) {
+    t = Math.max(0, Math.min(DURACAO, segundos));
+    const ms = t * 1000;
+    for (const a of palco.getAnimations({ subtree: true })) {
+      a.pause();
+      a.currentTime = ms;
+    }
+    linha.value = t;
+    tempo.textContent = `${t.toFixed(1).replace('.', ',')} / ${DURACAO} s`;
+  }
+
+  function sincronizarSom() {
+    if (!comSom || !tocando) { musica.pause(); return; }
+    musica.currentTime = t;
+    musica.play().catch(() => {});
+  }
+
+  function atualizarBotoes() {
+    botao.innerHTML = tocando ? ICONE_PAUSA : ICONE_PLAY;
+    botao.setAttribute('aria-label', tocando ? 'Pausar' : 'Tocar');
+    botaoSom.setAttribute('aria-pressed', String(comSom));
+  }
+
+  function quadro(agora) {
+    if (tocando) {
+      if (ultimo !== null) {
+        let proximo = t + (agora - ultimo) / 1000;
+        if (proximo >= DURACAO) {
+          proximo = 0;
+          posicionar(0);
+          sincronizarSom();
+        } else if (comSom && !musica.paused && Math.abs(musica.currentTime - proximo) < 1) {
+          // Com som, o áudio é o relógio, para a imagem não escorregar da música.
+          proximo = musica.currentTime;
+        }
+        posicionar(proximo);
+      }
+      ultimo = agora;
+    } else {
+      ultimo = null;
+    }
+    requestAnimationFrame(quadro);
+  }
+
+  botao.addEventListener('click', () => {
+    tocando = !tocando;
+    atualizarBotoes();
+    sincronizarSom();
+  });
+  botaoSom.addEventListener('click', () => {
+    comSom = !comSom;
+    if (comSom) { posicionar(0); tocando = true; }
+    atualizarBotoes();
+    sincronizarSom();
+  });
+  linha.addEventListener('input', () => {
+    tocando = false;
+    atualizarBotoes();
+    posicionar(Number(linha.value));
+    sincronizarSom();
+  });
+
+  // Exportação quadro a quadro.
+  window.teaser = { duracao: DURACAO, posicionar };
+
+  posicionar(tocando ? 0 : 26);
+  atualizarBotoes();
+  if (!render) requestAnimationFrame(quadro);
+})();
+</script>

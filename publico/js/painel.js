@@ -90,6 +90,9 @@
   let assetVersao = 0;
   let previewBlocosTimer = null;
   let previewRaf = 0;
+  // No celular a prévia fica oculta até tocar em "Ver prévia"; enquanto isso só marcamos que mudou.
+  let previewSuja = false;
+  const mqPreviaLateral = window.matchMedia("(min-width: 900px)");
   let marcaAtualId = null;
   let marcaAtual = null;
   let saveTextoEmAndamento = null;
@@ -1809,9 +1812,21 @@
     }, 250);
   }
 
+  function previaVisivel() {
+    return mqPreviaLateral.matches || document.body.classList.contains("previa-aberta");
+  }
+
   function atualizarPreview(opts) {
     const root = document.getElementById("painel-preview-pagina");
     if (!root) return;
+    if (!previaVisivel()) {
+      previewSuja = true;
+      return;
+    }
+    if (previewSuja) {
+      previewSuja = false;
+      opts = undefined;
+    }
     const c = estadoPreview();
     aplicarPaletaPreview(c.paleta || "ambar");
 
@@ -2893,8 +2908,13 @@
   });
 
   document.getElementById("secao-editor")?.addEventListener("focusin", (ev) => {
+    if (!previaVisivel()) return;
     const secao = ev.target.closest("[data-alvo-previa]");
     if (secao) rolarPreviaPara(secao.getAttribute("data-alvo-previa"));
+  });
+
+  mqPreviaLateral.addEventListener("change", () => {
+    if (previewSuja && previaVisivel()) atualizarPreview();
   });
 
   function initSecoesRecolhiveis() {
